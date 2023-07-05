@@ -1,0 +1,10 @@
+{
+    "ignore": [
+        "README.md",
+        "node_modules/"
+    ],
+    "watch": [
+        "."
+    ],
+    "ext": "js"
+}

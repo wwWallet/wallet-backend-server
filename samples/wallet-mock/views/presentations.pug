@@ -1,0 +1,21 @@
+extends layout
+
+block content
+	h1 Wallet Mock
+	a(href="/") See all Credentials
+	br
+	br
+	br
+	a.BigText(href="/init/issuance/vid") Request Verifiable ID from National VID Issuer
+	br
+	br
+	a.BigText(href="/init/issuance/uoa") Request credentials from University of Athens Issuer
+	br
+	br
+	br
+	h3 Verifiable Presentations
+
+	for vp of vp_list
+		a(href="/vp/" + vp.jti) #{vp.jti} (issuedAt: #{vp.vp.issuanceDate})
+		br
+		br

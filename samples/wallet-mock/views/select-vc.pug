@@ -1,0 +1,18 @@
+extends layout
+
+block content
+	h1 Wallet Mock
+	h3 Select VC
+
+	form(method="POST" action="/select-vc" name="selection")
+		for key of Object.keys(conformantCredentialsMap)
+			h3 Input descriptor: #{key}
+			for vcId of conformantCredentialsMap[key]
+				input(type="radio" name=key value=vcId)
+				label(for=key+":"+value) #{vcId}
+				br
+		br
+		br
+		br
+		br
+		button(type='submit') Send
