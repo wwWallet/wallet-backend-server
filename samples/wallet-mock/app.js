@@ -222,7 +222,10 @@ async function handleAuthorizationRequest(req, res, next) {
 		{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
 	).then(success => {
 		console.log("Success")
-		const { conformantCredentialsMap, verifierDomainName } = success.data;
+		const { conformantCredentialsMap, verifierDomainName, redirect_to } = success.data;
+		if (redirect_to) {
+			return res.redirect(redirect_to);
+		}
 		return res.render('select-vc', {
 			title: "VC Selection",
 			conformantCredentialsMap: conformantCredentialsMap
