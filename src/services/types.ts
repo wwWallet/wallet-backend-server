@@ -2,8 +2,8 @@ import "reflect-metadata";
 
 const TYPES = {
 
-	// WalletKeystore: Symbol.for("WalletKeystore"),
-	DatabaseKeystoreService: Symbol.for("DatabaseKeystoreService"),
+	WalletKeystore: Symbol.for("WalletKeystore"),
+	// DatabaseKeystoreService: Symbol.for("DatabaseKeystoreService"),
 
 
 	// OpenidCredentialReceiving: Symbol.for("OpenidCredentialReceiving"),
