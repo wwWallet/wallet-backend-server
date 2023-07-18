@@ -67,7 +67,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 	constructor(
-		@inject(TYPES.DatabaseKeystoreService) private walletKeystore: WalletKeystore,
+		@inject(TYPES.WalletKeystore) private walletKeystore: WalletKeystore,
 		@inject(TYPES.OpenidForCredentialIssuanceService) private OpenidCredentialReceivingService: OpenidCredentialReceiving
 	) { }
 
