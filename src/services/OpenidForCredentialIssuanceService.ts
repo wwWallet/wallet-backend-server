@@ -427,7 +427,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			logoURL: logoUrl,
 			format: credentialResponse.format as VerifiableCredentialFormat,
 			backgroundColor: background_color,
-			presentableFormat: [],
 			issuanceDate: new Date(credentialPayload.iat * 1000),
 			issuerFriendlyName: legalPerson.friendlyName
 		}).then(success => { // when credential is stored, then send notification

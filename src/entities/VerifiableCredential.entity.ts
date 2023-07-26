@@ -46,8 +46,6 @@ export class VerifiableCredentialEntity {
 	@Column({ nullable: false })
 	backgroundColor: string = "";
 
-	@Column({ type: 'blob' })
-	presentableFormat: string = "[]"
 
 	@Column({ type: "datetime", nullable: false })
 	issuanceDate: Date = new Date();
@@ -74,7 +72,6 @@ type VerifiableCredential = {
 	format: VerifiableCredentialFormat;
 	logoURL: string;
 	backgroundColor: string;
-	presentableFormat: Array<{key: string, friendlyName: string, path: string, value: string}>;
 	issuanceDate: Date;
 	issuerFriendlyName: string;
 }
@@ -85,7 +82,6 @@ async function createVerifiableCredential(createVc: VerifiableCredential) {
 		console.log("Storing VC...")
 		let vc = {
 			...createVc,
-			presentableFormat: JSON.stringify(createVc.presentableFormat)
 		};
 		const res = await AppDataSource
 			.createQueryBuilder()
@@ -116,7 +112,6 @@ async function getAllVerifiableCredentials(holderDID: string): Promise<Result<Ve
 			const transformed = {
 				...vc,
 				credential: vc.credential.toString(),
-				presentableFormat: JSON.parse(vc.presentableFormat.toString())
 			}
 			return transformed as VerifiableCredential;
 		})
@@ -140,7 +135,6 @@ async function getVerifiableCredentialByCredentialIdentifier(holderDID: string, 
 		const transformed = {
 			...vc,
 			credential: vc.credential.toString(),
-			presentableFormat: JSON.parse(vc.presentableFormat.toString())
 		}
 		return Ok(transformed as VerifiableCredential);
 	}

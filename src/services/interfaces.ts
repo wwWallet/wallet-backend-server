@@ -12,10 +12,16 @@ export interface OpenidCredentialReceiving {
 	getIssuerState(username: string): Promise<{ issuer_state?: string, error?: Error }>
 }
 
+
+export type AdditionalKeystoreParameters = {
+	
+}
+
+
 export interface WalletKeystore {
-	createIdToken(username: string, nonce: string, audience: string): Promise<{id_token: string}>;
-	signJwtPresentation(username: string, nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }>;
-	generateOpenid4vciProof(username: string, audience: string, nonce: string): Promise<{ proof_jwt: string }>;
+	createIdToken(username: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<{id_token: string}>;
+	signJwtPresentation(username: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<{ vpjwt: string }>;
+	generateOpenid4vciProof(username: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<{ proof_jwt: string }>;
 	getIdentifier(username: string): Promise<string>; // later can be converted into getIdentifiers() for more than one
 }
 

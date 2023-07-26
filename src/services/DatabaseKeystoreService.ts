@@ -1,5 +1,5 @@
 import { SignJWT, importJWK } from "jose";
-import { WalletKeystore } from "./interfaces";
+import { AdditionalKeystoreParameters, WalletKeystore } from "./interfaces";
 import { getUserByUsername } from "../entities/user.entity";
 import { SignVerifiablePresentationJWT, WalletKey } from "@gunet/ssi-sdk";
 import { randomUUID } from "crypto";
@@ -16,7 +16,7 @@ export class DatabaseKeystoreService implements WalletKeystore {
 
 	constructor() { }
 	
-	async createIdToken(username: string, nonce: string, audience: string): Promise<{ id_token: string; }> {
+	async createIdToken(username: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<{ id_token: string; }> {
 
 		const user = (await getUserByUsername(username)).unwrap();
 
@@ -39,7 +39,7 @@ export class DatabaseKeystoreService implements WalletKeystore {
 		return { id_token: jws };	
 	}
 
-	async signJwtPresentation(username: string, nonce: string, audience: string, verifiableCredentials: any[]): Promise<{ vpjwt: string }> {
+	async signJwtPresentation(username: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<{ vpjwt: string }> {
 		const user = (await getUserByUsername(username)).unwrap();
 		const keys = JSON.parse(user.keys.toString()) as WalletKey;
 		const privateKey = await importJWK(keys.privateKey, keys.alg);
@@ -68,7 +68,7 @@ export class DatabaseKeystoreService implements WalletKeystore {
 		return { vpjwt: jws };
 	}
 
-	async generateOpenid4vciProof(username: string, audience: string, nonce: string): Promise<{ proof_jwt: string }> {
+	async generateOpenid4vciProof(username: string, audience: string, nonce: string, additionalParameters: AdditionalKeystoreParameters): Promise<{ proof_jwt: string }> {
 
 		const user = (await getUserByUsername(username)).unwrap();
 

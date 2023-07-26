@@ -1,17 +1,18 @@
 # Builder stage
-FROM node:16-alpine3.16 AS builder
+FROM node:16-alpine AS builder
 WORKDIR /home/node/app
 
 COPY . .
 RUN yarn cache clean && yarn --frozen-lockfile && yarn build
 
 # Production stage
-FROM node:16-alpine3.16 AS production
+FROM node:16-alpine AS production
 WORKDIR /home/node/app
 
 COPY --from=builder /home/node/app/package.json .
 COPY --from=builder /home/node/app/.npmrc .
 COPY --from=builder /home/node/app/dist ./dist
+COPY --from=builder /home/node/app/public ./public
 
 
 

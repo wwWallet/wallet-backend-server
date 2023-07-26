@@ -180,12 +180,22 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		const { newLocation } = await axios.post(redirect_uri, encodedParams, { maxRedirects: 0, headers: { "Content-Type": "application/x-www-form-urlencoded" }})
 			.then(success => {
 				console.log("url = ", success.config.headers)
+				console.log("body = ", success.data)
+				console.log(success.status)
+				const msg = {
+					error: "Direct post error",
+					error_description: "Failed to redirect after direct post"
+				};
+				console.error(msg);
 				// console.log("Sucess = ", success.data)
 				return { newLocation: null }
 			})
 			.catch(e => {
 				console.log("ERR");
+				console.log("UNKNOWN")
 				if (e.response) {
+					console.log("UNKNOWN = ", e.response.data)
+
 					if (e.response.headers.location) {
 						console.log("Loc: ", e.response.headers.location);
 						const newLocation = e.response.headers.location as string;
