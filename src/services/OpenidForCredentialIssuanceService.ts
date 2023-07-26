@@ -51,7 +51,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
 
 	constructor(
-		@inject(TYPES.DatabaseKeystoreService) private walletKeyStore: WalletKeystore,
+		@inject(TYPES.WalletKeystore) private walletKeyStore: WalletKeystore,
 	) { }
 
 

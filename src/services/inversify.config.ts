@@ -9,7 +9,7 @@ import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
 const appContainer = new Container();
 
 
-appContainer.bind<WalletKeystore>(TYPES.DatabaseKeystoreService)
+appContainer.bind<WalletKeystore>(TYPES.WalletKeystore)
 	.to(DatabaseKeystoreService)
 
 
