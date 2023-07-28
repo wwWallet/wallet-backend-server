@@ -25,6 +25,9 @@ class UserEntity {
 	@Column( {type: "blob", nullable: true })
 	fcmToken: Buffer = Buffer.from("");
 
+	@Column( { type: "blob", nullable: true })
+	browserFcmToken: Buffer = Buffer.from("");
+
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 }
@@ -36,6 +39,7 @@ type CreateUser = {
 	passwordHash: string;
 	keys: Buffer;
 	fcmToken: Buffer;
+	browserFcmToken: Buffer;
 }
 
 
@@ -64,8 +68,6 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 			.into(UserEntity).values([
 				{ 
 					...createUser,
-					keys: createUser.keys,
-					fcmToken: createUser.fcmToken,
 					isAdmin: isAdmin
 				}
 			])
