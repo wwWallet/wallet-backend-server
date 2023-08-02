@@ -13,6 +13,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # Permissions for GITHUB_TOKEN
+    permissions:
+      contents: read  # To check out repo
+      packages: write  # To read NPM registry and push Docker image
+
     steps:
     - uses: actions/checkout@v3
     - name: 'Login to GitHub Container Registry'
@@ -21,6 +26,12 @@ jobs:
          registry: ghcr.io
          username: ${{github.actor}}
          password: ${{secrets.GITHUB_TOKEN}}
+
+    - name: Set up .npmrc to access GitHub NPM registry
+      uses: ./.github/actions/setup-npmrc
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
     - uses: docker/build-push-action@v3
       with:
         context: .
