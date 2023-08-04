@@ -76,7 +76,7 @@ export class DatabaseKeystoreService implements WalletKeystore {
 		const privateKey = await importJWK(keys.privateKey, keys.alg);
 		const header = {
 			alg: keys.alg,
-			typ: "openid4vci-proof+jwt",
+			// typ: "openid4vci-proof+jwt",
 			kid: keys.did + "#" + keys.did.split(":")[2]
 		};
 		

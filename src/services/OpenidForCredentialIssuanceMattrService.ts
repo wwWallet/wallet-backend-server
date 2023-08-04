@@ -32,7 +32,7 @@ type IssuanceState = {
 }
 
 @injectable()
-export class OpenidForCredentialIssuanceService implements OpenidCredentialReceiving {
+export class OpenidForCredentialIssuanceMattrService implements OpenidCredentialReceiving {
 
 	public static readonly identifier = "OpenidForCredentialIssuanceService"
 	// identifierService: IdentifierService = new IdentifierService();
@@ -107,6 +107,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		const walletDID = await this.walletKeyStore.getIdentifier(username);
 
+		let selectedCredentialType: string | null = null;
 		let lp: LegalPersonEntity;
 
 		if (legalPersonDID) {
@@ -121,16 +122,13 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			console.log("Credential offer url = ", credentialOfferURL)
 
 			credential_offer = qs.parse(credentialOfferURL.split('?')[1]) as any;
-			if (credential_offer.credential_offer_uri && typeof credential_offer.credential_offer_uri == 'string') {
-				credential_offer = (await axios.get(credential_offer.credential_offer_uri)).data;
-			}
-			console.log("Credential offer = ", credential_offer)
-
-			const credentialIssuerURL = credential_offer.credential_issuer as string;
-			lp = (await getLegalPersonByUrl(credentialIssuerURL)).unwrap();
-			issuerUrlString = lp.url;
-			issuer_state = credential_offer?.grants.authorization_code?.issuer_state 
-
+			console.log("Offer is = ", credential_offer)
+			const { issuer, credential_type } = credential_offer;
+			
+			console.log("Issuer url = ", issuer)
+			console.log("Selected credential type = ", credential_type)
+			issuerUrlString = issuer;
+			selectedCredentialType = credential_type;
 		}
 
 		if (!issuerUrlString) {
@@ -139,23 +137,27 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		
 
-		const credentialIssuerMetadata = (await axios.get(issuerUrlString + "/.well-known/openid-credential-issuer")).data as CredentialIssuerMetadata;
+		const credentialIssuerMetadata = (await axios.get(issuerUrlString + "/.well-known/openid-credential-issuer")).data as any;
 		console.log("Credential issuer metadata")
 		console.dir(credentialIssuerMetadata, { depth: null })
-		const authorizationServerConfig = (await axios.get(credentialIssuerMetadata.authorization_server + "/.well-known/openid-configuration")).data;
-
+		const { credentials_supported } = credentialIssuerMetadata;
+		// const authorizationServerConfig = (await axios.get(credentialIssuerMetadata.authorization_server + "/.well-known/openid-configuration")).data;
+		const authorizationServerConfig = {
+			authorization_endpoint: credentialIssuerMetadata.authorization_endpoint,
+			token_endpoint: credentialIssuerMetadata.token_endpoint
+		};
 		// all credential supported will be added into the authorization details by default
-		const authorizationDetails: CredentialSupportedJwtVcJson[] = (credential_offer ? credential_offer.credentials : credentialIssuerMetadata.credentials_supported)
-		.map((cred_sup) => {
-			return {
-				format: cred_sup.format,
-				types: cred_sup.types,
-				type: "openid_credential",
-				locations: [ credentialIssuerMetadata.credential_issuer ]
-			};
-		});
-
-		if (credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]) {
+		// const authorizationDetails: CredentialSupportedJwtVcJson[] = (credential_offer ? credential_offer.credentials : credentialIssuerMetadata.credentials_supported)
+		// .map((cred_sup) => {
+		// 	return {
+		// 		format: cred_sup.format,
+		// 		types: cred_sup.types,
+		// 		type: "openid_credential",
+		// 		locations: [ credentialIssuerMetadata.credential_issuer ]
+		// 	};
+		// });
+		const authorizationDetails =  [ { type: "openid_credential", types: [ selectedCredentialType as string ], format: "ldp_vc" }] as any
+		if (credential_offer && credential_offer["pre-authorized_code"]) {
 			this.states.set(username, {
 				username: username,
 				credentialIssuerMetadata: credentialIssuerMetadata,
@@ -164,9 +166,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 				authorization_details: authorizationDetails,
 				issuer_state: issuer_state,
 				grant_type: GrantType.PRE_AUTHORIZED_CODE,
-				code: credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["pre-authorized_code"]
+				code: credential_offer["pre-authorized_code"]
 			});
-			const user_pin_required = credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["user_pin_required"];
+			const user_pin_required = false;
 			console.log("Redirecting to ... ", config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}`)
 			return { redirect_to: config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}` }
 		}
@@ -202,6 +204,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			grant_type: GrantType.AUTHORIZATION_CODE
 		})
 		console.log("generateAuthorizationRequest \n\t", authorizationRequestURL)
+	
 		return { redirect_to: authorizationRequestURL.toString() };
 	}
 
@@ -243,8 +246,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 				console.error("Credential requests failed with error : ", e)
 			});
 		}).catch(e => {
-			console.error("Token Request failed");
-			console.error(e);
+			console.log(e)
 		})
 	}
 
@@ -322,12 +324,12 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		console.log("State = ", state)
 		const httpHeader = { 
-			"authorization": `Bearer ${state.tokenResponse.access_token}`,
+			"Authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
 
 		const c_nonce = state.tokenResponse.c_nonce;
 
-		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, "https://launchpad.mattrlabs.com", c_nonce);
 
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
@@ -337,18 +339,31 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 					proof_type: "jwt",
 					jwt: proof_jwt
 				},
-				...authzDetail
+				type: authzDetail.types[0],
+				format: authzDetail.format,
 			}
+			console.log("Body sent = ", httpBody)
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
 		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
+		
+		responses
+			.filter(res => res.status == 'rejected')
+			.map(res => res.status == 'rejected' ? res.reason : null)
+			.filter(resolvedResponse => resolvedResponse != null)
+			.map(response => {
+				console.error(`Failed credential (status, body) : (${response.response.status}, ${JSON.stringify(response.response.data)})`, );
+			});
+
+		
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
 			.map((res) => 
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
-			);
+			)
+			.filter(resolvedResponse => resolvedResponse != null);
 
 
 		for (const cr of credentialResponses) {

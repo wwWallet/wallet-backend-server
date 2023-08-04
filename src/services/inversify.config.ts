@@ -5,6 +5,7 @@ import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanc
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
 import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
+import { OpenidForCredentialIssuanceMattrService } from "./OpenidForCredentialIssuanceMattrService";
 
 const appContainer = new Container();
 
@@ -19,7 +20,7 @@ appContainer.bind<WalletKeystore>(TYPES.WalletKeystore)
 
 	
 appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
-	.to(OpenidForCredentialIssuanceService)
+	.to(OpenidForCredentialIssuanceMattrService)
 	// .whenTargetNamed(OpenidForCredentialIssuanceService.identifier);
 
 appContainer.bind<OutboundCommunication>(TYPES.OpenidForPresentationService)

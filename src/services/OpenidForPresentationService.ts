@@ -443,7 +443,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	private async fetchPresentationDefinition(authorizationRequestURL: URL): Promise<PresentationDefinition> {
 
 		const searchParams = authorizationRequestURL.searchParams;
-
+		console.log("Params = ", searchParams)
 		let presentation_definition = searchParams.get("presentation_definition");
 		let presentation_definition_uri = searchParams.get("presentation_definition_uri");
 

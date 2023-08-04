@@ -21,7 +21,7 @@ userController.post('/register', async (req: Request, res: Response) => {
 		res.status(500).send({ error: "No username or password was given" });
 		return;
 	}
-	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
+	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet(config.alg);
 
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
 	const keysStringified = JSON.stringify(naturalPersonWallet.key);
