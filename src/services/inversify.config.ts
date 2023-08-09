@@ -5,7 +5,8 @@ import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanc
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
 import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
-import { OpenidForCredentialIssuanceMattrService } from "./OpenidForCredentialIssuanceMattrService";
+import { OpenidForCredentialIssuanceMattrV2Service } from "./OpenidForCredentialIssuanceMattrV2Service";
+import config from "../../config";
 
 const appContainer = new Container();
 
@@ -18,15 +19,22 @@ appContainer.bind<WalletKeystore>(TYPES.WalletKeystore)
 // 	.to(LegalPersonService)
 	// .whenTargetNamed(LegalPersonService.identifier);
 
-	
-appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
-	.to(OpenidForCredentialIssuanceMattrService)
-	// .whenTargetNamed(OpenidForCredentialIssuanceService.identifier);
+
+
+console.log("Service name  = ", config.servicesConfiguration.issuanceService)
+switch (config.servicesConfiguration.issuanceService) {
+case "OpenidForCredentialIssuanceService":
+	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
+		.to(OpenidForCredentialIssuanceService)
+	break;
+case "OpenidForCredentialIssuanceMattrV2Service":
+	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
+		.to(OpenidForCredentialIssuanceMattrV2Service)
+	break;
+}
 
 appContainer.bind<OutboundCommunication>(TYPES.OpenidForPresentationService)
 	.to(OpenidForPresentationService)
-	// .whenTargetNamed(OpenidForPresentationService.identifier);
-
 
 export { appContainer }
 

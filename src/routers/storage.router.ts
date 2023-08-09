@@ -28,6 +28,8 @@ async function getAllVerifiableCredentialsController(req, res) {
 			issuanceDate: Math.floor(v.issuanceDate.getTime() / 1000)
 		}
 	});
+
+	console.log("VC list = ", vc_list)
 	res.status(200).send({ vc_list: vc_list })
 
 }

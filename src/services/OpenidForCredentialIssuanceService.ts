@@ -344,6 +344,14 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
+		responses
+			.filter(res => res.status == 'rejected')
+			.map(res => res.status == 'rejected' ? res.reason : null)
+			.filter(resolvedResponse => resolvedResponse != null)
+			.map(response => {
+				console.error(`Failed credential (status, body) : (${response.response.status}, ${JSON.stringify(response.response.data)})`, );
+			});
+			
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
 			.map((res) => 

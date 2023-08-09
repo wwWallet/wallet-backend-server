@@ -19,6 +19,7 @@ export type AdditionalKeystoreParameters = {
 
 
 export interface WalletKeystore {
+	generateKeyPair(username: string): Promise<{ did: string }>;
 	createIdToken(username: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<{id_token: string}>;
 	signJwtPresentation(username: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<{ vpjwt: string }>;
 	generateOpenid4vciProof(username: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<{ proof_jwt: string }>;

@@ -15,4 +15,7 @@ export = {
 	},
 	walletClientUrl: "WALLET_CLIENT_URL",
 	alg: "ES256",
+	servicesConfiguration: {
+		issuanceService: "OpenidForCredentialIssuanceService"
+	}
 }

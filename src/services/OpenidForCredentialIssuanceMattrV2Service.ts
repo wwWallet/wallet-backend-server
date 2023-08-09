@@ -14,6 +14,7 @@ import { TYPES } from "./types";
 import { OpenidCredentialReceiving, WalletKeystore  } from "./interfaces";
 import { injectable, inject } from "inversify";
 import "reflect-metadata";
+import { randomUUID } from "node:crypto";
 
 
 type IssuanceState = {
@@ -32,7 +33,7 @@ type IssuanceState = {
 }
 
 @injectable()
-export class OpenidForCredentialIssuanceMattrService implements OpenidCredentialReceiving {
+export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredentialReceiving {
 
 	public static readonly identifier = "OpenidForCredentialIssuanceService"
 	// identifierService: IdentifierService = new IdentifierService();
@@ -107,7 +108,6 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 
 		const walletDID = await this.walletKeyStore.getIdentifier(username);
 
-		let selectedCredentialType: string | null = null;
 		let lp: LegalPersonEntity;
 
 		if (legalPersonDID) {
@@ -122,42 +122,54 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 			console.log("Credential offer url = ", credentialOfferURL)
 
 			credential_offer = qs.parse(credentialOfferURL.split('?')[1]) as any;
-			console.log("Offer is = ", credential_offer)
-			const { issuer, credential_type } = credential_offer;
-			
-			console.log("Issuer url = ", issuer)
-			console.log("Selected credential type = ", credential_type)
-			issuerUrlString = issuer;
-			selectedCredentialType = credential_type;
+			if (credential_offer?.credential_offer_uri && typeof credential_offer?.credential_offer_uri == 'string') {
+				credential_offer = (await axios.get(credential_offer.credential_offer_uri)).data;
+			}
+			else {
+				credential_offer = JSON.parse(credential_offer.credential_offer);
+			}
+
+			console.log("Credential offer = ", credential_offer)
+			const credentialIssuerURL = credential_offer.credential_issuer as string;
+			console.log("Credential issuer url = ", credentialIssuerURL)
+			lp = (await getLegalPersonByUrl(credentialIssuerURL)).unwrap();
+			console.log("lp = ", lp == null)
+			if (!lp) {
+				lp = { id: -1,  friendlyName: "", did: "", url: credentialIssuerURL, client_id: "", client_secret: "" };
+			}
+			issuerUrlString = lp.url;
+			issuer_state = credential_offer?.grants?.authorization_code?.issuer_state 
+
 		}
 
+		console.log("Issuer url str = ", issuerUrlString)
 		if (!issuerUrlString) {
 			throw "No issuer url is defined"
 		}
 
 		
 
-		const credentialIssuerMetadata = (await axios.get(issuerUrlString + "/.well-known/openid-credential-issuer")).data as any;
+		const credentialIssuerMetadata = (await axios.get(issuerUrlString + "/.well-known/openid-credential-issuer")).data as CredentialIssuerMetadata;
 		console.log("Credential issuer metadata")
 		console.dir(credentialIssuerMetadata, { depth: null })
-		const { credentials_supported } = credentialIssuerMetadata;
+		const { authorization_endpoint, token_endpoint } = credentialIssuerMetadata as any;
+		const authorizationServerConfig = { authorization_endpoint, token_endpoint };
 		// const authorizationServerConfig = (await axios.get(credentialIssuerMetadata.authorization_server + "/.well-known/openid-configuration")).data;
-		const authorizationServerConfig = {
-			authorization_endpoint: credentialIssuerMetadata.authorization_endpoint,
-			token_endpoint: credentialIssuerMetadata.token_endpoint
-		};
+
 		// all credential supported will be added into the authorization details by default
-		// const authorizationDetails: CredentialSupportedJwtVcJson[] = (credential_offer ? credential_offer.credentials : credentialIssuerMetadata.credentials_supported)
-		// .map((cred_sup) => {
-		// 	return {
-		// 		format: cred_sup.format,
-		// 		types: cred_sup.types,
-		// 		type: "openid_credential",
-		// 		locations: [ credentialIssuerMetadata.credential_issuer ]
-		// 	};
-		// });
-		const authorizationDetails =  [ { type: "openid_credential", types: [ selectedCredentialType as string ], format: "ldp_vc" }] as any
-		if (credential_offer && credential_offer["pre-authorized_code"]) {
+		const authorizationDetails: CredentialSupportedJwtVcJson[] = (credential_offer ? credential_offer.credentials : credentialIssuerMetadata.credentials_supported)
+		.map((cred_sup) => {
+			return {
+				format: cred_sup.format,
+				types: cred_sup.types,
+				type: "openid_credential",
+				locations: [ credentialIssuerMetadata.credential_issuer ]
+			};
+		});
+
+
+		console.log("Result = ", credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"])
+		if (credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]) {
 			this.states.set(username, {
 				username: username,
 				credentialIssuerMetadata: credentialIssuerMetadata,
@@ -166,11 +178,11 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 				authorization_details: authorizationDetails,
 				issuer_state: issuer_state,
 				grant_type: GrantType.PRE_AUTHORIZED_CODE,
-				code: credential_offer["pre-authorized_code"]
+				code: credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["pre-authorized_code"]
 			});
-			const user_pin_required = false;
-			console.log("Redirecting to ... ", config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}`)
-			return { redirect_to: config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}` }
+			const user_pin_required = credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["user_pin_required"];
+			console.log("Redirecting to ... ", config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required ? user_pin_required : false}`)
+			return { redirect_to: config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required ? user_pin_required : false}` }
 		}
 		
 		
@@ -204,7 +216,6 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 			grant_type: GrantType.AUTHORIZATION_CODE
 		})
 		console.log("generateAuthorizationRequest \n\t", authorizationRequestURL)
-	
 		return { redirect_to: authorizationRequestURL.toString() };
 	}
 
@@ -246,7 +257,8 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 				console.error("Credential requests failed with error : ", e)
 			});
 		}).catch(e => {
-			console.log(e)
+			console.error("Token Request failed");
+			console.error(e);
 		})
 	}
 
@@ -324,12 +336,12 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 
 		console.log("State = ", state)
 		const httpHeader = { 
-			"Authorization": `Bearer ${state.tokenResponse.access_token}`,
+			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
 
 		const c_nonce = state.tokenResponse.c_nonce;
 
-		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, "https://launchpad.mattrlabs.com", c_nonce);
+		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, state.credentialIssuerMetadata.credential_issuer, c_nonce);
 
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
@@ -339,16 +351,14 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 					proof_type: "jwt",
 					jwt: proof_jwt
 				},
-				type: authzDetail.types[0],
 				format: authzDetail.format,
+				type: authzDetail.types[0]
 			}
-			console.log("Body sent = ", httpBody)
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
 		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
-		
 		responses
 			.filter(res => res.status == 'rejected')
 			.map(res => res.status == 'rejected' ? res.reason : null)
@@ -357,13 +367,11 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 				console.error(`Failed credential (status, body) : (${response.response.status}, ${JSON.stringify(response.response.data)})`, );
 			});
 
-		
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
 			.map((res) => 
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
-			)
-			.filter(resolvedResponse => resolvedResponse != null);
+			);
 
 
 		for (const cr of credentialResponses) {
@@ -411,15 +419,44 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 
 		const { legalPerson } = this.states.get(username);
 		console.log("Legal person  = ", legalPerson)
-		const credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
-		const type = credentialPayload.vc.type as string[];
+		console.log("Credential response = ", credentialResponse)
+		let credentialPayload;
+		let type;
+		let credentiaIdentifier = null;
+		let credentialIssuerDID = null;
+		let credentialToBeStored = null;
+		let issuanceDate = null;
+		if (credentialResponse.format == 'w3cvc-jsonld') {
+			credentialPayload = credentialResponse.credential;
+			type = credentialPayload.type;
+			credentiaIdentifier = randomUUID();
+			credentialIssuerDID = credentialPayload.issuer.id;
+			credentialToBeStored = JSON.stringify(credentialPayload);
+			console.log("Credential issuance date = ", credentialPayload.issuanceDate)
+			issuanceDate = new Date(credentialPayload.issuanceDate);
+		}
+		else if (credentialResponse.format == 'jwt_vc') {
+			credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
+			type = credentialPayload.vc.type as string[];
+			credentiaIdentifier = credentialPayload.jti;
+			credentialIssuerDID = credentialPayload.iss;
+			credentialToBeStored = credentialPayload;
+			issuanceDate = new Date(credentialPayload.iat * 1000);
+		}
+		else {
+			throw new Error("Unknown VC format");
+		}
+		console.log("Metadata url = ", legalPerson.url + "/.well-known/openid-credential-issuer")
 		const metadata = (await axios.get(legalPerson.url + "/.well-known/openid-credential-issuer")).data as CredentialIssuerMetadata;
-		
+		console.log("metadta = ", metadata)
 		
 		let logoUrl = config.url + "/alt-vc-logo.png";
 		let background_color = "#D3D3D3";
 
-		const supportedCredential = metadata.credentials_supported.filter(cs => cs.format == credentialResponse.format && _.isEqual(cs.types, type))[0];
+		
+		const supportedCredential = type && credentialResponse.format && Array.isArray(metadata.credentials_supported) ?
+			metadata.credentials_supported.filter(cs => cs.format == credentialResponse.format && _.isEqual(cs.types, type))[0] :
+			null;
 		if (supportedCredential) {
 			if (supportedCredential.display && 
 					supportedCredential.display.length != 0 &&
@@ -437,15 +474,15 @@ export class OpenidForCredentialIssuanceMattrService implements OpenidCredential
 
 
 		createVerifiableCredential({
-			issuerDID: credentialPayload.iss,
-			credentialIdentifier: credentialPayload.jti,
-			credential: credentialResponse.credential,
+			issuerDID: credentialIssuerDID,
+			credentialIdentifier: credentiaIdentifier,
+			credential: credentialToBeStored,
 			holderDID: user.did,
 			issuerURL: legalPerson.url,
 			logoURL: logoUrl,
 			format: credentialResponse.format as VerifiableCredentialFormat,
 			backgroundColor: background_color,
-			issuanceDate: new Date(credentialPayload.iat * 1000),
+			issuanceDate: issuanceDate,
 			issuerFriendlyName: legalPerson.friendlyName
 		}).then(success => { // when credential is stored, then send notification
 			if (success.err) {

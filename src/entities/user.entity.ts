@@ -11,16 +11,14 @@ class UserEntity {
 	@Column({ unique: true, nullable: false})
 	username: string = "";
 
-	@Column({ unique: true, nullable: false })
+	@Column({ unique: true, nullable: true })
 	did: string = "";
+
+	@Column({ type: 'blob', nullable: true })
+	keys: Buffer = Buffer.from("");
 
   @Column({ nullable: false })
   passwordHash: string = "";
-
-
-	@Column({ type: 'blob', nullable: false })
-	keys: Buffer = Buffer.from("");
-
 
 	@Column( {type: "blob", nullable: true })
 	fcmToken: Buffer = Buffer.from("");
@@ -35,9 +33,7 @@ class UserEntity {
 
 type CreateUser = {
 	username: string;
-	did: string;
 	passwordHash: string;
-	keys: Buffer;
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
 }
@@ -78,6 +74,23 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 	catch(e) {
 		console.log(e);
 		return Err(CreateUserErr.ALREADY_EXISTS);
+	}
+}
+
+async function storeKeypair(username: string, did: string, keys: Buffer): Promise<Result<{}, Error>> {
+	try {
+		const res = await AppDataSource
+			.createQueryBuilder()
+			.update(UserEntity)
+			.set({ keys: keys, did: did })
+			.where('username = :username', { username })
+			.execute();
+
+		return Ok({});
+	}
+	catch(e) {
+		console.log(e);
+		return Err(e);
 	}
 }
 
@@ -183,5 +196,6 @@ export {
 	getUserByCredentials,
 	UpdateFcmError,
 	getUserByUsername,
-	getAllUsers
+	getAllUsers,
+	storeKeypair
 }

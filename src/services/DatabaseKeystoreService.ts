@@ -1,10 +1,12 @@
-import { SignJWT, importJWK } from "jose";
+import { SignJWT, importJWK, jwtVerify } from "jose";
 import { AdditionalKeystoreParameters, WalletKeystore } from "./interfaces";
-import { getUserByUsername } from "../entities/user.entity";
+import { getUserByUsername, storeKeypair } from "../entities/user.entity";
 import { SignVerifiablePresentationJWT, WalletKey } from "@gunet/ssi-sdk";
 import { randomUUID } from "crypto";
 import { verifiablePresentationSchemaURL } from "../util/util";
 import { injectable } from "inversify";
+import * as ed25519 from "@transmute/did-key-ed25519";
+import * as crypto from "node:crypto";
 import "reflect-metadata";
 
 
@@ -12,22 +14,37 @@ import "reflect-metadata";
 export class DatabaseKeystoreService implements WalletKeystore {
 
 	public static readonly identifier = "DatabaseKeystoreService"
-
+	private readonly algorithm = "EdDSA";
 
 	constructor() { }
-	
+
+	async generateKeyPair(username: string): Promise<{ did: string }> {
+		const { didDocument, keys } = await ed25519.generate(
+			{
+				secureRandom: () => {
+					return crypto.randomBytes(32);
+				},
+			},
+			{ accept: 'application/did+json' }
+		);
+		console.log("DID document = ", didDocument)
+		console.log("Keys = ", keys);
+		storeKeypair(username, didDocument.id, Buffer.from(JSON.stringify(keys[0])));
+		return { did: didDocument.id }
+	}
+
 	async createIdToken(username: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<{ id_token: string; }> {
 
 		const user = (await getUserByUsername(username)).unwrap();
 
-		const keys = JSON.parse(user.keys.toString()) as WalletKey;
-		const privateKey = await importJWK(keys.privateKey, keys.alg);
+		const keys = JSON.parse(user.keys.toString());
+		const privateKey = await importJWK(keys.privateKeyJwk, this.algorithm);
 
 		const jws = await new SignJWT({ nonce: nonce })
 			.setProtectedHeader({
-				alg: keys.alg,
+				alg: this.algorithm,
 				typ: "JWT",
-				kid: keys.did + "#" + keys.did.split(":")[2],
+				kid: keys.id,
 			})
 			.setSubject(user.did)
 			.setIssuer(user.did)
@@ -41,14 +58,14 @@ export class DatabaseKeystoreService implements WalletKeystore {
 
 	async signJwtPresentation(username: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<{ vpjwt: string }> {
 		const user = (await getUserByUsername(username)).unwrap();
-		const keys = JSON.parse(user.keys.toString()) as WalletKey;
-		const privateKey = await importJWK(keys.privateKey, keys.alg);
+		const keys = JSON.parse(user.keys.toString());
+		const privateKey = await importJWK(keys.privateKeyJwk, this.algorithm);
 
 		const jws = await new SignVerifiablePresentationJWT()
 			.setProtectedHeader({
-				alg: keys.alg,
+				alg: this.algorithm,
 				typ: "JWT",
-				kid: keys.did + "#" + keys.did.split(":")[2],
+				kid: keys.id,
 			})
 			.setVerifiableCredential(verifiableCredentials)
 			.setContext(["https://www.w3.org/2018/credentials/v1"])
@@ -72,23 +89,23 @@ export class DatabaseKeystoreService implements WalletKeystore {
 
 		const user = (await getUserByUsername(username)).unwrap();
 
-		const keys = JSON.parse(user.keys.toString()) as WalletKey;
-		const privateKey = await importJWK(keys.privateKey, keys.alg);
+		const keys = JSON.parse(user.keys.toString());
+		const privateKey = await importJWK(keys.privateKeyJwk, this.algorithm);
 		const header = {
-			alg: keys.alg,
-			// typ: "openid4vci-proof+jwt",
-			kid: keys.did + "#" + keys.did.split(":")[2]
+			alg: this.algorithm,
+			typ: "openid4vci-proof+jwt",
+			kid: keys.id
 		};
 		
-		const jws = await new SignJWT({ nonce: nonce })
+		const jws = await new SignJWT({ nonce: nonce ? nonce : "" })
 			.setProtectedHeader(header)
 			.setIssuedAt()
 			.setIssuer(user.did)
 			.setAudience(audience)
-			.setExpirationTime('1m')
+			// .setExpirationTime('1m')
 			.sign(privateKey);
-		return { proof_jwt: jws };
 
+		return { proof_jwt: jws };
 	}
 	async getIdentifier(username: string): Promise<string> {
 		const user = (await getUserByUsername(username)).unwrap();

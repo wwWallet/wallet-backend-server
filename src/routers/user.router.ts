@@ -4,6 +4,10 @@ import config from '../../config';
 import { NaturalPersonWallet } from '@gunet/ssi-sdk';
 import { CreateUser, createUser, getUserByCredentials, UserEntity } from '../entities/user.entity';
 import crypto from 'node:crypto';
+import { appContainer } from '../services/inversify.config';
+import { DatabaseKeystoreService } from '../services/DatabaseKeystoreService';
+
+const databaseKeyStoreService = appContainer.resolve(DatabaseKeystoreService);
 
 
 /**
@@ -21,15 +25,15 @@ userController.post('/register', async (req: Request, res: Response) => {
 		res.status(500).send({ error: "No username or password was given" });
 		return;
 	}
-	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet(config.alg);
+	// const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet(config.alg);
 
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
-	const keysStringified = JSON.stringify(naturalPersonWallet.key);
+	// const keysStringified = JSON.stringify(naturalPersonWallet.key);
 	const newUser: CreateUser = {
 		username: username ? username : "", 
 		passwordHash: passwordHash,
-		keys: Buffer.from(keysStringified),
-		did: naturalPersonWallet.key.did,
+		// keys: Buffer.from(keysStringified),
+		// did: naturalPersonWallet.key.did,
 		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
 		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from("")
 	};
@@ -42,12 +46,14 @@ userController.post('/register', async (req: Request, res: Response) => {
 	}
 
 
+	const { did } = await databaseKeyStoreService.generateKeyPair(username);
+	console.log("Generated DID = ", did)
 	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: naturalPersonWallet.key.did })
+	const appToken = await new SignJWT({ did: did })
 		.setProtectedHeader({ alg: "HS256" }) 
 		.sign(secret);
 
-	res.status(200).send({ did: naturalPersonWallet.key.did, appToken });
+	res.status(200).send({ did: did, appToken });
 });
 
 userController.post('/login', async (req: Request, res: Response) => {
