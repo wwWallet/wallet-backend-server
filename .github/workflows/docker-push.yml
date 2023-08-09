@@ -1,10 +1,9 @@
-name: Build Docker image
+name: Build and push Docker image
 
 on:
   push:
-    branches-ignore:
-      - master  # Covered by docker-push.yml
-  pull_request:
+    branches:
+      - master
 
 jobs:
 
@@ -15,7 +14,7 @@ jobs:
     # Permissions for GITHUB_TOKEN
     permissions:
       contents: read  # To check out repo
-      packages: read  # To read NPM registry
+      packages: write  # To read NPM registry and push Docker image
 
     steps:
     - uses: actions/checkout@v3
@@ -35,5 +34,5 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        push: false
+        push: true
         tags: ghcr.io/gunet/wallet-backend:latest
