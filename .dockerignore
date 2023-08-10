@@ -1,3 +1,4 @@
+.npmrc.template
 node_modules
 dist
 .vscode
