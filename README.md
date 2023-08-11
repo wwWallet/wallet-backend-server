@@ -16,6 +16,39 @@ yarn dev
 ```
 
 
+## Working with database migrations
+
+The app runs database migrations from `/src/migrations` on startup, and when the application is reloaded in the dev server.
+Unfortunately, compiled migrations remain in the output directory even after you check out an older version,
+so you have to delete the output files manually.
+
+To check out an earlier version:
+
+ 1. Delete migrations from the compilation output directory: `docker-compose exec wallet-backend-server rm -r dist/src/migrations`
+ 2. Kill the docker-compose environment: `docker-compose stop`
+ 3. Restart the database container: `docker-compose start wallet-db`
+ 4. Revert migrations until you're at the database state of the target commit (or earlier):
+    - `npm run typeorm -- migration:show` to show current migration state
+    - `npm run typeorm -- migration:revert` to move backward one migration at a time
+    - `npm run typeorm -- migration:run` to move forward one migration at a time
+ 5. Check out the targeted earlier commit.
+
+To show the diff between the database and the current TypeORM state:
+
+```sh
+$ npm run typeorm -- schema:log
+```
+
+To generate a migration for the diff between the database and the current TypeORM state:
+
+```sh
+$ npm run typeorm -- migration:generate src/migrations/<name of new migration script>
+```
+
+While working with migrations it's usually best to stop the development server (`docker-compose stop wallet-backend-server`) first,
+otherwise the dev server will attempt to run migrations immediately when the app reloads.
+
+
 # 2 Production
 
 ## 2.1. Preparation (The following steps should run on a clone of the production VM)
