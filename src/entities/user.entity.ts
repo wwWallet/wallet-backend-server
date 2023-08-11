@@ -26,11 +26,13 @@ class UserEntity {
 	keys: Buffer = Buffer.from("");
 
 
-	@Column( {type: "blob", nullable: true })
-	fcmToken: Buffer = Buffer.from("");
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ type: "blob", nullable: true, default: () => "NULL" })
+	fcmToken: Buffer;
 
-	@Column( { type: "blob", nullable: true })
-	browserFcmToken: Buffer = Buffer.from("");
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column( { type: "blob", nullable: true, default: () => "NULL" })
+	browserFcmToken: Buffer;
 
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;

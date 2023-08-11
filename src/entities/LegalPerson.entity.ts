@@ -20,10 +20,12 @@ class LegalPersonEntity {
 	did: string = "";
 
 
-	@Column({ nullable: true })
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ nullable: true, default: () => "NULL" })
 	client_id: string = "";
-	
-	@Column({ nullable: true })
+
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ nullable: true, default: () => "NULL" })
 	client_secret: string = "";
 }
 
