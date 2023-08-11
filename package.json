@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf dist && npx tsc",
     "dev": "nodemon --config nodemon.json --exec \"npx tsc && yarn start\"",
-    "start": "node -r source-map-support/register dist/src/app.js"
+    "start": "node -r source-map-support/register dist/src/app.js",
+    "typeorm": "typeorm-ts-node-commonjs -d src/AppDataSource.ts",
+    "typeorm-raw": "typeorm-ts-node-commonjs"
   },
   "keywords": [],
   "author": "",
@@ -49,6 +51,7 @@
     "@types/randomstring": "^1.1.8",
     "nodemon": "^2.0.19",
     "source-map-support": "^0.5.21",
+    "ts-node": "^10.9.1",
     "typescript": "^4.8.3"
   }
 }
