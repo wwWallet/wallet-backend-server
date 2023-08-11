@@ -1,5 +1,5 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, Repository, Generated } from "typeorm"
 import crypto from "node:crypto";
 
 import AppDataSource from "../AppDataSource";
@@ -31,11 +31,16 @@ class UserEntity {
 	fcmToken: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column( { type: "blob", nullable: true, default: () => "NULL" })
+	@Column({ type: "blob", nullable: true, default: () => "NULL" })
 	browserFcmToken: Buffer;
 
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
+
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ nullable: true, default: () => "NULL" })
+	@Generated("uuid")
+	webauthnUserHandle: string;
 }
 
 
