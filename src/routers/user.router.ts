@@ -1,9 +1,11 @@
 import express, { Request, Response, Router } from 'express';
 import { SignJWT } from 'jose';
+import * as uuid from 'uuid';
+import crypto from 'node:crypto';
+
 import config from '../../config';
 import { NaturalPersonWallet } from '@gunet/ssi-sdk';
 import { CreateUser, createUser, getUserByCredentials, UserEntity } from '../entities/user.entity';
-import crypto from 'node:crypto';
 
 
 /**
@@ -31,7 +33,8 @@ userController.post('/register', async (req: Request, res: Response) => {
 		keys: Buffer.from(keysStringified),
 		did: naturalPersonWallet.key.did,
 		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
-		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from("")
+		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from(""),
+		webauthnUserHandle: uuid.v4(),
 	};
 
 	const result = (await createUser(newUser));
