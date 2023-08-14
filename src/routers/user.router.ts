@@ -2,19 +2,28 @@ import express, { Request, Response, Router } from 'express';
 import { SignJWT } from 'jose';
 import * as uuid from 'uuid';
 import crypto from 'node:crypto';
+import * as SimpleWebauthn from '@simplewebauthn/server';
+import base64url from 'base64url';
 
 import config from '../../config';
 import { NaturalPersonWallet } from '@gunet/ssi-sdk';
-import { CreateUser, createUser, getUserByCredentials, UserEntity } from '../entities/user.entity';
+import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr } from '../entities/user.entity';
+import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 
 
 /**
  * "/user"
  */
+const noAuthUserController: Router = express.Router();
+
 const userController: Router = express.Router();
+userController.use(AuthMiddleware);
+noAuthUserController.use('/session', userController);
 
 
-userController.post('/register', async (req: Request, res: Response) => {
+noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;	
 	const password = req.body.password;
 	const fcm_token = req.body.fcm_token;
@@ -53,7 +62,7 @@ userController.post('/register', async (req: Request, res: Response) => {
 	res.status(200).send({ did: naturalPersonWallet.key.did, appToken });
 });
 
-userController.post('/login', async (req: Request, res: Response) => {
+noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	const { username, password } = req.body;
 	if (!username || !password) {
 		res.status(500).send({ error: "No username or password was given" });
@@ -69,10 +78,184 @@ userController.post('/login', async (req: Request, res: Response) => {
 	const { did } = user;
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did })
-		.setProtectedHeader({ alg: "HS256" }) 
+		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
 
 	res.status(200).send({ did: user.did, appToken: appToken });
+})
+
+userController.get('/account-info', async (req: Request, res: Response) => {
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const keys = jsonParseTaggedBinary(user.keys.toString());
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		username: user.username,
+		did: user.did,
+		hasPassword: user.passwordHash !== null,
+		publicKey: keys.publicKey,
+		webauthnUserHandle: user.webauthnUserHandle,
+		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
+			createTime: cred.createTime,
+			credentialId: cred.credentialId,
+			id: cred.id,
+			lastUseTime: cred.lastUseTime,
+			nickname: cred.nickname,
+			prfCapable: cred.prfCapable,
+		})),
+	}));
+})
+
+userController.post('/webauthn/register-begin', async (req: Request, res: Response) => {
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const prfSalt = crypto.randomBytes(32);
+	const challengeRes = await createChallenge("create", user.webauthnUserHandle, prfSalt);
+	if (challengeRes.err) {
+		res.status(500).send({});
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	const createOptions = {
+		publicKey: {
+			rp: {
+				name: "Digital Wallet demo",
+				id: "localhost",
+			},
+			user: {
+				id: Buffer.from(user.webauthnUserHandle),
+				name: user.username,
+				displayName: user.username,
+			},
+			challenge: challenge.challenge,
+			pubKeyCredParams: [
+				{ type: "public-key", alg: -7 },
+				{ type: "public-key", alg: -8 },
+				{ type: "public-key", alg: -257 },
+			],
+			excludeCredentials: (user.webauthnCredentials || []).map(cred => ({
+				type: "public-key",
+				id: cred.credentialId,
+				transports: cred.transports || [],
+			})),
+			authenticatorSelection: {
+				requireResidentKey: true,
+				residentKey: "required",
+				userVerification: "required",
+			},
+			attestation: "direct",
+			extensions: {
+				credProps: true,
+				prf: {
+					eval: {
+						first: prfSalt,
+					},
+				},
+			},
+		},
+	};
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		username: user.username,
+		challengeId: challenge.id,
+		createOptions,
+	}));
+});
+
+userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
+	console.log("webauthn register-finish", req.body);
+
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const challengeRes = await popChallenge(req.body.challengeId);
+	if (challengeRes.err) {
+		if ([ChallengeErr.EXPIRED, ChallengeErr.NOT_EXISTS].includes(challengeRes.val)) {
+			res.status(404).send({});
+		} else {
+			res.status(500).send({});
+		}
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	console.log("webauthn register-finish challenge", challenge);
+
+	const credential = req.body.credential;
+	const verification = await SimpleWebauthn.verifyRegistrationResponse({
+		response: credential,
+		expectedChallenge: base64url.encode(challenge.challenge),
+		expectedOrigin: "http://localhost:3000",
+		expectedRPID: "localhost",
+	});
+
+	if (verification.verified) {
+		const updateUserRes = await updateUserByDID(user.did, (userEntity, manager) => {
+			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
+			userEntity.webauthnCredentials.push(
+				newWebauthnCredentialEntity(manager, {
+					credentialId: Buffer.from(verification.registrationInfo.credentialID),
+					userHandle: Buffer.from(userEntity.webauthnUserHandle),
+					nickname: req.body.nickname,
+					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
+					signatureCount: verification.registrationInfo.counter,
+					transports: credential.response.transports || [],
+					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
+					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
+					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+				})
+			);
+			return userEntity;
+		});
+
+		if (updateUserRes.ok) {
+			res.status(200).send(jsonStringifyTaggedBinary({
+				credentialId: credential.id
+			}));
+		} else {
+			res.status(500).send({});
+		}
+
+	} else {
+		res.status(400).send({});
+	}
+})
+
+userController.delete('/webauthn/credential/:id', async (req: Request, res: Response) => {
+	console.log("webauthn delete", req.params.id);
+
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const deleteRes = await deleteWebauthnCredential(user, req.params.id);
+	if (deleteRes.ok) {
+		res.status(204).send();
+	} else {
+		if (deleteRes.val === UpdateUserErr.NOT_EXISTS) {
+			res.status(404).send();
+		} else {
+			res.status(500).send();
+		}
+	}
 })
 
 
@@ -97,4 +280,4 @@ userController.post('/login', async (req: Request, res: Response) => {
 // 	res.send({ publicKeyJwk });
 // });
 
-export default userController;
+export default noAuthUserController;
