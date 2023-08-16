@@ -202,6 +202,31 @@ async function getUserByCredentials(username: string, password: string): Promise
 	}
 }
 
+
+async function getUserByWebauthnCredential(userHandle: string, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
+	try {
+		const q = userRepository.createQueryBuilder("user")
+			.leftJoinAndSelect("user.webauthnCredentials", "credential")
+			.where("user.webauthnUserHandle = :userHandle", { userHandle })
+			.andWhere("credential.credentialId = :credentialId", { credentialId });
+		console.log(q.getSql());
+		const userRes = await q.getOne();
+		if (!userRes) {
+			return Err(GetUserErr.NOT_EXISTS);
+		}
+		console.log(userRes);
+		if (userRes.webauthnCredentials.length !== 1) {
+			return Err(GetUserErr.NOT_EXISTS);
+		} else {
+			return Ok([userRes, userRes.webauthnCredentials[0]]);
+		}
+	}
+	catch(e) {
+		console.log(e);
+		return Err(GetUserErr.NOT_EXISTS);
+	}
+}
+
 async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 	try {
 
@@ -268,6 +293,17 @@ async function updateUserByDID(did: string, update: (user: UserEntity, entityMan
 	});
 }
 
+async function updateWebauthnCredential(credential: WebauthnCredentialEntity, update: (credential: WebauthnCredentialEntity) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	try {
+		const updated = update(credential);
+		const res = await webauthnCredentialRepository.save(updated);
+		return Ok(res);
+	} catch (e) {
+		console.log(e);
+		return Err(UpdateUserErr.DB_ERR);
+	}
+}
+
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string): Promise<Result<{}, UpdateUserErr>> {
 	try {
 		const res = await webauthnCredentialRepository.createQueryBuilder()
@@ -296,8 +332,10 @@ export {
 	getUserByDID,
 	getUserByCredentials,
 	UpdateFcmError,
+	getUserByWebauthnCredential,
 	getAllUsers,
 	newWebauthnCredentialEntity,
 	updateUserByDID,
 	deleteWebauthnCredential,
+	updateWebauthnCredential,
 }
