@@ -86,6 +86,14 @@ class WebauthnCredentialEntity {
 
 	@Column({ nullable: false })
 	prfCapable: boolean;
+
+	getCredentialDescriptor() {
+		return {
+			type: "public-key",
+			id: this.credentialId,
+			transports: this.transports || [],
+		};
+	}
 }
 
 

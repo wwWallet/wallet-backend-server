@@ -11,6 +11,7 @@ import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials,
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
+import * as webauthn from '../webauthn';
 
 
 /**
@@ -91,15 +92,7 @@ noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Res
 		return;
 	}
 	const challenge = challengeRes.unwrap();
-
-	const getOptions = {
-		publicKey: {
-			rpId: "localhost",
-			challenge: challenge.challenge,
-			allowCredentials: [],
-			userVerification: "required",
-		},
-	};
+	const getOptions = webauthn.makeGetOptions({ challenge: challenge.challenge });
 
 	res.status(200).send(jsonStringifyTaggedBinary({
 		challengeId: challenge.id,
@@ -137,8 +130,8 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	const verification = await SimpleWebauthn.verifyAuthenticationResponse({
 		response: credential,
 		expectedChallenge: base64url.encode(challenge.challenge),
-		expectedOrigin: "http://localhost:3000",
-		expectedRPID: "localhost",
+		expectedOrigin: config.webauthn.origin,
+		expectedRPID: config.webauthn.rp.id,
 		requireUserVerification: true,
 		authenticator: {
 			credentialID: credentialRecord.credentialId,
@@ -218,44 +211,14 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 	}
 	const challenge = challengeRes.unwrap();
 
-	const createOptions = {
-		publicKey: {
-			rp: {
-				name: "Digital Wallet demo",
-				id: "localhost",
-			},
-			user: {
-				id: Buffer.from(user.webauthnUserHandle),
-				name: user.username,
-				displayName: user.username,
-			},
-			challenge: challenge.challenge,
-			pubKeyCredParams: [
-				{ type: "public-key", alg: -7 },
-				{ type: "public-key", alg: -8 },
-				{ type: "public-key", alg: -257 },
-			],
-			excludeCredentials: (user.webauthnCredentials || []).map(cred => ({
-				type: "public-key",
-				id: cred.credentialId,
-				transports: cred.transports || [],
-			})),
-			authenticatorSelection: {
-				requireResidentKey: true,
-				residentKey: "required",
-				userVerification: "required",
-			},
-			attestation: "direct",
-			extensions: {
-				credProps: true,
-				prf: {
-					eval: {
-						first: prfSalt,
-					},
-				},
-			},
+	const createOptions = webauthn.makeCreateOptions({
+		challenge: challenge.challenge,
+		user: {
+			...user,
+			name: user.username,
+			displayName: user.username,
 		},
-	};
+	});
 
 	res.status(200).send(jsonStringifyTaggedBinary({
 		username: user.username,
@@ -291,8 +254,8 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	const verification = await SimpleWebauthn.verifyRegistrationResponse({
 		response: credential,
 		expectedChallenge: base64url.encode(challenge.challenge),
-		expectedOrigin: "http://localhost:3000",
-		expectedRPID: "localhost",
+		expectedOrigin: config.webauthn.origin,
+		expectedRPID: config.webauthn.rp.id,
 	});
 
 	if (verification.verified) {

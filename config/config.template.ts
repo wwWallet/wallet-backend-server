@@ -14,5 +14,13 @@ export = {
 		password: undefined
 	},
 	walletClientUrl: "WALLET_CLIENT_URL",
+	webauthn: {
+		attestation: "direct",
+		origin: "WEBAUTHN_ORIGIN",
+		rp: {
+			id: "WEBAUTHN_RP_ID",
+			name: "Digital Wallet demo",
+		},
+	},
 	alg: "ES256",
 }
