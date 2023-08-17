@@ -23,6 +23,19 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
+async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keysStringified: string, did: string }> {
+	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
+	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
+	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
+	const keysStringified = JSON.stringify(naturalPersonWallet.key);
+	return {
+		fcmToken,
+		browserFcmToken,
+		keysStringified,
+		did: naturalPersonWallet.key.did,
+	};
+}
+
 async function initSession(did: string): Promise<{ did: string, appToken: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did })
@@ -32,26 +45,19 @@ async function initSession(did: string): Promise<{ did: string, appToken: string
 }
 
 noAuthUserController.post('/register', async (req: Request, res: Response) => {
-	const username = req.body.username;	
+	const username = req.body.username;
 	const password = req.body.password;
-	const fcm_token = req.body.fcm_token;
-	const browser_fcm_token = req.body.browser_fcm_token;
-	if (!username || !password) {
-		res.status(500).send({ error: "No username or password was given" });
-		return;
-	}
-	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
 
+	const { fcmToken, browserFcmToken, keysStringified, did } = await initNewUser(req);
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
-	const keysStringified = JSON.stringify(naturalPersonWallet.key);
 
 	const newUser: CreateUser = {
-		username: username ? username : "", 
+		username: username ? username : "",
 		passwordHash: passwordHash,
 		keys: Buffer.from(keysStringified),
-		did: naturalPersonWallet.key.did,
-		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
-		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from(""),
+		did,
+		fcmToken,
+		browserFcmToken,
 		webauthnUserHandle: uuid.v4(),
 	};
 
@@ -62,7 +68,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 		return;
 	}
 
-	res.status(200).send(await initSession(naturalPersonWallet.key.did));
+	res.status(200).send(await initSession(did));
 });
 
 noAuthUserController.post('/login', async (req: Request, res: Response) => {
