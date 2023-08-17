@@ -271,8 +271,8 @@ async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 // 	}
 // }
 
-function newWebauthnCredentialEntity(manager: EntityManager, data: DeepPartial<WebauthnCredentialEntity>): WebauthnCredentialEntity {
-	const entity = manager.create(WebauthnCredentialEntity, data);
+function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>, manager?: EntityManager): WebauthnCredentialEntity {
+	const entity = (manager || webauthnCredentialRepository.manager).create(WebauthnCredentialEntity, data);
 	entity.createTime = new Date();
 	entity.lastUseTime = new Date();
 	return entity;

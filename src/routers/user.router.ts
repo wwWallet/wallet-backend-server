@@ -257,7 +257,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 		const updateUserRes = await updateUserByDID(user.did, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
-				newWebauthnCredentialEntity(manager, {
+				newWebauthnCredentialEntity({
 					credentialId: Buffer.from(verification.registrationInfo.credentialID),
 					userHandle: Buffer.from(userEntity.webauthnUserHandle),
 					nickname: req.body.nickname,
@@ -267,7 +267,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
 					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
-				})
+				}, manager)
 			);
 			return userEntity;
 		});
