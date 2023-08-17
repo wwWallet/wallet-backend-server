@@ -23,6 +23,13 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
+async function initSession(did: string): Promise<{ did: string, appToken: string }> {
+	const secret = new TextEncoder().encode(config.appSecret);
+	const appToken = await new SignJWT({ did })
+		.setProtectedHeader({ alg: "HS256" })
+		.sign(secret);
+	return { did, appToken };
+}
 
 noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;	
@@ -37,6 +44,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
 	const keysStringified = JSON.stringify(naturalPersonWallet.key);
+
 	const newUser: CreateUser = {
 		username: username ? username : "", 
 		passwordHash: passwordHash,
@@ -54,13 +62,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 		return;
 	}
 
-
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: naturalPersonWallet.key.did })
-		.setProtectedHeader({ alg: "HS256" }) 
-		.sign(secret);
-
-	res.status(200).send({ did: naturalPersonWallet.key.did, appToken });
+	res.status(200).send(await initSession(naturalPersonWallet.key.did));
 });
 
 noAuthUserController.post('/login', async (req: Request, res: Response) => {
@@ -76,13 +78,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	const { did } = user;
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did })
-		.setProtectedHeader({ alg: "HS256" })
-		.sign(secret);
-
-	res.status(200).send({ did: user.did, appToken: appToken });
+	res.status(200).send(await initSession(user.did));
 })
 
 noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Response) => {
@@ -148,16 +144,9 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			const { did } = user;
-			const secret = new TextEncoder().encode(config.appSecret);
-			const appToken = await new SignJWT({ did })
-				.setProtectedHeader({ alg: "HS256" })
-				.sign(secret);
-
 			res.status(200).send({
 				username: user.username,
-				did: user.did,
-				appToken: appToken,
+				...await initSession(user.did),
 			});
 		} else {
 			res.status(500).send({});
