@@ -87,6 +87,94 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	res.status(200).send(await initSession(user.did));
 })
 
+noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
+	const challengeRes = await createChallenge("create", uuid.v4());
+	if (challengeRes.err) {
+		res.status(500).send({});
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	const createOptions = webauthn.makeCreateOptions({
+		challenge: challenge.challenge,
+		user: {
+			webauthnUserHandle: challenge.userHandle,
+			name: "",
+			displayName: "",
+		},
+	});
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		challengeId: challenge.id,
+		createOptions,
+	}));
+});
+
+noAuthUserController.post('/register-webauthn-finish', async (req: Request, res: Response) => {
+	console.log("webauthn register-finish", req.body);
+
+	const challengeRes = await popChallenge(req.body.challengeId);
+	if (challengeRes.err) {
+		if ([ChallengeErr.EXPIRED, ChallengeErr.NOT_EXISTS].includes(challengeRes.val)) {
+			res.status(404).send({});
+		} else {
+			res.status(500).send({});
+		}
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+	console.log("webauthn register-finish challenge", challenge);
+
+	const credential = req.body.credential;
+	const verification = await SimpleWebauthn.verifyRegistrationResponse({
+		response: credential,
+		expectedChallenge: base64url.encode(challenge.challenge),
+		expectedOrigin: config.webauthn.origin,
+		expectedRPID: config.webauthn.rp.id,
+		requireUserVerification: true,
+	});
+
+	if (verification.verified) {
+		const webauthnUserHandle = challenge.userHandle;
+		if (!webauthnUserHandle) {
+			res.status(500).send({});
+			return;
+		}
+
+		const { fcmToken, browserFcmToken, keysStringified, did } = await initNewUser(req);
+		const newUser: CreateUser = {
+			keys: Buffer.from(keysStringified),
+			did,
+			fcmToken,
+			browserFcmToken,
+			webauthnUserHandle,
+			webauthnCredentials: [
+				newWebauthnCredentialEntity({
+					credentialId: Buffer.from(verification.registrationInfo.credentialID),
+					userHandle: Buffer.from(webauthnUserHandle),
+					nickname: req.body.nickname,
+					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
+					signatureCount: verification.registrationInfo.counter,
+					transports: credential.response.transports || [],
+					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
+					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
+					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+				}),
+			],
+		};
+
+		const userRes = await createUser(newUser, false, );
+		if (userRes.ok) {
+			console.log("Created user", userRes.val);
+			res.status(200).send(await initSession(did));
+		} else {
+			res.status(500).send({});
+		}
+	} else {
+		res.status(400).send({});
+	}
+})
+
 noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Response) => {
 	const challengeRes = await createChallenge("get");
 	if (challengeRes.err) {

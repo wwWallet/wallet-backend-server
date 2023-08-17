@@ -1,6 +1,7 @@
 import { Err, Ok, Result } from "ts-results";
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial } from "typeorm"
 import crypto from "node:crypto";
+import base64url from "base64url";
 
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
@@ -9,21 +10,23 @@ import * as scrypt from "../scrypt";
 @Entity({ name: "user" })
 class UserEntity {
 	@PrimaryGeneratedColumn()
-	id: number = -1;
+	id: number;
 
 
-	@Column({ unique: true, nullable: false})
-	username: string = "";
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ unique: true, nullable: true, default: () => "NULL" })
+	username: string;
 
 	@Column({ unique: true, nullable: false })
-	did: string = "";
+	did: string;
 
-	@Column({ nullable: false })
-	passwordHash: string = "";
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ nullable: true, default: () => "NULL" })
+	passwordHash: string;
 
 
 	@Column({ type: 'blob', nullable: false })
-	keys: Buffer = Buffer.from("");
+	keys: Buffer;
 
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
@@ -41,7 +44,9 @@ class UserEntity {
 	@Generated("uuid")
 	webauthnUserHandle: string;
 
-	@OneToMany(() => WebauthnCredentialEntity, (credential) => credential.user, { cascade: true, eager: true, nullable: false })
+	@OneToMany(
+		() => WebauthnCredentialEntity, (credential) => credential.user,
+		{ cascade: true, onDelete: "CASCADE", orphanedRowAction: "delete", eager: true, nullable: false })
 	webauthnCredentials: WebauthnCredentialEntity[];
 }
 
@@ -105,6 +110,13 @@ type CreateUser = {
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
 	webauthnUserHandle: string;
+} | {
+	did: string;
+	keys: Buffer;
+	fcmToken: Buffer;
+	browserFcmToken: Buffer;
+	webauthnUserHandle: string;
+	webauthnCredentials: WebauthnCredentialEntity[];
 }
 
 
@@ -131,20 +143,13 @@ const userRepository: Repository<UserEntity> = AppDataSource.getRepository(UserE
 const webauthnCredentialRepository: Repository<WebauthnCredentialEntity> = AppDataSource.getRepository(WebauthnCredentialEntity);
 
 
-async function createUser(createUser: CreateUser, isAdmin: boolean = false): Promise<Result<{}, CreateUserErr>> {
+async function createUser(createUser: CreateUser, isAdmin: boolean = false): Promise<Result<UserEntity, CreateUserErr>> {
 	try {
-		const res = await AppDataSource
-			.createQueryBuilder()
-			.insert()
-			.into(UserEntity).values([
-				{ 
-					...createUser,
-					isAdmin: isAdmin
-				}
-			])
-			.execute();
-
-		return Ok({});
+		const user = await userRepository.save(userRepository.create({
+			...createUser,
+			isAdmin,
+		}));
+		return Ok(user);
 	}
 	catch(e) {
 		console.log(e);
@@ -174,7 +179,7 @@ async function getUserByCredentials(username: string, password: string): Promise
 	try {
 		return await userRepository.manager.transaction(async (manager) => {
 			const user = await manager.findOne(UserEntity, { where: { username } });
-			if (user) {
+			if (user && user.passwordHash) {
 				const scryptRes = await scrypt.verifyHash(password, user.passwordHash);
 				if (scryptRes.ok) {
 					if (scryptRes.val) {
@@ -213,16 +218,17 @@ async function getUserByCredentials(username: string, password: string): Promise
 
 async function getUserByWebauthnCredential(userHandle: string, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
 	try {
+		console.log("getUserByWebauthnCredential", userHandle, base64url.encode(credentialId));
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
 			.where("user.webauthnUserHandle = :userHandle", { userHandle })
 			.andWhere("credential.credentialId = :credentialId", { credentialId });
 		console.log(q.getSql());
 		const userRes = await q.getOne();
+		console.log(userRes);
 		if (!userRes) {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
-		console.log(userRes);
 		if (userRes.webauthnCredentials.length !== 1) {
 			return Err(GetUserErr.NOT_EXISTS);
 		} else {
