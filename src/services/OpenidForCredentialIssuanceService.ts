@@ -339,6 +339,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
 		
+
 		const responses = await Promise.allSettled(httpResponsePromises);
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
@@ -372,7 +373,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			{}, 
 			{ headers: defferedCredentialReqHeader } )
 			.then((res) => {
-				console.log("deferredResponse = ", res.data);
 				this.handleCredentialStorage(state.username, res.data);
 			})
 			.catch(err => {
@@ -434,10 +434,16 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 				return;
 			}
 			console.log("FCM token = ", user.fcmToken)
-			sendPushNotification(user.fcmToken, "New Credential", "A new verifiable credential is in your wallet").catch(err => {
-				console.log("Failed to send notification")
-				console.log(err)
-			});
+			if (user.fcmToken)
+				sendPushNotification(user.fcmToken.toString(), "New Credential", "A new verifiable credential is in your wallet").catch(err => {
+					console.log("Failed to send notification")
+					console.log(err)
+				});
+			if (user.browserFcmToken)
+				sendPushNotification(user.browserFcmToken.toString(), "New Credential", "A new verifiable credential is in your wallet").catch(err => {
+					console.log("Failed to send notification")
+					console.log(err)
+				});
 		});
 
 	}

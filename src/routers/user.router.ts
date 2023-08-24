@@ -13,16 +13,15 @@ const userController: Router = express.Router();
 
 
 userController.post('/register', async (req: Request, res: Response) => {
-	console.log("Received registration req")
 	const username = req.body.username;	
 	const password = req.body.password;
 	const fcm_token = req.body.fcm_token;
+	const browser_fcm_token = req.body.browser_fcm_token;
 	if (!username || !password) {
 		res.status(500).send({ error: "No username or password was given" });
 		return;
 	}
 	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
-	
 
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
 	const keysStringified = JSON.stringify(naturalPersonWallet.key);
@@ -31,7 +30,8 @@ userController.post('/register', async (req: Request, res: Response) => {
 		passwordHash: passwordHash,
 		keys: Buffer.from(keysStringified),
 		did: naturalPersonWallet.key.did,
-		fcmToken: fcm_token
+		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
+		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from("")
 	};
 
 	const result = (await createUser(newUser));
