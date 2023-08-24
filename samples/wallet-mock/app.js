@@ -164,6 +164,16 @@ app.get('/init/issuance/:iss', async (req, res) => {
 });
 
 
+app.get('/init/verification/vid', async (req, res) => {
+	const url = new URL("http://127.0.0.1:8003/verification/authorize");
+	url.searchParams.append("scope", "openid vid")
+	url.searchParams.append("redirect_uri", "http://127.0.0.1:7777");
+	url.searchParams.append("client_id", global.user.did)
+	url.searchParams.append("response_type", "code")
+	res.redirect(url.toString())
+});
+
+
 
 /**
  * For OpenID 4 VCI (Issuance)

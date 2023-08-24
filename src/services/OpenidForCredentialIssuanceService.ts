@@ -326,7 +326,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		};
 
 		const c_nonce = state.tokenResponse.c_nonce;
-
 		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, state.credentialIssuerMetadata.credential_issuer, c_nonce);
 
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
