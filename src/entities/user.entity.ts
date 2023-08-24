@@ -117,7 +117,7 @@ async function getUserByCredentials(username: string, password: string): Promise
 					}
 
 				} else {
-					// User isn't migrated to sha256 yet - fall back to sha256
+					// User isn't migrated to scrypt yet - fall back to sha256
 					const sha256Hash = crypto.createHash('sha256').update(password).digest('base64');
 
 					if (user.passwordHash === sha256Hash) {
