@@ -1,7 +1,11 @@
 import { Err, Ok, Result } from "ts-results";
 import { Entity, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
-import AppDataSource from "../AppDataSource";
 import crypto from "node:crypto";
+
+import AppDataSource from "../AppDataSource";
+import * as scrypt from "../scrypt";
+
+
 @Entity({ name: "user" })
 class UserEntity {
   @PrimaryGeneratedColumn()
@@ -25,6 +29,9 @@ class UserEntity {
 	@Column( {type: "blob", nullable: true })
 	fcmToken: Buffer = Buffer.from("");
 
+	@Column( { type: "blob", nullable: true })
+	browserFcmToken: Buffer = Buffer.from("");
+
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 }
@@ -36,6 +43,7 @@ type CreateUser = {
 	passwordHash: string;
 	keys: Buffer;
 	fcmToken: Buffer;
+	browserFcmToken: Buffer;
 }
 
 
@@ -64,8 +72,6 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 			.into(UserEntity).values([
 				{ 
 					...createUser,
-					keys: createUser.keys,
-					fcmToken: createUser.fcmToken,
 					isAdmin: isAdmin
 				}
 			])
@@ -99,18 +105,39 @@ async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>
 
 async function getUserByCredentials(username: string, password: string): Promise<Result<UserEntity, GetUserErr>> {
 	try {
+		return await userRepository.manager.transaction(async (manager) => {
+			const user = await manager.findOne(UserEntity, { where: { username } });
+			if (user) {
+				const scryptRes = await scrypt.verifyHash(password, user.passwordHash);
+				if (scryptRes.ok) {
+					if (scryptRes.val) {
+						return Ok(user);
+					} else {
+						return Err(GetUserErr.NOT_EXISTS);
+					}
 
-		const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
-		const res = await AppDataSource.getRepository(UserEntity)
-			.createQueryBuilder("user")
-			.where("user.username = :username and user.passwordHash = :passwordHash", { username: username, passwordHash: passwordHash })
-			.getOne();
-		if (!res) {
-			return Err(GetUserErr.NOT_EXISTS);
-		}
-		return Ok(res);
-	}
-	catch(e) {
+				} else {
+					// User isn't migrated to scrypt yet - fall back to sha256
+					const sha256Hash = crypto.createHash('sha256').update(password).digest('base64');
+
+					if (user.passwordHash === sha256Hash) {
+						// Upgrade the user to scrypt
+						user.passwordHash = await scrypt.createHash(password);
+						await manager.save(user);
+
+						return Ok(user);
+					} else {
+						return Err(GetUserErr.NOT_EXISTS);
+					}
+				}
+
+			} else {
+				// Compute a throwaway hash anyway so we don't leak timing information
+				await scrypt.createHash(password);
+				return Err(GetUserErr.NOT_EXISTS);
+			}
+		});
+	} catch (e) {
 		console.log(e);
 		return Err(GetUserErr.DB_ERR)
 	}

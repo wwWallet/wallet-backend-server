@@ -28,10 +28,9 @@ class LegalPersonEntity {
 }
 
 type CreateLegalPerson = {
-	username: string;
+	url: string;
+	friendlyName: string;
 	did: string;
-	passwordHash: string;
-	keys: string;
 	client_id: string;
 	client_secret: string;
 }
@@ -73,15 +72,11 @@ async function createIssuer(createIssuer: CreateLegalPerson) {
 
 async function getAllLegalPersons(): Promise<Result<LegalPersonEntity[], GetLegalPersonErr>> {
 	try {
-		const vcList = await legalPersonRepository 
+		const lps = await legalPersonRepository 
 			.createQueryBuilder("legal_person")
+			.select(["legal_person.id", "legal_person.friendlyName", "legal_person.url", "legal_person.did"])
 			.getMany();
-
-		// convert all Blobs to actual data
-		const decodedIssuers = vcList.map((issuer) => {
-			return issuer as LegalPersonEntity;
-		})
-		return Ok(decodedIssuers);
+		return Ok(lps);
 	}
 	catch(e) {
 		console.log(e);
@@ -111,6 +106,7 @@ async function getLegalPersonsBySearchParams(friendlyNameSubstring: string): Pro
 	try {
 		const issuersList = await legalPersonRepository 
 			.createQueryBuilder("legal_person")
+			.select(["legal_person.id", "legal_person.friendlyName", "legal_person.url", "legal_person.did"])
 			.where("friendlyName LIKE '%:friendlyNameSubstring%", { friendlyNameSubstring })
 			.getMany();
 

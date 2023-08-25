@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM node:16-bullseye-slim
 WORKDIR /home/node/app
 
 # Copy package.json and yarn.lock and npmrc to the container
