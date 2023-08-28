@@ -57,8 +57,12 @@ issuanceRouter.post('/handle/authorization/response', async (req, res) => {
 		if (!(new URL(authorization_response_url).searchParams.get("code"))) {
 			return res.status(500).send({});
 		}
-		await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.username, authorization_response_url);
-		res.send({});
+		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.username, authorization_response_url);
+		if (result.ok) {
+			res.send({});
+		} else {
+			res.status(500).send({});
+		}
 	}
 	catch(err) {
 		res.status(500).send({ error: "Failed to handle authorization response" });

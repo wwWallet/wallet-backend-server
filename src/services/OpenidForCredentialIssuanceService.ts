@@ -1,19 +1,21 @@
 import axios from "axios";
+import * as _ from 'lodash';
+import base64url from "base64url";
+import qs from "qs";
+import { injectable, inject } from "inversify";
+import "reflect-metadata";
+import { Err, Ok, Result } from "ts-results";
+
 import { LegalPersonEntity, getLegalPersonByDID, getLegalPersonByUrl } from "../entities/LegalPerson.entity";
 import { CredentialIssuerMetadata, CredentialResponseSchemaType, CredentialSupportedJwtVcJson, GrantType, OpenidConfiguration, TokenResponseSchemaType, VerifiableCredentialFormat } from "../types/oid4vci";
 import config from "../../config";
 import { getUserByUsername } from "../entities/user.entity";
 import { sendPushNotification } from "../lib/firebase";
-import * as _ from 'lodash';
 import { generateCodeChallengeFromVerifier, generateCodeVerifier } from "../util/util";
-import base64url from "base64url";
 import { createVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
-import qs from "qs";
 import { TYPES } from "./types";
-import { OpenidCredentialReceiving, WalletKeystore  } from "./interfaces";
-import { injectable, inject } from "inversify";
-import "reflect-metadata";
+import { OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 
 
 type IssuanceState = {
@@ -226,7 +228,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<void> {
+	public async handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<Result<void, void>> {
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
 		if (!code) {
@@ -240,7 +242,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		newState = { ...newState, tokenResponse }
 		this.states.set(username, newState);
 		try {
-			await this.credentialRequests(username, newState);
+			return await this.credentialRequests(username, newState);
 		} catch (e) {
 			console.error("Credential requests failed with error : ", e)
 		}
@@ -316,17 +318,21 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(username: string, state: IssuanceState) {
-
+	private async credentialRequests(username: string, state: IssuanceState): Promise<Result<void, void>> {
 		console.log("State = ", state)
-		const httpHeader = { 
+		const httpHeader = {
 			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
 
 		const c_nonce = state.tokenResponse.c_nonce;
+		const res = await this.walletKeyStore.generateOpenid4vciProof(username, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		if (!res.ok) {
+			if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
+				return Err.EMPTY;
+			}
+		}
 
-		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, state.credentialIssuerMetadata.credential_issuer, c_nonce);
-
+		const { proof_jwt } = res.val;
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
 		let httpResponsePromises = state.authorization_details.map((authzDetail) => {
@@ -339,12 +345,11 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			}
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
-		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
-			.map((res) => 
+			.map((res) =>
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
 			);
 
@@ -352,7 +357,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		for (const cr of credentialResponses) {
 			this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
 		}
-		
+
 		// remove the ones that are for deferred endpoint
 		credentialResponses = credentialResponses.filter((cres) => !cres.acceptance_token);
 
@@ -361,7 +366,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			this.handleCredentialStorage(username, response);
 		}
 		console.log("=====FINISHED OID4VCI")
-		return;
+		return Ok.EMPTY;
 	}
 
 	// Deferred Credential only
