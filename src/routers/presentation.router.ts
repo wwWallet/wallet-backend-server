@@ -20,13 +20,18 @@ presentationRouter.use(AuthMiddleware);
 
 presentationRouter.post('/handle/authorization/request', async (req, res) => {
 	const {
-		authorization_request
+		authorization_request,
+		id_token,
 	} = req.body;
 
 	try{
-		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.username, authorization_request);
+		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.username, authorization_request, id_token);
 		if (!outboundRequestResult.ok) {
-			return res.status(500).send({});
+			if (outboundRequestResult.err && outboundRequestResult.val.action === "createIdToken") {
+				return res.status(409).send(outboundRequestResult.val);
+			} else {
+				return res.status(500).send({});
+			}
 		}
 
 		const outboundRequest = outboundRequestResult.val;
@@ -54,14 +59,19 @@ presentationRouter.post('/handle/authorization/request', async (req, res) => {
 
 presentationRouter.post('/generate/authorization/response', async (req, res) => {
 	const {
-		verifiable_credentials_map // { "descriptor_id1": "urn:vid:123", "descriptor_id1": "urn:vid:645" }
+		verifiable_credentials_map, // { "descriptor_id1": "urn:vid:123", "descriptor_id1": "urn:vid:645" }
+		vpjwt,
 	} = req.body;
 
 	const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
 	try {
-		const result = await openidForPresentationService.sendResponse(req.user.username, selection);
+		const result = await openidForPresentationService.sendResponse(req.user.username, selection, vpjwt);
 		if (!result.ok) {
-			return res.status(500).send({});
+			if (result.err && result.val.action === "signJwtPresentation") {
+				return res.status(409).send(result.val);
+			} else {
+				return res.status(500).send({});
+			}
 		}
 
 		const { redirect_to, error } = result.val;

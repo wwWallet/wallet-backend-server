@@ -50,18 +50,21 @@ issuanceRouter.post('/generate/authorization/request/with/offer', async (req, re
 issuanceRouter.post('/handle/authorization/response', async (req, res) => {
 	try {
 		const {
-			authorization_response_url
+			authorization_response_url,
+			proof_jwt,
 		} = req.body;
 
 
 		if (!(new URL(authorization_response_url).searchParams.get("code"))) {
 			return res.status(500).send({});
 		}
-		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.username, authorization_response_url);
+		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.username, authorization_response_url, proof_jwt);
 		if (result.ok) {
 			res.send({});
 		} else if (result.val === IssuanceErr.STATE_NOT_FOUND) {
 			res.status(404).send({});
+		} else if (result.err && result.val.action === "generateOpenid4vciProof") {
+			res.status(409).send(result.val);
 		} else {
 			res.status(500).send({});
 		}
