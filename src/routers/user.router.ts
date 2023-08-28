@@ -1,8 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import { SignJWT } from 'jose';
 import config from '../../config';
-import { NaturalPersonWallet } from '@gunet/ssi-sdk';
-import { CreateUser, createUser, getUserByCredentials, UserEntity } from '../entities/user.entity';
+import { CreateUser, createUser, getUserByCredentials } from '../entities/user.entity';
 import crypto from 'node:crypto';
 
 
@@ -13,23 +12,24 @@ const userController: Router = express.Router();
 
 
 userController.post('/register', async (req: Request, res: Response) => {
-	const username = req.body.username;	
-	const password = req.body.password;
-	const fcm_token = req.body.fcm_token;
-	const browser_fcm_token = req.body.browser_fcm_token;
+	const {
+		username,
+		password,
+		fcm_token,
+		browser_fcm_token,
+		keys,
+	} = req.body;
 	if (!username || !password) {
 		res.status(500).send({ error: "No username or password was given" });
 		return;
 	}
-	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
-
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
-	const keysStringified = JSON.stringify(naturalPersonWallet.key);
+	const keysStringified = JSON.stringify(keys);
 	const newUser: CreateUser = {
 		username: username ? username : "", 
 		passwordHash: passwordHash,
 		keys: Buffer.from(keysStringified),
-		did: naturalPersonWallet.key.did,
+		did: keys.did,
 		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
 		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from("")
 	};
@@ -43,11 +43,11 @@ userController.post('/register', async (req: Request, res: Response) => {
 
 
 	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: naturalPersonWallet.key.did })
+	const appToken = await new SignJWT({ did: keys.did })
 		.setProtectedHeader({ alg: "HS256" }) 
 		.sign(secret);
 
-	res.status(200).send({ did: naturalPersonWallet.key.did, appToken });
+	res.status(200).send({ appToken });
 });
 
 userController.post('/login', async (req: Request, res: Response) => {
@@ -69,7 +69,7 @@ userController.post('/login', async (req: Request, res: Response) => {
 		.setProtectedHeader({ alg: "HS256" }) 
 		.sign(secret);
 
-	res.status(200).send({ did: user.did, appToken: appToken });
+	res.status(200).send({ appToken: appToken });
 })
 
 
