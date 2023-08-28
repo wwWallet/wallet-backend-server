@@ -236,13 +236,14 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		let newState = { ...currentState, code };
 		this.states.set(username, newState);
 
-		this.tokenRequest(newState).then(tokenResponse => {
-			newState = { ...newState, tokenResponse }
-			this.states.set(username, newState);
-			this.credentialRequests(username, newState).catch(e => {
-				console.error("Credential requests failed with error : ", e)
-			});
-		})
+		const tokenResponse = await this.tokenRequest(newState);
+		newState = { ...newState, tokenResponse }
+		this.states.set(username, newState);
+		try {
+			await this.credentialRequests(username, newState);
+		} catch (e) {
+			console.error("Credential requests failed with error : ", e)
+		}
 	}
 
 
