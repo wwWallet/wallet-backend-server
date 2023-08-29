@@ -19,6 +19,7 @@ userController.post('/register', async (req: Request, res: Response) => {
 		browser_fcm_token,
 		keys,
 		pbkdf2Params,
+		privateData,
 	} = req.body;
 	if (!username || !password) {
 		res.status(500).send({ error: "No username or password was given" });
@@ -34,6 +35,7 @@ userController.post('/register', async (req: Request, res: Response) => {
 		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
 		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from(""),
 		pbkdf2Params,
+		privateData: Buffer.from(privateData),
 	};
 
 	const result = (await createUser(newUser));
@@ -71,7 +73,11 @@ userController.post('/login', async (req: Request, res: Response) => {
 		.setProtectedHeader({ alg: "HS256" }) 
 		.sign(secret);
 
-	res.status(200).send({ appToken, pbkdf2Params: user.pbkdf2Params });
+	res.status(200).send({
+		appToken,
+		pbkdf2Params: user.pbkdf2Params,
+		privateData: new TextDecoder().decode(user.privateData),
+	});
 })
 
 

@@ -37,6 +37,9 @@ class UserEntity {
 
 	@Column({ nullable: false })
 	pbkdf2Params: string;
+
+	@Column({ type: "blob", nullable: false })
+	privateData: Buffer;
 }
 
 
@@ -48,6 +51,7 @@ type CreateUser = {
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
 	pbkdf2Params: string;
+	privateData: Buffer;
 }
 
 
