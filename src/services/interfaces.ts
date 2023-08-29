@@ -7,10 +7,14 @@ export interface OpenidCredentialReceiving {
 	getAvailableSupportedCredentials(username: string, legalPersonIdentifier: string): Promise<Array<{id: string, displayName: string}>>
 	generateAuthorizationRequestURL(username: string, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to: string }> 
 	
-	handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<Result<void, void>>;
+	handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>>;
 	requestCredentialsWithPreAuthorizedGrant(username: string, user_pin: string): Promise<void>;
 
 	getIssuerState(username: string): Promise<{ issuer_state?: string, error?: Error }>
+}
+
+export enum IssuanceErr {
+	STATE_NOT_FOUND = "STATE_NOT_FOUND",
 }
 
 

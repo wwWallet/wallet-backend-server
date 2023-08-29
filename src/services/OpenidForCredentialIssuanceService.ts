@@ -15,7 +15,7 @@ import { generateCodeChallengeFromVerifier, generateCodeVerifier } from "../util
 import { createVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
 import { TYPES } from "./types";
-import { OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 
 
 type IssuanceState = {
@@ -228,13 +228,17 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<Result<void, void>> {
+	public async handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>> {
+		const currentState = this.states.get(username);
+		if (!currentState) {
+			return Err(IssuanceErr.STATE_NOT_FOUND);
+		}
+
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
 		if (!code) {
 			throw new Error("Code not received");
 		}
-		const currentState = this.states.get(username);
 		let newState = { ...currentState, code };
 		this.states.set(username, newState);
 
@@ -320,6 +324,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 */
 	private async credentialRequests(username: string, state: IssuanceState): Promise<Result<void, void>> {
 		console.log("State = ", state)
+
 		const httpHeader = {
 			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
@@ -353,6 +358,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
 			);
 
+		// Prevent duplicate credential acceptance
+		this.states.delete(username);
 
 		for (const cr of credentialResponses) {
 			this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
@@ -363,7 +370,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		for (const response of credentialResponses) {
 			console.log("Response = ", response)
-			this.handleCredentialStorage(username, response);
+			this.handleCredentialStorage(state, response);
 		}
 		console.log("=====FINISHED OID4VCI")
 		return Ok.EMPTY;
@@ -379,7 +386,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			{}, 
 			{ headers: defferedCredentialReqHeader } )
 			.then((res) => {
-				this.handleCredentialStorage(state.username, res.data);
+				this.handleCredentialStorage(state, res.data);
 			})
 			.catch(err => {
 				setTimeout(() => {
@@ -390,14 +397,14 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 	}
 
-	private async handleCredentialStorage(username: string, credentialResponse: CredentialResponseSchemaType) {
-		const userRes = await getUserByUsername(username);
+	private async handleCredentialStorage(state: IssuanceState, credentialResponse: CredentialResponseSchemaType) {
+		const userRes = await getUserByUsername(state.username);
 		if (userRes.err) {
 			return;
 		}
 		const user = userRes.unwrap();
 
-		const { legalPerson } = this.states.get(username);
+		const { legalPerson } = state;
 		console.log("Legal person  = ", legalPerson)
 		const credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
 		const type = credentialPayload.vc.type as string[];
