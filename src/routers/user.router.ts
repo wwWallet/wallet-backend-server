@@ -58,7 +58,7 @@ userController.post('/login', async (req: Request, res: Response) => {
 	}
 	const userRes = await getUserByCredentials(username, password);
 	if (userRes.err) {
-		res.send(500).send({});
+		res.status(500).send({});
 		return;
 	}
 	console.log('user res = ', userRes)
