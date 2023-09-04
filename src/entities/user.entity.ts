@@ -143,26 +143,6 @@ async function getUserByCredentials(username: string, password: string): Promise
 	}
 }
 
-async function getUserByUsername(username: string): Promise<Result<UserEntity, GetUserErr>> {
-	try {
-
-		const res = await AppDataSource.getRepository(UserEntity)
-			.createQueryBuilder("user")
-			.where("user.username = :username", { username: username })
-			.getOne();
-		if (!res) {
-			return Err(GetUserErr.NOT_EXISTS);
-		}
-		
-		return Ok(res);
-	}
-	catch(e) {
-		console.log(e);
-		return Err(GetUserErr.DB_ERR)
-	}
-}
-
-
 async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 	try {
 
@@ -207,6 +187,5 @@ export {
 	getUserByDID,
 	getUserByCredentials,
 	UpdateFcmError,
-	getUserByUsername,
 	getAllUsers
 }

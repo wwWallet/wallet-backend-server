@@ -24,7 +24,7 @@ presentationRouter.post('/handle/authorization/request', async (req, res) => {
 	} = req.body;
 
 	try{
-		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.username, authorization_request);
+		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.did, authorization_request);
 		if (!outboundRequestResult.ok) {
 			return res.status(500).send({});
 		}
@@ -59,7 +59,7 @@ presentationRouter.post('/generate/authorization/response', async (req, res) => 
 
 	const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
 	try {
-		const result = await openidForPresentationService.sendResponse(req.user.username, selection);
+		const result = await openidForPresentationService.sendResponse(req.user.did, selection);
 		if (!result.ok) {
 			return res.status(500).send({});
 		}
