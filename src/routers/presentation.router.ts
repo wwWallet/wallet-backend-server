@@ -24,7 +24,7 @@ presentationRouter.post('/handle/authorization/request', async (req, res) => {
 	} = req.body;
 
 	try{
-		const outboundRequest = await openidForPresentationService.handleRequest(req.user.username, authorization_request)
+		const outboundRequest = await openidForPresentationService.handleRequest(req.user.did, authorization_request)
 		if (outboundRequest.conformantCredentialsMap && outboundRequest.verifierDomainName) {
 			const { conformantCredentialsMap, verifierDomainName } = outboundRequest;
 			// convert from map to JSON
@@ -54,7 +54,7 @@ presentationRouter.post('/generate/authorization/response', async (req, res) => 
 
 	const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
 	try {
-		const { redirect_to, error } = await openidForPresentationService.sendResponse(req.user.username, selection);
+		const { redirect_to, error } = await openidForPresentationService.sendResponse(req.user.did, selection);
 		if (error) {
 			const errText = `Error generating authorization response: ${error}`;
 			console.error(errText);
