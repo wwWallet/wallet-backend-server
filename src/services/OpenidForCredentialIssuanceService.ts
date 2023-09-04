@@ -91,7 +91,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	async generateAuthorizationRequestURL(username: string, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to: string }> {
 		console.log("Username = ", username)
 		console.log("LP = ", legalPersonDID)
-		const user = (await getUserByUsername(username)).unwrap();
 		let issuerUrlString: string | null = null;
 		let credential_offer = null;
 		let issuer_state = null;
