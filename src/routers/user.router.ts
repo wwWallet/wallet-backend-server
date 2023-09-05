@@ -3,7 +3,7 @@ import { SignJWT } from 'jose';
 import config from '../../config';
 import { NaturalPersonWallet } from '@gunet/ssi-sdk';
 import { CreateUser, createUser, getUserByCredentials, UserEntity } from '../entities/user.entity';
-import crypto from 'node:crypto';
+import * as scrypt from "../scrypt";
 
 
 /**
@@ -23,7 +23,7 @@ userController.post('/register', async (req: Request, res: Response) => {
 	}
 	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
 
-	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
+	const passwordHash = await scrypt.createHash(password);
 	const keysStringified = JSON.stringify(naturalPersonWallet.key);
 	const newUser: CreateUser = {
 		username: username ? username : "", 
