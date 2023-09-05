@@ -36,12 +36,16 @@ async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcm
 	};
 }
 
-async function initSession(did: string): Promise<{ did: string, appToken: string }> {
+async function initSession(did: string, displayName: string): Promise<{ did: string, appToken: string, displayName: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did })
 		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
-	return { did, appToken };
+	return {
+		did,
+		appToken,
+		displayName,
+	};
 }
 
 noAuthUserController.post('/register', async (req: Request, res: Response) => {
@@ -53,6 +57,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 
 	const newUser: CreateUser = {
 		username: username ? username : "",
+		displayName: req.body.displayName,
 		passwordHash: passwordHash,
 		keys: Buffer.from(keysStringified),
 		did,
@@ -68,7 +73,8 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 		return;
 	}
 
-	res.status(200).send(await initSession(did));
+	const user = result.unwrap();
+	res.status(200).send(await initSession(did, user.displayName || username));
 });
 
 noAuthUserController.post('/login', async (req: Request, res: Response) => {
@@ -84,7 +90,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	res.status(200).send(await initSession(user.did));
+	res.status(200).send(await initSession(user.did, user.displayName || username));
 })
 
 noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
@@ -143,6 +149,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 
 		const { fcmToken, browserFcmToken, keysStringified, did } = await initNewUser(req);
 		const newUser: CreateUser = {
+			displayName: req.body.displayName,
 			keys: Buffer.from(keysStringified),
 			did,
 			fcmToken,
@@ -166,7 +173,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false, );
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send(await initSession(did));
+			res.status(200).send(await initSession(did, userRes.val.displayName));
 		} else {
 			res.status(500).send({});
 		}
@@ -240,7 +247,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		if (updateCredentialRes.ok) {
 			res.status(200).send({
 				username: user.username,
-				...await initSession(user.did),
+				...await initSession(user.did, user.displayName),
 			});
 		} else {
 			res.status(500).send({});
@@ -304,8 +311,7 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 		challenge: challenge.challenge,
 		user: {
 			...user,
-			name: user.username,
-			displayName: user.username,
+			name: user.displayName,
 		},
 	});
 

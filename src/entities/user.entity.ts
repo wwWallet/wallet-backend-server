@@ -17,6 +17,10 @@ class UserEntity {
 	@Column({ unique: true, nullable: true, default: () => "NULL" })
 	username: string;
 
+	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
+	@Column({ unique: true, nullable: true, default: () => "NULL" })
+	displayName: string;
+
 	@Column({ unique: true, nullable: false })
 	did: string;
 
@@ -104,6 +108,7 @@ class WebauthnCredentialEntity {
 
 type CreateUser = {
 	username: string;
+	displayName: string,
 	did: string;
 	passwordHash: string;
 	keys: Buffer;
@@ -111,6 +116,7 @@ type CreateUser = {
 	browserFcmToken: Buffer;
 	webauthnUserHandle: string;
 } | {
+	displayName: string,
 	did: string;
 	keys: Buffer;
 	fcmToken: Buffer;
