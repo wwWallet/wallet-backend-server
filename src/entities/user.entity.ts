@@ -35,9 +35,6 @@ class UserEntity {
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 
-	@Column({ nullable: false })
-	pbkdf2Params: string;
-
 	@Column({ type: "blob", nullable: false })
 	privateData: Buffer;
 }
@@ -50,7 +47,6 @@ type CreateUser = {
 	keys: Buffer;
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
-	pbkdf2Params: string;
 	privateData: Buffer;
 }
 

@@ -18,7 +18,6 @@ userController.post('/register', async (req: Request, res: Response) => {
 		fcm_token,
 		browser_fcm_token,
 		keys,
-		pbkdf2Params,
 		privateData,
 	} = req.body;
 	if (!username || !password) {
@@ -34,7 +33,6 @@ userController.post('/register', async (req: Request, res: Response) => {
 		did: keys.did,
 		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
 		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from(""),
-		pbkdf2Params,
 		privateData: Buffer.from(privateData),
 	};
 
@@ -75,7 +73,6 @@ userController.post('/login', async (req: Request, res: Response) => {
 
 	res.status(200).send({
 		appToken,
-		pbkdf2Params: user.pbkdf2Params,
 		privateData: new TextDecoder().decode(user.privateData),
 	});
 })
