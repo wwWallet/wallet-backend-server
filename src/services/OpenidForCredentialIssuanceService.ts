@@ -34,7 +34,6 @@ type IssuanceState = {
 @injectable()
 export class OpenidForCredentialIssuanceService implements OpenidCredentialReceiving {
 
-	public static readonly identifier = "OpenidForCredentialIssuanceService"
 	// identifierService: IdentifierService = new IdentifierService();
 	// legalPersonService: LegalPersonService = new LegalPersonService();
 	
@@ -359,7 +358,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 		for (const cr of credentialResponses) {
-			this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
+			if (cr.acceptance_token)
+				this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
 		}
 		
 		// remove the ones that are for deferred endpoint

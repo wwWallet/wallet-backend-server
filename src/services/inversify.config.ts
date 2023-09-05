@@ -1,12 +1,14 @@
 import { Container } from "inversify";
 import { TYPES  } from "./types";
-import { OpenidCredentialReceiving, LegalPersonsRegistry, OutboundCommunication, WalletKeystore } from "./interfaces";
+import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, DidKeyUtilityService } from "./interfaces";
 import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanceService";
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
 import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
 import { OpenidForCredentialIssuanceMattrV2Service } from "./OpenidForCredentialIssuanceMattrV2Service";
 import config from "../../config";
+import { W3CDidKeyUtilityService } from "./W3CDidKeyUtilityService";
+import { VerifierRegistryService } from "./VerifierRegistryService";
 
 const appContainer = new Container();
 
@@ -35,6 +37,20 @@ case "OpenidForCredentialIssuanceMattrV2Service":
 
 appContainer.bind<OutboundCommunication>(TYPES.OpenidForPresentationService)
 	.to(OpenidForPresentationService)
+
+switch (config.servicesConfiguration.didKeyService) {
+case "W3C":
+	appContainer.bind<DidKeyUtilityService>(TYPES.DidKeyUtilityService)
+		.to(W3CDidKeyUtilityService)
+	break;
+default:
+	appContainer.bind<DidKeyUtilityService>(TYPES.DidKeyUtilityService)
+		.to(W3CDidKeyUtilityService)
+	break;
+}
+
+appContainer.bind<VerifierRegistryService>(TYPES.VerifierRegistryService)
+	.to(VerifierRegistryService)
 
 export { appContainer }
 

@@ -1,36 +1,28 @@
 import { SignJWT, importJWK, jwtVerify } from "jose";
-import { AdditionalKeystoreParameters, WalletKeystore } from "./interfaces";
+import { AdditionalKeystoreParameters, DidKeyUtilityService, WalletKeystore } from "./interfaces";
 import { getUserByUsername, storeKeypair } from "../entities/user.entity";
 import { SignVerifiablePresentationJWT, WalletKey } from "@gunet/ssi-sdk";
 import { randomUUID } from "crypto";
 import { verifiablePresentationSchemaURL } from "../util/util";
-import { injectable } from "inversify";
-import * as ed25519 from "@transmute/did-key-ed25519";
-import * as crypto from "node:crypto";
+import { inject, injectable } from "inversify";
+
 import "reflect-metadata";
+import { TYPES } from "./types";
 
 
 @injectable()
 export class DatabaseKeystoreService implements WalletKeystore {
 
-	public static readonly identifier = "DatabaseKeystoreService"
 	private readonly algorithm = "EdDSA";
 
-	constructor() { }
+	constructor(
+		@inject(TYPES.DidKeyUtilityService) private didKeyService: DidKeyUtilityService,
+	) { }
 
 	async generateKeyPair(username: string): Promise<{ did: string }> {
-		const { didDocument, keys } = await ed25519.generate(
-			{
-				secureRandom: () => {
-					return crypto.randomBytes(32);
-				},
-			},
-			{ accept: 'application/did+json' }
-		);
-		console.log("DID document = ", didDocument)
-		console.log("Keys = ", keys);
-		storeKeypair(username, didDocument.id, Buffer.from(JSON.stringify(keys[0])));
-		return { did: didDocument.id }
+		const { did, key } = await this.didKeyService.generateKeyPair();
+		storeKeypair(username, did, Buffer.from(JSON.stringify(key)));
+		return { did: did }
 	}
 
 	async createIdToken(username: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<{ id_token: string; }> {

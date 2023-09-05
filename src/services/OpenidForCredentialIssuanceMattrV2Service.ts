@@ -35,7 +35,6 @@ type IssuanceState = {
 @injectable()
 export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredentialReceiving {
 
-	public static readonly identifier = "OpenidForCredentialIssuanceService"
 	// identifierService: IdentifierService = new IdentifierService();
 	// legalPersonService: LegalPersonService = new LegalPersonService();
 	

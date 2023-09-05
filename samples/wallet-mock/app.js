@@ -48,9 +48,6 @@ app.get('/', async (req, res) => {
 		{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
 	).then(response => {
 		let { vc_list } = response.data;
-		console.log("VC list = ");
-
-		console.dir(vc_list);
 		vc_list = vc_list.map((vc) => {
 			const vcjwt = vc.credential;
 			const payload = JSON.parse(base64url.decode(vcjwt.split('.')[1]));
@@ -74,9 +71,7 @@ app.get('/vp', async (req, res) => {
 		{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
 	).then(response => {
 		let { vp_list } = response.data;
-		console.log("VP list = ");
 
-		console.dir(vp_list);
 		vp_list = vp_list.map((vp) => {
 			const vpjwt = vp.presentation;
 			const payload = JSON.parse(base64url.decode(vpjwt.split('.')[1]));
@@ -101,7 +96,6 @@ app.get('/vc/:vc_id', async (req, res) => {
 		{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
 	).then(response => {
 		let vc = response.data;
-		console.log("VC list = ");
 
 		const vcjwt = vc.credential;
 		const payload = base64url.decode(vcjwt.split('.')[1]);
@@ -165,11 +159,13 @@ app.get('/init/issuance/:iss', async (req, res) => {
 
 
 app.get('/init/verification/vid', async (req, res) => {
-	const url = new URL("http://127.0.0.1:8003/verification/authorize");
-	url.searchParams.append("scope", "openid vid")
-	url.searchParams.append("redirect_uri", "http://127.0.0.1:7777");
+	const url = new URL("http://wallet-enterprise-vid-issuer:8003/verification/authorize");
+	url.searchParams.append("scope", "openid ver_test:vp_token vid")
+	url.searchParams.append("redirect_uri", "http://wallet-mock:7777");
 	url.searchParams.append("client_id", global.user.did)
 	url.searchParams.append("response_type", "code")
+	url.searchParams.append("state", "123xxx")
+
 	res.redirect(url.toString())
 });
 
@@ -188,7 +184,6 @@ async function handleCredentialOffer(req, res, next) {
 		{ credential_offer_url: url },
 		{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
 	).then(success => {
-		console.log("SUccess = ", success.data)
 		const { redirect_to } = issuanceInitiation.data;
 		return res.redirect(redirect_to);
 	}).catch(e => {

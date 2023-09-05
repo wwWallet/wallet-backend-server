@@ -16,7 +16,20 @@ const openidForPresentationService = appContainer.get<OutboundCommunication>(TYP
 const presentationRouter: Router = express.Router();
 presentationRouter.use(AuthMiddleware);
 
+presentationRouter.post('/initiate', async (req, res) => {
+	const {
+		verifier_id,
+		scope_name
+	} = req.body;
 
+	try {
+		const { redirect_to } = await openidForPresentationService.initiateVerificationFlow(req.user.username, verifier_id, scope_name);
+		return res.send({ redirect_to });
+	}
+	catch(e) {
+		return res.status(500).send({ error: "Cannot initiate verification flow" });
+	}
+})
 
 presentationRouter.post('/handle/authorization/request', async (req, res) => {
 	const {

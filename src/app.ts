@@ -10,6 +10,7 @@ import { issuanceRouter } from './routers/issuance.router';
 import { storageRouter } from './routers/storage.router';
 import { presentationRouter } from './routers/presentation.router';
 import { legalPersonRouter } from './routers/legal_person.router';
+import verifiersRouter from './routers/verifiers.router';
 
 const app: Express = express();
 // __dirname is "/path/to/dist/src"
@@ -52,6 +53,7 @@ app.use('/issuance', issuanceRouter);
 app.use('/storage', storageRouter);
 app.use('/presentation', presentationRouter);
 app.use('/legal_person', legalPersonRouter);
+app.use('/verifiers', verifiersRouter);
 
 app.listen(config.port, () => {
 	console.log(`eDiplomas Register app listening at ${config.url}`)

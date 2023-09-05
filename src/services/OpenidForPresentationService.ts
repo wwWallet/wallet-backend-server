@@ -12,6 +12,9 @@ import "reflect-metadata";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getUserByUsername } from "../entities/user.entity";
 import { z } from 'zod';
+import config from "../../config";
+import { randomUUID } from "crypto";
+import { VerifierRegistryService } from "./VerifierRegistryService";
 
 type PresentationDefinition = {
 	id: string,
@@ -51,6 +54,7 @@ type Field = {
 }
 
 type VerificationState = {
+	holder_state?: string;
 	presentation_definition?: PresentationDefinition;
 	audience?: string;
 	nonce?: string;
@@ -61,16 +65,38 @@ type VerificationState = {
 
 @injectable()
 export class OpenidForPresentationService implements OutboundCommunication {
-	public static readonly identifier = "OpenidForPresentationService"
 
 	states = new Map<string, VerificationState>();
 
 
+
 	constructor(
 		@inject(TYPES.WalletKeystore) private walletKeystore: WalletKeystore,
+		@inject(TYPES.VerifierRegistryService) private verifierRegistryService: VerifierRegistryService,
 		@inject(TYPES.OpenidForCredentialIssuanceService) private OpenidCredentialReceivingService: OpenidCredentialReceiving
 	) { }
 
+
+	async initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
+		const verifier = (await this.verifierRegistryService.getAllVerifiers()).filter(ver => ver.id == verifierId)[0];
+
+		const userFetchRes = await getUserByUsername(username);
+		if (userFetchRes.err) {
+			return {};
+		}
+
+		const holder_state = randomUUID();
+		this.states.set(username, { holder_state });
+
+		const user = userFetchRes.unwrap();
+		const url = new URL(verifier.url);
+		url.searchParams.append("scope", "openid " + scopeName);
+		url.searchParams.append("redirect_uri", config.walletClientUrl);
+		url.searchParams.append("client_id", user.did);
+		url.searchParams.append("response_type", "code");
+		url.searchParams.append("state", holder_state);
+		return { redirect_to: url.toString() };
+	}
 
 	async handleRequest(username: string, requestURL: string): Promise<OutboundRequest> {
 		try {
@@ -371,7 +397,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 			const directPostPayload = {
 				vp_token: vp_token,
-				presentation_submission: JSON.stringify(presentationSubmission),
+				presentation_submission: presentationSubmission,
 				state: state
 			};
 			const { newLocation } = await axios.post(redirect_uri, qs.stringify(directPostPayload), {

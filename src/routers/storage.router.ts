@@ -29,7 +29,6 @@ async function getAllVerifiableCredentialsController(req, res) {
 		}
 	});
 
-	console.log("VC list = ", vc_list)
 	res.status(200).send({ vc_list: vc_list })
 
 }

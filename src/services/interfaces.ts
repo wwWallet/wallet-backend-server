@@ -1,3 +1,4 @@
+import { JWK } from "jose";
 import { LegalPersonEntity } from "../entities/LegalPerson.entity";
 import { OutboundRequest } from "./types/OutboundRequest";
 
@@ -30,6 +31,9 @@ export interface WalletKeystore {
 
 export interface OutboundCommunication {
 	
+
+	initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
+
 	handleRequest(username: string, requestURL: string): Promise<OutboundRequest>;
 
 	/**
@@ -44,4 +48,9 @@ export interface OutboundCommunication {
 
 export interface LegalPersonsRegistry {
 	getByIdentifier(did: string): Promise<LegalPersonEntity>;
+}
+
+export interface DidKeyUtilityService {
+	getPublicKeyJwk(did: string): Promise<JWK>;
+	generateKeyPair(): Promise<{ did: string, key: any }>
 }
