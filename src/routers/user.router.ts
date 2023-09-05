@@ -279,7 +279,13 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 })
 
 userController.post('/webauthn/register-begin', async (req: Request, res: Response) => {
-	const userRes = await getUserByDID(req.user.did);
+	const userRes = await updateUserByDID(req.user.did, (userEntity, manager) => {
+		if (!userEntity.webauthnUserHandle) {
+			userEntity.webauthnUserHandle = uuid.v4();
+		}
+		return userEntity;
+	});
+
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
