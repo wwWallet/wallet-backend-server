@@ -270,6 +270,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 
 	res.status(200).send(jsonStringifyTaggedBinary({
 		username: user.username,
+		displayName: user.displayName,
 		did: user.did,
 		hasPassword: user.passwordHash !== null,
 		publicKey: keys.publicKey,
