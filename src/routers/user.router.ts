@@ -2,7 +2,7 @@ import express, { Request, Response, Router } from 'express';
 import { SignJWT } from 'jose';
 import config from '../../config';
 import { CreateUser, createUser, getUserByCredentials } from '../entities/user.entity';
-import crypto from 'node:crypto';
+import * as scrypt from "../scrypt";
 
 
 /**
@@ -25,7 +25,7 @@ userController.post('/register', async (req: Request, res: Response) => {
 		res.status(500).send({ error: "No username or password was given" });
 		return;
 	}
-	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
+	const passwordHash = await scrypt.createHash(password);
 	const keysStringified = JSON.stringify(keys);
 	const newUser: CreateUser = {
 		username: username ? username : "", 
@@ -62,7 +62,7 @@ userController.post('/login', async (req: Request, res: Response) => {
 	}
 	const userRes = await getUserByCredentials(username, password);
 	if (userRes.err) {
-		res.send(500).send({});
+		res.status(500).send({});
 		return;
 	}
 	console.log('user res = ', userRes)
