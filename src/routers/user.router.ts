@@ -7,12 +7,11 @@ import base64url from 'base64url';
 
 import config from '../../config';
 import { NaturalPersonWallet } from '@gunet/ssi-sdk';
-import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential } from '../entities/user.entity';
+import { CreateUser, createUser, deleteWebauthnCredential, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
-import * as scrypt from "../scrypt";
 
 
 /**
@@ -48,45 +47,6 @@ async function initSession(did: string, displayName: string): Promise<{ did: str
 		displayName,
 	};
 }
-
-noAuthUserController.post('/register', async (req: Request, res: Response) => {
-	const username = req.body.username;
-	const password = req.body.password;
-
-	const passwordHash = await scrypt.createHash(password);
-	const newUser: CreateUser = {
-		...await initNewUser(req),
-		username: username ? username : "",
-		passwordHash: passwordHash,
-		webauthnUserHandle: uuid.v4(),
-	};
-
-	const result = (await createUser(newUser));
-	if (result.err) {
-		console.log("Failed to create user")
-		res.status(500).send({ error: result.val });
-		return;
-	}
-
-	const user = result.unwrap();
-	res.status(200).send(await initSession(user.did, user.displayName || username));
-});
-
-noAuthUserController.post('/login', async (req: Request, res: Response) => {
-	const { username, password } = req.body;
-	if (!username || !password) {
-		res.status(500).send({ error: "No username or password was given" });
-		return;
-	}
-	const userRes = await getUserByCredentials(username, password);
-	if (userRes.err) {
-		res.status(500).send({});
-		return;
-	}
-	console.log('user res = ', userRes)
-	const user = userRes.unwrap();
-	res.status(200).send(await initSession(user.did, user.displayName || username));
-})
 
 noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
 	const challengeRes = await createChallenge("create", uuid.v4());
@@ -235,10 +195,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send({
-				...await initSession(user.did, user.displayName),
-				username: user.username,
-			});
+			res.status(200).send(await initSession(user.did, user.displayName));
 		} else {
 			res.status(500).send({});
 		}
@@ -259,10 +216,8 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 	const keys = jsonParseTaggedBinary(user.keys.toString());
 
 	res.status(200).send(jsonStringifyTaggedBinary({
-		username: user.username,
-		displayName: user.displayName,
 		did: user.did,
-		hasPassword: user.passwordHash !== null,
+		displayName: user.displayName,
 		publicKey: keys.publicKey,
 		webauthnUserHandle: user.webauthnUserHandle,
 		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
@@ -307,7 +262,6 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 	});
 
 	res.status(200).send(jsonStringifyTaggedBinary({
-		username: user.username,
 		challengeId: challenge.id,
 		createOptions,
 	}));

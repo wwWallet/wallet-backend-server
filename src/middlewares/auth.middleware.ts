@@ -5,7 +5,6 @@ import config from "../../config";
 import { getUserByDID } from "../entities/user.entity";
 
 export type AppTokenUser = {
-	username: string;
 	did: string;
 }
 
@@ -60,18 +59,13 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 
 		// success
 		req.user = {
-			username: "",
-			did: ""
-		} as AppTokenUser;
-		req.user.did = (payload as AppTokenUser).did;
+			did: (payload as AppTokenUser).did
+		};
 		const userRes = await getUserByDID(req.user.did);
 		if (userRes.err) {
 			res.status(401).send(); // Unauthorized
 			return;
 		}
-		const user = userRes.unwrap();
-		req.user.username = user.username;
-		req.user.did = user.did;
 		return next();
 	})
 	.catch(e => {

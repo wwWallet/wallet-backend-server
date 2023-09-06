@@ -1,10 +1,8 @@
 import { Err, Ok, Result } from "ts-results";
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial } from "typeorm"
-import crypto from "node:crypto";
 import base64url from "base64url";
 
 import AppDataSource from "../AppDataSource";
-import * as scrypt from "../scrypt";
 
 
 @Entity({ name: "user" })
@@ -14,19 +12,11 @@ class UserEntity {
 
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ unique: true, nullable: true, default: () => "NULL" })
-	username: string;
-
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ unique: false, nullable: true, default: () => "NULL" })
 	displayName: string;
 
 	@Column({ unique: true, nullable: false })
 	did: string;
-
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ nullable: true, default: () => "NULL" })
-	passwordHash: string;
 
 
 	@Column({ type: 'blob', nullable: false })
@@ -107,15 +97,6 @@ class WebauthnCredentialEntity {
 
 
 type CreateUser = {
-	username: string;
-	displayName: string,
-	did: string;
-	passwordHash: string;
-	keys: Buffer;
-	fcmToken: Buffer;
-	browserFcmToken: Buffer;
-	webauthnUserHandle: string;
-} | {
 	displayName: string,
 	did: string;
 	keys: Buffer;
@@ -180,47 +161,6 @@ async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>
 		return Err(GetUserErr.NOT_EXISTS);
 	}
 }
-
-async function getUserByCredentials(username: string, password: string): Promise<Result<UserEntity, GetUserErr>> {
-	try {
-		return await userRepository.manager.transaction(async (manager) => {
-			const user = await manager.findOne(UserEntity, { where: { username } });
-			if (user && user.passwordHash) {
-				const scryptRes = await scrypt.verifyHash(password, user.passwordHash);
-				if (scryptRes.ok) {
-					if (scryptRes.val) {
-						return Ok(user);
-					} else {
-						return Err(GetUserErr.NOT_EXISTS);
-					}
-
-				} else {
-					// User isn't migrated to scrypt yet - fall back to sha256
-					const sha256Hash = crypto.createHash('sha256').update(password).digest('base64');
-
-					if (user.passwordHash === sha256Hash) {
-						// Upgrade the user to scrypt
-						user.passwordHash = await scrypt.createHash(password);
-						await manager.save(user);
-
-						return Ok(user);
-					} else {
-						return Err(GetUserErr.NOT_EXISTS);
-					}
-				}
-
-			} else {
-				// Compute a throwaway hash anyway so we don't leak timing information
-				await scrypt.createHash(password);
-				return Err(GetUserErr.NOT_EXISTS);
-			}
-		});
-	} catch (e) {
-		console.log(e);
-		return Err(GetUserErr.DB_ERR)
-	}
-}
-
 
 async function getUserByWebauthnCredential(userHandle: string, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
 	try {
@@ -350,7 +290,6 @@ export {
 	UpdateUserErr,
 	createUser,
 	getUserByDID,
-	getUserByCredentials,
 	UpdateFcmError,
 	getUserByWebauthnCredential,
 	getAllUsers,
