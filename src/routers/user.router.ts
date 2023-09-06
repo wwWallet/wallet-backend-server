@@ -23,15 +23,14 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keysStringified: string, did: string }> {
+async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string }> {
 	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
 	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
 	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
-	const keysStringified = JSON.stringify(naturalPersonWallet.key);
 	return {
 		fcmToken,
 		browserFcmToken,
-		keysStringified,
+		keys: Buffer.from(JSON.stringify(naturalPersonWallet.key)),
 		did: naturalPersonWallet.key.did,
 	};
 }
@@ -52,14 +51,14 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;
 	const password = req.body.password;
 
-	const { fcmToken, browserFcmToken, keysStringified, did } = await initNewUser(req);
+	const { fcmToken, browserFcmToken, keys, did } = await initNewUser(req);
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
 
 	const newUser: CreateUser = {
 		username: username ? username : "",
 		displayName: req.body.displayName,
 		passwordHash: passwordHash,
-		keys: Buffer.from(keysStringified),
+		keys,
 		did,
 		fcmToken,
 		browserFcmToken,
@@ -147,10 +146,10 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			return;
 		}
 
-		const { fcmToken, browserFcmToken, keysStringified, did } = await initNewUser(req);
+		const { fcmToken, browserFcmToken, keys, did } = await initNewUser(req);
 		const newUser: CreateUser = {
 			displayName: req.body.displayName,
-			keys: Buffer.from(keysStringified),
+			keys,
 			did,
 			fcmToken,
 			browserFcmToken,
