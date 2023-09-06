@@ -51,17 +51,13 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;
 	const password = req.body.password;
 
-	const { fcmToken, browserFcmToken, keys, did } = await initNewUser(req);
 	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
 
 	const newUser: CreateUser = {
+		...await initNewUser(req),
 		username: username ? username : "",
 		displayName: req.body.displayName,
 		passwordHash: passwordHash,
-		keys,
-		did,
-		fcmToken,
-		browserFcmToken,
 		webauthnUserHandle: uuid.v4(),
 	};
 
@@ -73,7 +69,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	}
 
 	const user = result.unwrap();
-	res.status(200).send(await initSession(did, user.displayName || username));
+	res.status(200).send(await initSession(user.did, user.displayName || username));
 });
 
 noAuthUserController.post('/login', async (req: Request, res: Response) => {
@@ -146,13 +142,9 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			return;
 		}
 
-		const { fcmToken, browserFcmToken, keys, did } = await initNewUser(req);
 		const newUser: CreateUser = {
+			...await initNewUser(req),
 			displayName: req.body.displayName,
-			keys,
-			did,
-			fcmToken,
-			browserFcmToken,
 			webauthnUserHandle,
 			webauthnCredentials: [
 				newWebauthnCredentialEntity({
@@ -172,7 +164,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false, );
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send(await initSession(did, userRes.val.displayName));
+			res.status(200).send(await initSession(userRes.val.did, userRes.val.displayName));
 		} else {
 			res.status(500).send({});
 		}
