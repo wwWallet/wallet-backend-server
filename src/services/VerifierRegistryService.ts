@@ -16,8 +16,8 @@ export class VerifierRegistryService {
 	private readonly verifierRegistry: Verifier[] = [
 		{
 			id: 1,
-			name: "National Authority",
-			url: "http://wallet-enterprise-vid-issuer:8003/verification/authorize",
+			name: "ACME verifier",
+			url: "http://wallet-enterprise-acme-verifier:8005/verification/authorize",
 			scopes: [
 				{
 					name: "vid",
