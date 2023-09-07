@@ -37,7 +37,7 @@ async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcm
 	};
 }
 
-async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, displayName: string }> {
+async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
@@ -46,6 +46,7 @@ async function initSession(user: UserEntity): Promise<{ did: string, appToken: s
 		appToken,
 		did: user.did,
 		displayName: user.displayName || user.username,
+		username: user.username,
 	};
 }
 
@@ -234,10 +235,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send({
-				...await initSession(user),
-				username: user.username,
-			});
+			res.status(200).send(await initSession(user));
 		} else {
 			res.status(500).send({});
 		}
