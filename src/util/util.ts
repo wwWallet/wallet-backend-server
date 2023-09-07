@@ -25,6 +25,29 @@ export function decideVerifiableCredentialType(type: string[]): 'Diploma' | 'Att
 	return 'Attestation';
 }
 
+export function jsonStringifyTaggedBinary(value: any): string {
+  return JSON.stringify(value, replacerBufferToTaggedBase64Url);
+}
+
+export function jsonParseTaggedBinary(json: string): any {
+  return JSON.parse(json, reviverTaggedBase64UrlToBuffer);
+}
+
+export function replacerBufferToTaggedBase64Url(key: string, value: any): any {
+  if (this[key] instanceof Buffer) {
+    return { '$b64u': base64url.encode(this[key]) };
+  } else {
+    return value;
+  }
+}
+
+export function reviverTaggedBase64UrlToBuffer(key: string, value: any): any {
+	if (value?.$b64u !== undefined) {
+		return base64url.toBuffer(value["$b64u"]);
+	} else {
+		return value;
+	}
+}
 
 export function isValidUri(uri: string): boolean {
 	try {
