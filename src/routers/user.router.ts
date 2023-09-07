@@ -12,6 +12,7 @@ import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
+import * as scrypt from "../scrypt";
 
 
 /**
@@ -51,8 +52,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;
 	const password = req.body.password;
 
-	const passwordHash = crypto.createHash('sha256').update(password).digest('base64');
-
+	const passwordHash = await scrypt.createHash(password);
 	const newUser: CreateUser = {
 		...await initNewUser(req),
 		username: username ? username : "",

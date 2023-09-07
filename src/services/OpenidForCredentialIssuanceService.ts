@@ -1,19 +1,21 @@
 import axios from "axios";
+import * as _ from 'lodash';
+import base64url from "base64url";
+import qs from "qs";
+import { injectable, inject } from "inversify";
+import "reflect-metadata";
+import { Err, Ok, Result } from "ts-results";
+
 import { LegalPersonEntity, getLegalPersonByDID, getLegalPersonByUrl } from "../entities/LegalPerson.entity";
 import { CredentialIssuerMetadata, CredentialResponseSchemaType, CredentialSupportedJwtVcJson, GrantType, OpenidConfiguration, TokenResponseSchemaType, VerifiableCredentialFormat } from "../types/oid4vci";
 import config from "../../config";
 import { getUserByDID } from "../entities/user.entity";
 import { sendPushNotification } from "../lib/firebase";
-import * as _ from 'lodash';
 import { generateCodeChallengeFromVerifier, generateCodeVerifier } from "../util/util";
-import base64url from "base64url";
 import { createVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
-import qs from "qs";
 import { TYPES } from "./types";
-import { OpenidCredentialReceiving, WalletKeystore  } from "./interfaces";
-import { injectable, inject } from "inversify";
-import "reflect-metadata";
+import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 
 
 type IssuanceState = {
@@ -223,23 +225,28 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<void> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>> {
+		const currentState = this.states.get(userDid);
+		if (!currentState) {
+			return Err(IssuanceErr.STATE_NOT_FOUND);
+		}
+
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
 		if (!code) {
 			throw new Error("Code not received");
 		}
-		const currentState = this.states.get(userDid);
 		let newState = { ...currentState, code };
 		this.states.set(userDid, newState);
 
-		this.tokenRequest(newState).then(tokenResponse => {
-			newState = { ...newState, tokenResponse }
-			this.states.set(userDid, newState);
-			this.credentialRequests(userDid, newState).catch(e => {
-				console.error("Credential requests failed with error : ", e)
-			});
-		})
+		const tokenResponse = await this.tokenRequest(newState);
+		newState = { ...newState, tokenResponse }
+		this.states.set(userDid, newState);
+		try {
+			return await this.credentialRequests(userDid, newState);
+		} catch (e) {
+			console.error("Credential requests failed with error : ", e)
+		}
 	}
 
 
@@ -312,17 +319,22 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(userDid: string, state: IssuanceState) {
-
+	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, void>> {
 		console.log("State = ", state)
-		const httpHeader = { 
+
+		const httpHeader = {
 			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
 
 		const c_nonce = state.tokenResponse.c_nonce;
+		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		if (!res.ok) {
+			if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
+				return Err.EMPTY;
+			}
+		}
 
-		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
-
+		const { proof_jwt } = res.val;
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
 		let httpResponsePromises = state.authorization_details.map((authzDetail) => {
@@ -335,29 +347,30 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			}
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
-		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
-			.map((res) => 
+			.map((res) =>
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
 			);
 
+		// Prevent duplicate credential acceptance
+		this.states.delete(userDid);
 
 		for (const cr of credentialResponses) {
 			this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
 		}
-		
+
 		// remove the ones that are for deferred endpoint
 		credentialResponses = credentialResponses.filter((cres) => !cres.acceptance_token);
 
 		for (const response of credentialResponses) {
 			console.log("Response = ", response)
-			this.handleCredentialStorage(userDid, response);
+			this.handleCredentialStorage(state, response);
 		}
 		console.log("=====FINISHED OID4VCI")
-		return;
+		return Ok.EMPTY;
 	}
 
 	// Deferred Credential only
@@ -370,7 +383,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			{}, 
 			{ headers: defferedCredentialReqHeader } )
 			.then((res) => {
-				this.handleCredentialStorage(state.userDid, res.data);
+				this.handleCredentialStorage(state, res.data);
 			})
 			.catch(err => {
 				setTimeout(() => {
@@ -381,14 +394,14 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 	}
 
-	private async handleCredentialStorage(userDid: string, credentialResponse: CredentialResponseSchemaType) {
-		const userRes = await getUserByDID(userDid);
+	private async handleCredentialStorage(state: IssuanceState, credentialResponse: CredentialResponseSchemaType) {
+		const userRes = await getUserByDID(state.userDid);
 		if (userRes.err) {
 			return;
 		}
 		const user = userRes.unwrap();
 
-		const { legalPerson } = this.states.get(userDid);
+		const { legalPerson } = state;
 		console.log("Legal person  = ", legalPerson)
 		const credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
 		const type = credentialPayload.vc.type as string[];
