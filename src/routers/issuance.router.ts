@@ -23,7 +23,7 @@ issuanceRouter.post('/generate/authorization/request', async (req, res) => {
 		const {
 			legal_person_did,
 		} = req.body;
-		const result = await openidForCredentialIssuanceService.generateAuthorizationRequestURL(req.user.username, null, legal_person_did);
+		const result = await openidForCredentialIssuanceService.generateAuthorizationRequestURL(req.user.did, null, legal_person_did);
 		res.send(result);
 	}
 	catch(err) {
@@ -38,7 +38,7 @@ issuanceRouter.post('/generate/authorization/request/with/offer', async (req, re
 			credential_offer_url,
 		} = req.body;
 
-		const result = await openidForCredentialIssuanceService.generateAuthorizationRequestURL(req.user.username, credential_offer_url, null);
+		const result = await openidForCredentialIssuanceService.generateAuthorizationRequestURL(req.user.did, credential_offer_url, null);
 		res.send(result);
 	}
 	catch(err) {
@@ -58,7 +58,7 @@ issuanceRouter.post('/handle/authorization/response', async (req, res) => {
 		if (!(new URL(authorization_response_url).searchParams.get("code"))) {
 			return res.status(500).send({});
 		}
-		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.username, authorization_response_url, proof_jwt);
+		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.did, authorization_response_url, proof_jwt);
 		if (result.ok) {
 			res.send({});
 		} else if (result.val === IssuanceErr.STATE_NOT_FOUND) {
@@ -81,7 +81,7 @@ issuanceRouter.post('/request/credentials/with/pre_authorized', async (req, res)
 			user_pin
 		} = req.body;
 
-		await openidForCredentialIssuanceService.requestCredentialsWithPreAuthorizedGrant(req.user.username, user_pin);
+		await openidForCredentialIssuanceService.requestCredentialsWithPreAuthorizedGrant(req.user.did, user_pin);
 		res.send({});
 	}
 	catch(err) {

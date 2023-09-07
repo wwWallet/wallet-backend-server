@@ -1,58 +1,83 @@
 import express, { Request, Response, Router } from 'express';
 import { SignJWT } from 'jose';
+import * as uuid from 'uuid';
+import crypto from 'node:crypto';
+import * as SimpleWebauthn from '@simplewebauthn/server';
+import base64url from 'base64url';
+
 import config from '../../config';
-import { CreateUser, createUser, getUserByCredentials } from '../entities/user.entity';
+import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, UserEntity } from '../entities/user.entity';
+import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
+import * as webauthn from '../webauthn';
 import * as scrypt from "../scrypt";
 
 
 /**
  * "/user"
  */
+const noAuthUserController: Router = express.Router();
+
 const userController: Router = express.Router();
+userController.use(AuthMiddleware);
+noAuthUserController.use('/session', userController);
 
 
-userController.post('/register', async (req: Request, res: Response) => {
-	const {
-		username,
-		password,
-		fcm_token,
-		browser_fcm_token,
-		keys,
-		privateData,
-	} = req.body;
+async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string, privateData: Buffer }> {
+	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
+	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
+	return {
+		fcmToken,
+		browserFcmToken,
+		keys: Buffer.from(JSON.stringify(req.body.keys)),
+		did: req.body.keys.did,
+		displayName: req.body.displayName,
+		privateData: Buffer.from(req.body.privateData),
+	};
+}
+
+async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
+	const secret = new TextEncoder().encode(config.appSecret);
+	const appToken = await new SignJWT({ did: user.did })
+		.setProtectedHeader({ alg: "HS256" })
+		.sign(secret);
+	return {
+		appToken,
+		did: user.did,
+		displayName: user.displayName || user.username,
+		privateData: user.privateData.toString(),
+		username: user.username,
+	};
+}
+
+noAuthUserController.post('/register', async (req: Request, res: Response) => {
+	const username = req.body.username;
+	const password = req.body.password;
 	if (!username || !password) {
 		res.status(500).send({ error: "No username or password was given" });
 		return;
 	}
+
 	const passwordHash = await scrypt.createHash(password);
-	const keysStringified = JSON.stringify(keys);
 	const newUser: CreateUser = {
-		username: username ? username : "", 
+		...await initNewUser(req),
+		username: username ? username : "",
 		passwordHash: passwordHash,
-		keys: Buffer.from(keysStringified),
-		did: keys.did,
-		fcmToken: fcm_token ? Buffer.from(fcm_token) : Buffer.from(""),
-		browserFcmToken: browser_fcm_token ? Buffer.from(browser_fcm_token) : Buffer.from(""),
-		privateData: Buffer.from(privateData),
+		webauthnUserHandle: uuid.v4(),
 	};
 
 	const result = (await createUser(newUser));
-	if (result.err) {
+	if (result.ok) {
+		res.status(200).send(await initSession(result.val));
+
+	} else {
 		console.log("Failed to create user")
 		res.status(500).send({ error: result.val });
-		return;
 	}
-
-
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: keys.did })
-		.setProtectedHeader({ alg: "HS256" }) 
-		.sign(secret);
-
-	res.status(200).send({ appToken });
 });
 
-userController.post('/login', async (req: Request, res: Response) => {
+noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	const { username, password } = req.body;
 	if (!username || !password) {
 		res.status(500).send({ error: "No username or password was given" });
@@ -65,16 +90,314 @@ userController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	const { did } = user;
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did })
-		.setProtectedHeader({ alg: "HS256" }) 
-		.sign(secret);
+	res.status(200).send(await initSession(user));
+})
 
-	res.status(200).send({
-		appToken,
-		privateData: new TextDecoder().decode(user.privateData),
+noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
+	const challengeRes = await createChallenge("create", uuid.v4());
+	if (challengeRes.err) {
+		res.status(500).send({});
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	const createOptions = webauthn.makeCreateOptions({
+		challenge: challenge.challenge,
+		user: {
+			webauthnUserHandle: challenge.userHandle,
+			name: "",
+			displayName: "",
+		},
 	});
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		challengeId: challenge.id,
+		createOptions,
+	}));
+});
+
+noAuthUserController.post('/register-webauthn-finish', async (req: Request, res: Response) => {
+	console.log("webauthn register-finish", req.body);
+
+	const challengeRes = await popChallenge(req.body.challengeId);
+	if (challengeRes.err) {
+		if ([ChallengeErr.EXPIRED, ChallengeErr.NOT_EXISTS].includes(challengeRes.val)) {
+			res.status(404).send({});
+		} else {
+			res.status(500).send({});
+		}
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+	console.log("webauthn register-finish challenge", challenge);
+
+	const credential = req.body.credential;
+	const verification = await SimpleWebauthn.verifyRegistrationResponse({
+		response: credential,
+		expectedChallenge: base64url.encode(challenge.challenge),
+		expectedOrigin: config.webauthn.origin,
+		expectedRPID: config.webauthn.rp.id,
+		requireUserVerification: true,
+	});
+
+	if (verification.verified) {
+		const webauthnUserHandle = challenge.userHandle;
+		if (!webauthnUserHandle) {
+			res.status(500).send({});
+			return;
+		}
+
+		const newUser: CreateUser = {
+			...await initNewUser(req),
+			webauthnUserHandle,
+			webauthnCredentials: [
+				newWebauthnCredentialEntity({
+					credentialId: Buffer.from(verification.registrationInfo.credentialID),
+					userHandle: Buffer.from(webauthnUserHandle),
+					nickname: req.body.nickname,
+					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
+					signatureCount: verification.registrationInfo.counter,
+					transports: credential.response.transports || [],
+					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
+					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
+					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+				}),
+			],
+		};
+
+		const userRes = await createUser(newUser, false, );
+		if (userRes.ok) {
+			console.log("Created user", userRes.val);
+			res.status(200).send(await initSession(userRes.val));
+		} else {
+			res.status(500).send({});
+		}
+	} else {
+		res.status(400).send({});
+	}
+})
+
+noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Response) => {
+	const challengeRes = await createChallenge("get");
+	if (challengeRes.err) {
+		res.status(500).send({});
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+	const getOptions = webauthn.makeGetOptions({ challenge: challenge.challenge });
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		challengeId: challenge.id,
+		getOptions,
+	}));
+});
+
+noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Response) => {
+	console.log("webauthn login-finish", req.body);
+
+	const credential = req.body.credential;
+	const userHandle = base64url.toBuffer(credential.response.userHandle).toString();
+	const credentialId = base64url.toBuffer(credential.id);
+
+	const userRes = await getUserByWebauthnCredential(userHandle, credentialId);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const [user, credentialRecord] = userRes.unwrap();
+
+	const challengeRes = await popChallenge(req.body.challengeId);
+	if (challengeRes.err) {
+		if ([ChallengeErr.EXPIRED, ChallengeErr.NOT_EXISTS].includes(challengeRes.val)) {
+			res.status(404).send({});
+		} else {
+			res.status(500).send({});
+		}
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	console.log("webauthn login-finish challenge", challenge);
+
+	const verification = await SimpleWebauthn.verifyAuthenticationResponse({
+		response: credential,
+		expectedChallenge: base64url.encode(challenge.challenge),
+		expectedOrigin: config.webauthn.origin,
+		expectedRPID: config.webauthn.rp.id,
+		requireUserVerification: true,
+		authenticator: {
+			credentialID: credentialRecord.credentialId,
+			credentialPublicKey: credentialRecord.publicKeyCose,
+			counter: credentialRecord.signatureCount,
+		},
+	});
+
+	if (verification.verified) {
+		const updateCredentialRes = await updateWebauthnCredential(credentialRecord, (entity) => {
+			entity.signatureCount = verification.authenticationInfo.newCounter;
+			entity.lastUseTime = new Date();
+			return entity;
+		});
+
+		if (updateCredentialRes.ok) {
+			res.status(200).send(await initSession(user));
+		} else {
+			res.status(500).send({});
+		}
+
+	} else {
+		res.status(400).send({});
+	}
+})
+
+userController.get('/account-info', async (req: Request, res: Response) => {
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const keys = jsonParseTaggedBinary(user.keys.toString());
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		username: user.username,
+		displayName: user.displayName,
+		did: user.did,
+		hasPassword: user.passwordHash !== null,
+		publicKey: keys.publicKey,
+		webauthnUserHandle: user.webauthnUserHandle,
+		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
+			createTime: cred.createTime,
+			credentialId: cred.credentialId,
+			id: cred.id,
+			lastUseTime: cred.lastUseTime,
+			nickname: cred.nickname,
+			prfCapable: cred.prfCapable,
+		})),
+	}));
+})
+
+userController.post('/webauthn/register-begin', async (req: Request, res: Response) => {
+	const userRes = await updateUserByDID(req.user.did, (userEntity, manager) => {
+		if (!userEntity.webauthnUserHandle) {
+			userEntity.webauthnUserHandle = uuid.v4();
+		}
+		return userEntity;
+	});
+
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const prfSalt = crypto.randomBytes(32);
+	const challengeRes = await createChallenge("create", user.webauthnUserHandle, prfSalt);
+	if (challengeRes.err) {
+		res.status(500).send({});
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	const createOptions = webauthn.makeCreateOptions({
+		challenge: challenge.challenge,
+		user: {
+			...user,
+			name: user.displayName,
+		},
+	});
+
+	res.status(200).send(jsonStringifyTaggedBinary({
+		username: user.username,
+		challengeId: challenge.id,
+		createOptions,
+	}));
+});
+
+userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
+	console.log("webauthn register-finish", req.body);
+
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const challengeRes = await popChallenge(req.body.challengeId);
+	if (challengeRes.err) {
+		if ([ChallengeErr.EXPIRED, ChallengeErr.NOT_EXISTS].includes(challengeRes.val)) {
+			res.status(404).send({});
+		} else {
+			res.status(500).send({});
+		}
+		return;
+	}
+	const challenge = challengeRes.unwrap();
+
+	console.log("webauthn register-finish challenge", challenge);
+
+	const credential = req.body.credential;
+	const verification = await SimpleWebauthn.verifyRegistrationResponse({
+		response: credential,
+		expectedChallenge: base64url.encode(challenge.challenge),
+		expectedOrigin: config.webauthn.origin,
+		expectedRPID: config.webauthn.rp.id,
+	});
+
+	if (verification.verified) {
+		const updateUserRes = await updateUserByDID(user.did, (userEntity, manager) => {
+			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
+			userEntity.webauthnCredentials.push(
+				newWebauthnCredentialEntity({
+					credentialId: Buffer.from(verification.registrationInfo.credentialID),
+					userHandle: Buffer.from(userEntity.webauthnUserHandle),
+					nickname: req.body.nickname,
+					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
+					signatureCount: verification.registrationInfo.counter,
+					transports: credential.response.transports || [],
+					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
+					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
+					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+				}, manager)
+			);
+			return userEntity;
+		});
+
+		if (updateUserRes.ok) {
+			res.status(200).send(jsonStringifyTaggedBinary({
+				credentialId: credential.id
+			}));
+		} else {
+			res.status(500).send({});
+		}
+
+	} else {
+		res.status(400).send({});
+	}
+})
+
+userController.delete('/webauthn/credential/:id', async (req: Request, res: Response) => {
+	console.log("webauthn delete", req.params.id);
+
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.err) {
+		res.status(403).send({});
+		return;
+	}
+	const user = userRes.unwrap();
+
+	const deleteRes = await deleteWebauthnCredential(user, req.params.id);
+	if (deleteRes.ok) {
+		res.status(204).send();
+	} else {
+		if (deleteRes.val === UpdateUserErr.NOT_EXISTS) {
+			res.status(404).send();
+		} else {
+			res.status(500).send();
+		}
+	}
 })
 
 
@@ -99,4 +422,4 @@ userController.post('/login', async (req: Request, res: Response) => {
 // 	res.send({ publicKeyJwk });
 // });
 
-export default userController;
+export default noAuthUserController;

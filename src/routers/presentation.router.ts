@@ -25,7 +25,7 @@ presentationRouter.post('/handle/authorization/request', async (req, res) => {
 	} = req.body;
 
 	try{
-		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.username, authorization_request, id_token);
+		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.did, authorization_request, id_token);
 		if (!outboundRequestResult.ok) {
 			if (outboundRequestResult.err && outboundRequestResult.val.action === "createIdToken") {
 				return res.status(409).send(outboundRequestResult.val);
@@ -65,7 +65,7 @@ presentationRouter.post('/generate/authorization/response', async (req, res) => 
 
 	const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
 	try {
-		const result = await openidForPresentationService.sendResponse(req.user.username, selection, vpjwt);
+		const result = await openidForPresentationService.sendResponse(req.user.did, selection, vpjwt);
 		if (!result.ok) {
 			if (result.err && result.val.action === "signJwtPresentation") {
 				return res.status(409).send(result.val);
