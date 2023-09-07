@@ -13,7 +13,7 @@ import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
 import { createVerifiablePresentation } from "../entities/VerifiablePresentation.entity";
-import { getUserByUsername } from "../entities/user.entity";
+import { getUserByDID } from "../entities/user.entity";
 
 
 type PresentationDefinition = {
@@ -75,9 +75,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	) { }
 
 
-	async handleRequest(username: string, requestURL: string): Promise<Result<OutboundRequest, void>> {
+	async handleRequest(userDid: string, requestURL: string): Promise<Result<OutboundRequest, void>> {
 		try {
-			return await this.parseIdTokenRequest(username, requestURL);
+			return await this.parseIdTokenRequest(userDid, requestURL);
 		}
 		catch(err) {
 		}
@@ -90,7 +90,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			const jsonParams = Object.fromEntries(paramEntries);
 			authorizationRequestSchema.parse(jsonParams); // will throw error if input is not conforming to the schema
 
-			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(username, requestURL);
+			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(userDid, requestURL);
 			return Ok({
 				conformantCredentialsMap: conformantCredentialsMap,
 				verifierDomainName: verifierDomainName
@@ -104,9 +104,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	async sendResponse(username: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, void>> {
+	async sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, void>> {
 		try {
-			return await this.generateAuthorizationResponse(username, selection)
+			return await this.generateAuthorizationResponse(userDid, selection)
 		}
 		catch(err) {
 			console.error("Failed to generate authorization response.\nError details: ", err);
@@ -117,9 +117,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 
-	private async parseIdTokenRequest(username: string, authorizationRequestURL: string): Promise<Result<{ redirect_to: string }, void>> {
-		console.log("Username2: ", username)
-		const { issuer_state } = await this.OpenidCredentialReceivingService.getIssuerState(username);
+	private async parseIdTokenRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{ redirect_to: string }, void>> {
+		console.log("parseIdTokenRequest userDid:", userDid)
+		const { issuer_state } = await this.OpenidCredentialReceivingService.getIssuerState(userDid);
 
 		let client_id: string,
 			redirect_uri: string,
@@ -148,14 +148,14 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			throw "This is not an id token request"
 		}
 
-		const currentState = this.states.get(username);
-		this.states.set(username, {
+		const currentState = this.states.get(userDid);
+		this.states.set(userDid, {
 			...currentState,
 			audience: client_id,
 			nonce,
 			redirect_uri
 		});
-		const idTokenResult = await this.walletKeystore.createIdToken(username, nonce, client_id);
+		const idTokenResult = await this.walletKeystore.createIdToken(userDid, nonce, client_id);
 
 		if (!idTokenResult.ok) {
 			if (idTokenResult.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
@@ -224,14 +224,13 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 	/**
 	 * @throws
-	 * @param did 
-	 * @param username 
+	 * @param userDid
 	 * @param authorizationRequestURL 
 	 * @returns 
 	 */
-	private async parseAuthorizationRequest(username: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, string[]>, verifierDomainName: string}> {
-		console.log("Request username = ", username)
-		const { did } = (await getUserByUsername(username)).unwrap();
+	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, string[]>, verifierDomainName: string}> {
+		console.log("parseAuthorizationRequest userDid = ", userDid)
+		const { did } = (await getUserByDID(userDid)).unwrap();
 		let client_id: string,
 				redirect_uri: string,
 				nonce: string,
@@ -261,7 +260,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			throw new Error(`Error fetching authorization request search params: ${error}`);
 		}
 		
-		this.states.set(username, {
+		this.states.set(userDid, {
 			presentation_definition,
 			audience: client_id,
 			nonce,
@@ -270,7 +269,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		});
 
 
-		console.log("State = ", this.states.get(username))
+		console.log("State = ", this.states.get(userDid))
 
 
 		console.log("Definition = ", presentation_definition)
@@ -327,11 +326,11 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	private async generateVerifiablePresentation(selectedVC: string[], username: string): Promise<Result<string, void>> {
-		const fetchedState = this.states.get(username);
+	private async generateVerifiablePresentation(selectedVC: string[], userDid: string): Promise<Result<string, void>> {
+		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
 		const {audience, nonce} = fetchedState;
-		const result = await this.walletKeystore.signJwtPresentation(username, nonce, audience, selectedVC);
+		const result = await this.walletKeystore.signJwtPresentation(userDid, nonce, audience, selectedVC);
 		if (!result.ok) {
 			return Err.EMPTY;
 		}
@@ -339,11 +338,11 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return Ok(vpjwt);
 	}
 	
-	private async generateAuthorizationResponse(username: string, selection: Map<string, string>): Promise<Result<{ redirect_to: string }, void>> {
-		console.log("Response username = ", username)
+	private async generateAuthorizationResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to: string }, void>> {
+		console.log("generateAuthorizationResponse userDid = ", userDid)
 		const allSelectedCredentialIdentifiers = Array.from(selection.values());
 
-		const { did } = (await getUserByUsername(username)).unwrap();
+		const { did } = (await getUserByDID(userDid)).unwrap();
 		console.log("Verifiable credentials map = ", selection)
 		let vcListRes = await getAllVerifiableCredentials(did);
 		if (vcListRes.err) {
@@ -356,13 +355,13 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
 
 		try {
-			const vp_token_result = await this.generateVerifiablePresentation(filteredVCJwtList, username);
+			const vp_token_result = await this.generateVerifiablePresentation(filteredVCJwtList, userDid);
 			if (vp_token_result.err) {
 				return Err(vp_token_result.val);
 			}
 
 			const vp_token: string = vp_token_result.val as string;
-			const {presentation_definition, redirect_uri, state} = this.states.get(username);
+			const {presentation_definition, redirect_uri, state} = this.states.get(userDid);
 			// console.log("vp token = ", vp_token)
 			// console.log("Presentation definition from state is = ");
 			// console.dir(presentation_definition, { depth: null });
