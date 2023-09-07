@@ -3,7 +3,7 @@ import express, { Router } from 'express';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import _ from 'lodash';
 import { appContainer } from '../services/inversify.config';
-import { OpenidCredentialReceiving } from '../services/interfaces';
+import { IssuanceErr, OpenidCredentialReceiving } from '../services/interfaces';
 import { TYPES } from '../services/types';
 
 
@@ -57,8 +57,14 @@ issuanceRouter.post('/handle/authorization/response', async (req, res) => {
 		if (!(new URL(authorization_response_url).searchParams.get("code"))) {
 			return res.status(500).send({});
 		}
-		await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.did, authorization_response_url);
-		res.send({});
+		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.did, authorization_response_url);
+		if (result.ok) {
+			res.send({});
+		} else if (result.val === IssuanceErr.STATE_NOT_FOUND) {
+			res.status(404).send({});
+		} else {
+			res.status(500).send({});
+		}
 	}
 	catch(err) {
 		res.status(500).send({ error: "Failed to handle authorization response" });
