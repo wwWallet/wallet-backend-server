@@ -1,23 +1,25 @@
 import axios from "axios";
+import * as _ from 'lodash';
+import base64url from "base64url";
+import qs from "qs";
+import { injectable, inject } from "inversify";
+import "reflect-metadata";
+import { Err, Ok, Result } from "ts-results";
+
 import { LegalPersonEntity, getLegalPersonByDID, getLegalPersonByUrl } from "../entities/LegalPerson.entity";
 import { CredentialIssuerMetadata, CredentialResponseSchemaType, CredentialSupportedJwtVcJson, GrantType, OpenidConfiguration, TokenResponseSchemaType, VerifiableCredentialFormat } from "../types/oid4vci";
 import config from "../../config";
-import { getUserByUsername } from "../entities/user.entity";
+import { getUserByDID } from "../entities/user.entity";
 import { sendPushNotification } from "../lib/firebase";
-import * as _ from 'lodash';
 import { generateCodeChallengeFromVerifier, generateCodeVerifier } from "../util/util";
-import base64url from "base64url";
 import { createVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
-import qs from "qs";
 import { TYPES } from "./types";
-import { OpenidCredentialReceiving, WalletKeystore  } from "./interfaces";
-import { injectable, inject } from "inversify";
-import "reflect-metadata";
+import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 
 
 type IssuanceState = {
-	username: string;  // Before Authorization Req
+	userDid: string;  // Before Authorization Req
 	legalPerson: LegalPersonEntity; // Before Authorization Req
 	credentialIssuerMetadata: CredentialIssuerMetadata; // Before Authorization Req
 	openidConfiguration: OpenidConfiguration; // Before Authorization Req
@@ -38,7 +40,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	// legalPersonService: LegalPersonService = new LegalPersonService();
 	
 
-	// key: username
+	// key: userDid
 	public states = new Map<string, IssuanceState>();
 
 
@@ -46,7 +48,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	// to be received.
 	// When a credential is ready to be received, the credential response
 	// is added for specific fcm token and a notification is sent to the device.
-	// key: username, value: array of credential responses
+	// key: userDid, value: array of credential responses
 	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
 
 	constructor(
@@ -54,8 +56,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	) { }
 
 
-	async getIssuerState(username: string): Promise<{ issuer_state?: string, error?: Error; }> {
-		const state = this.states.get(username);
+	async getIssuerState(userDid: string): Promise<{ issuer_state?: string, error?: Error; }> {
+		const state = this.states.get(userDid);
 		if (!state) {
 			return { issuer_state: null, error: new Error("No state found") };
 		}
@@ -82,15 +84,14 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 	/**
 	 * 
-	 * @param username 
+	 * @param userDid
 	 * @param legalPersonDID 
 	 * @returns 
 	 * @throws
 	 */
-	async generateAuthorizationRequestURL(username: string, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to: string }> {
-		console.log("Username = ", username)
-		console.log("LP = ", legalPersonDID)
-		const user = (await getUserByUsername(username)).unwrap();
+	async generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to: string }> {
+		console.log("generateAuthorizationRequestURL userDid = ", userDid);
+		console.log("LP = ", legalPersonDID);
 		let issuerUrlString: string | null = null;
 		let credential_offer = null;
 		let issuer_state = null;
@@ -103,8 +104,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			},
 			response_types_supported: [ "vp_token", "id_token" ]
 		};
-
-		const walletDID = await this.walletKeyStore.getIdentifier(username);
 
 		let lp: LegalPersonEntity;
 
@@ -155,8 +154,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		});
 
 		if (credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]) {
-			this.states.set(username, {
-				username: username,
+			this.states.set(userDid, {
+				userDid,
 				credentialIssuerMetadata: credentialIssuerMetadata,
 				openidConfiguration: authorizationServerConfig,
 				legalPerson: lp,
@@ -177,7 +176,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 		const authorizationRequestURL = new URL(authorizationServerConfig.authorization_endpoint);
 		authorizationRequestURL.searchParams.append("scope", "openid");
-		authorizationRequestURL.searchParams.append("client_id", walletDID);
+		authorizationRequestURL.searchParams.append("client_id", userDid);
 		
 		authorizationRequestURL.searchParams.append("redirect_uri", config.walletClientUrl);
 
@@ -190,8 +189,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		authorizationRequestURL.searchParams.append("issuer_state", issuer_state);
 
 		authorizationRequestURL.searchParams.append("client_metadata", JSON.stringify(client_metadata));
-		this.states.set(username, {
-			username: username,
+		this.states.set(userDid, {
+			userDid,
 			authorization_details: authorizationDetails,
 			credentialIssuerMetadata: credentialIssuerMetadata,
 			openidConfiguration: authorizationServerConfig,
@@ -206,15 +205,15 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 
-	public async requestCredentialsWithPreAuthorizedGrant(username: string, user_pin: string) {
-		let state = this.states.get(username)
+	public async requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string) {
+		let state = this.states.get(userDid)
 		state = { ...state, user_pin: user_pin };
-		this.states.set(username, state); // save state with pin
+		this.states.set(userDid, state); // save state with pin
 
 		this.tokenRequest(state).then(tokenResponse => {
 			state = { ...state, tokenResponse }
-			this.states.set(username, state);
-			this.credentialRequests(username, state).catch(e => {
+			this.states.set(userDid, state);
+			this.credentialRequests(userDid, state).catch(e => {
 				console.error("Credential requests failed with error : ", e)
 			});
 		})
@@ -225,26 +224,28 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(username: string, authorizationResponseURL: string): Promise<void> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>> {
+		const currentState = this.states.get(userDid);
+		if (!currentState) {
+			return Err(IssuanceErr.STATE_NOT_FOUND);
+		}
+
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
 		if (!code) {
 			throw new Error("Code not received");
 		}
-		const currentState = this.states.get(username);
 		let newState = { ...currentState, code };
-		this.states.set(username, newState);
+		this.states.set(userDid, newState);
 
-		this.tokenRequest(newState).then(tokenResponse => {
-			newState = { ...newState, tokenResponse }
-			this.states.set(username, newState);
-			this.credentialRequests(username, newState).catch(e => {
-				console.error("Credential requests failed with error : ", e)
-			});
-		}).catch(e => {
-			console.error("Token Request failed");
-			console.error(e);
-		})
+		const tokenResponse = await this.tokenRequest(newState);
+		newState = { ...newState, tokenResponse }
+		this.states.set(userDid, newState);
+		try {
+			return await this.credentialRequests(userDid, newState);
+		} catch (e) {
+			console.error("Credential requests failed with error : ", e)
+		}
 	}
 
 
@@ -270,7 +271,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			data.append('code', state.code);
 			data.append('redirect_uri', config.walletClientUrl);
 			data.append('code_verifier', state.code_verifier);
-			const user = (await getUserByUsername(state.username)).unwrap();
+			const user = (await getUserByDID(state.userDid)).unwrap();
 			data.append('client_id', user.did);
 			break;
 		case GrantType.PRE_AUTHORIZED_CODE:
@@ -317,16 +318,22 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(username: string, state: IssuanceState) {
-
+	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, void>> {
 		console.log("State = ", state)
-		const httpHeader = { 
+
+		const httpHeader = {
 			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
 
 		const c_nonce = state.tokenResponse.c_nonce;
-		const { proof_jwt } = await this.walletKeyStore.generateOpenid4vciProof(username, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		if (!res.ok) {
+			if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
+				return Err.EMPTY;
+			}
+		}
 
+		const { proof_jwt } = res.val;
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
 		let httpResponsePromises = state.authorization_details.map((authzDetail) => {
@@ -339,7 +346,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			}
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
-		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
 		responses
@@ -352,25 +358,27 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
-			.map((res) => 
+			.map((res) =>
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
 			);
 
+		// Prevent duplicate credential acceptance
+		this.states.delete(userDid);
 
 		for (const cr of credentialResponses) {
 			if (cr.acceptance_token)
 				this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
 		}
-		
+
 		// remove the ones that are for deferred endpoint
 		credentialResponses = credentialResponses.filter((cres) => !cres.acceptance_token);
 
 		for (const response of credentialResponses) {
 			console.log("Response = ", response)
-			this.handleCredentialStorage(username, response);
+			this.handleCredentialStorage(state, response);
 		}
 		console.log("=====FINISHED OID4VCI")
-		return;
+		return Ok.EMPTY;
 	}
 
 	// Deferred Credential only
@@ -383,7 +391,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			{}, 
 			{ headers: defferedCredentialReqHeader } )
 			.then((res) => {
-				this.handleCredentialStorage(state.username, res.data);
+				this.handleCredentialStorage(state, res.data);
 			})
 			.catch(err => {
 				setTimeout(() => {
@@ -394,14 +402,14 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 	}
 
-	private async handleCredentialStorage(username: string, credentialResponse: CredentialResponseSchemaType) {
-		const userRes = await getUserByUsername(username);
+	private async handleCredentialStorage(state: IssuanceState, credentialResponse: CredentialResponseSchemaType) {
+		const userRes = await getUserByDID(state.userDid);
 		if (userRes.err) {
 			return;
 		}
 		const user = userRes.unwrap();
 
-		const { legalPerson } = this.states.get(username);
+		const { legalPerson } = state;
 		console.log("Legal person  = ", legalPerson)
 		const credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
 		const type = credentialPayload.vc.type as string[];

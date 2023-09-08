@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf dist && npx tsc",
     "dev": "nodemon --config nodemon.json --exec \"npx tsc && yarn start\"",
-    "start": "node -r source-map-support/register dist/src/app.js"
+    "start": "node -r source-map-support/register dist/src/app.js",
+    "typeorm": "typeorm-ts-node-commonjs -d src/AppDataSource.ts",
+    "typeorm-raw": "typeorm-ts-node-commonjs"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +17,7 @@
   "dependencies": {
     "@gunet/ssi-sdk": "^1.0.0",
     "@transmute/did-key-ed25519": "^0.3.0-unstable.10",
+    "@simplewebauthn/server": "^7.4.0",
     "ajv": "^8.12.0",
     "apn": "^2.2.0",
     "axios": "^0.27.2",
@@ -37,9 +40,11 @@
     "sequelize": "^6.29.3",
     "ts-results": "^3.3.0",
     "typeorm": "^0.3.9",
+    "uuid": "^9.0.0",
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@simplewebauthn/typescript-types": "^7.4.0",
     "@types/body-parser": "^1.19.2",
     "@types/cookie-parser": "^1.4.3",
     "@types/cors": "^2.8.12",
@@ -48,8 +53,10 @@
     "@types/node": "^18.7.17",
     "@types/node-fetch": "^2.6.4",
     "@types/randomstring": "^1.1.8",
+    "@types/uuid": "^9.0.2",
     "nodemon": "^2.0.19",
     "source-map-support": "^0.5.21",
+    "ts-node": "^10.9.1",
     "typescript": "^4.8.3"
   }
 }

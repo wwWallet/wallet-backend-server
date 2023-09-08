@@ -9,12 +9,16 @@ export = {
 		password: "DB_PASSWORD",
 		dbname: "DB_NAME"
 	},
-	redis: {
-		url: "REDIS_URL",
-		password: undefined
-	},
 	walletClientUrl: "WALLET_CLIENT_URL",
-	alg: "ES256",
+	webauthn: {
+		attestation: "direct",
+		origin: "WEBAUTHN_ORIGIN",
+		rp: {
+			id: "WEBAUTHN_RP_ID",
+			name: "Digital Wallet demo",
+		},
+	},
+	alg: "EdDSA",
 	servicesConfiguration: {
 		issuanceService: "OpenidForCredentialIssuanceService", // OpenidForCredentialIssuanceService or OpenidForCredentialIssuanceMattrV2Service
 		didKeyService: "W3C", // W3C or EBSI

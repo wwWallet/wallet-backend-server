@@ -1,20 +1,23 @@
 import axios from "axios";
-import { InputDescriptorType, Verify } from "@gunet/ssi-sdk";
 import { JSONPath } from "jsonpath-plus";
 import base64url from "base64url";
+import qs from "qs";
+import { inject, injectable } from "inversify";
+import "reflect-metadata";
+import { z } from 'zod';
+import { Err, Ok, Result } from "ts-results";
+
+import { InputDescriptorType, Verify } from "@gunet/ssi-sdk";
+import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { TYPES } from "./types";
+import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
 import { createVerifiablePresentation } from "../entities/VerifiablePresentation.entity";
-import qs from "qs";
-import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore } from "./interfaces";
-import { inject, injectable } from "inversify";
-import { TYPES } from "./types";
-import "reflect-metadata";
-import { OutboundRequest } from "./types/OutboundRequest";
-import { getUserByUsername } from "../entities/user.entity";
-import { z } from 'zod';
-import config from "../../config";
-import { randomUUID } from "crypto";
+import { getUserByDID } from "../entities/user.entity";
 import { VerifierRegistryService } from "./VerifierRegistryService";
+import { randomUUID } from "node:crypto";
+import config from "../../config";
+
 
 type PresentationDefinition = {
 	id: string,
@@ -66,6 +69,7 @@ type VerificationState = {
 @injectable()
 export class OpenidForPresentationService implements OutboundCommunication {
 
+	// key: did
 	states = new Map<string, VerificationState>();
 
 
@@ -77,16 +81,15 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	) { }
 
 
-	async initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
+	async initiateVerificationFlow(userDid: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
 		const verifier = (await this.verifierRegistryService.getAllVerifiers()).filter(ver => ver.id == verifierId)[0];
-
-		const userFetchRes = await getUserByUsername(username);
+		console.log("User did = ", userDid)
+		const userFetchRes = await getUserByDID(userDid);
 		if (userFetchRes.err) {
 			return {};
 		}
-
 		const holder_state = randomUUID();
-		this.states.set(username, { holder_state });
+		this.states.set(userDid, { holder_state });
 
 		const user = userFetchRes.unwrap();
 		const url = new URL(verifier.url);
@@ -98,10 +101,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return { redirect_to: url.toString() };
 	}
 
-	async handleRequest(username: string, requestURL: string): Promise<OutboundRequest> {
+	async handleRequest(userDid: string, requestURL: string): Promise<Result<OutboundRequest, void>> {
 		try {
-			const { redirect_to } = await this.parseIdTokenRequest(username, requestURL);
-			return { redirect_to: redirect_to }
+			return await this.parseIdTokenRequest(userDid, requestURL);
 		}
 		catch(err) {
 		}
@@ -114,37 +116,36 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			const jsonParams = Object.fromEntries(paramEntries);
 			authorizationRequestSchema.parse(jsonParams); // will throw error if input is not conforming to the schema
 
-			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(username, requestURL);
-			return {
+			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(userDid, requestURL);
+			return Ok({
 				conformantCredentialsMap: conformantCredentialsMap,
 				verifierDomainName: verifierDomainName
-			};
+			});
 		}
 		catch(err) {
 
 		}
 
-		return { };
+		return Ok({ });
 	}
 
 
-	async sendResponse(username: string, selection: Map<string, string>): Promise<{ redirect_to?: string, error?: Error }> {
+	async sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, void>> {
 		try {
-			const { redirect_to } = await this.generateAuthorizationResponse(username, selection)
-			return { redirect_to };
+			return await this.generateAuthorizationResponse(userDid, selection)
 		}
 		catch(err) {
 			console.error("Failed to generate authorization response.\nError details: ", err);
-			return { error: new Error("Failed to generate authorization response") };
+			return Ok({ error: new Error("Failed to generate authorization response") });
 		}
 	}
 
 
 
 
-	private async parseIdTokenRequest(username: string, authorizationRequestURL: string): Promise<{ redirect_to: string }> {
-		console.log("Username2: ", username)
-		const { issuer_state } = await this.OpenidCredentialReceivingService.getIssuerState(username);
+	private async parseIdTokenRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{ redirect_to: string }, void>> {
+		console.log("parseIdTokenRequest userDid:", userDid)
+		const { issuer_state } = await this.OpenidCredentialReceivingService.getIssuerState(userDid);
 
 		let client_id: string,
 			redirect_uri: string,
@@ -173,16 +174,22 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			throw "This is not an id token request"
 		}
 
-		const currentState = this.states.get(username);
-		this.states.set(username, {
+		const currentState = this.states.get(userDid);
+		this.states.set(userDid, {
 			...currentState,
 			audience: client_id,
 			nonce,
 			redirect_uri
 		});
+		const idTokenResult = await this.walletKeystore.createIdToken(userDid, nonce, client_id);
 
+		if (!idTokenResult.ok) {
+			if (idTokenResult.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
+				return Err.EMPTY;
+			}
+		}
 
-		const { id_token } = await this.walletKeystore.createIdToken(username, nonce, client_id);
+		const { id_token } = idTokenResult.val;
 		// const id_token = await new SignJWT({ nonce: nonce })
 		// 	.setAudience(client_id)
 		// 	.setIssuedAt()
@@ -238,20 +245,18 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			});
 		console.log("New loc : ", newLocation)
 		// check if newLocation is null
-		return { redirect_to: newLocation }
-
+		return Ok({ redirect_to: newLocation });
 	}
 
 	/**
 	 * @throws
-	 * @param did 
-	 * @param username 
+	 * @param userDid
 	 * @param authorizationRequestURL 
 	 * @returns 
 	 */
-	private async parseAuthorizationRequest(username: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, string[]>, verifierDomainName: string}> {
-		console.log("Request username = ", username)
-		const { did } = (await getUserByUsername(username)).unwrap();
+	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, string[]>, verifierDomainName: string}> {
+		console.log("parseAuthorizationRequest userDid = ", userDid)
+		const { did } = (await getUserByDID(userDid)).unwrap();
 		let client_id: string,
 				redirect_uri: string,
 				nonce: string,
@@ -281,7 +286,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			throw new Error(`Error fetching authorization request search params: ${error}`);
 		}
 		
-		this.states.set(username, {
+		this.states.set(userDid, {
 			presentation_definition,
 			audience: client_id,
 			nonce,
@@ -290,7 +295,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		});
 
 
-		console.log("State = ", this.states.get(username))
+		console.log("State = ", this.states.get(userDid))
 
 
 		console.log("Definition = ", presentation_definition)
@@ -347,19 +352,23 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	private async generateVerifiablePresentation(selectedVC: string[], username: string): Promise<string> {
-		const fetchedState = this.states.get(username);
+	private async generateVerifiablePresentation(selectedVC: string[], userDid: string): Promise<Result<string, void>> {
+		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
 		const {audience, nonce} = fetchedState;
-		const { vpjwt } = await this.walletKeystore.signJwtPresentation(username, nonce, audience, selectedVC)
-		return vpjwt;
+		const result = await this.walletKeystore.signJwtPresentation(userDid, nonce, audience, selectedVC);
+		if (!result.ok) {
+			return Err.EMPTY;
+		}
+		const { vpjwt } = result.val;
+		return Ok(vpjwt);
 	}
 	
-	private async generateAuthorizationResponse(username: string, selection: Map<string, string>): Promise<{ redirect_to: string }> {
-		console.log("Response username = ", username)
+	private async generateAuthorizationResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to: string }, void>> {
+		console.log("generateAuthorizationResponse userDid = ", userDid)
 		const allSelectedCredentialIdentifiers = Array.from(selection.values());
 
-		const { did } = (await getUserByUsername(username)).unwrap();
+		const { did } = (await getUserByDID(userDid)).unwrap();
 		console.log("Verifiable credentials map = ", selection)
 		let vcListRes = await getAllVerifiableCredentials(did);
 		if (vcListRes.err) {
@@ -371,12 +380,14 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			);
 		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
 
-		let vp_token: string;
 		try {
-			
+			const vp_token_result = await this.generateVerifiablePresentation(filteredVCJwtList, userDid);
+			if (vp_token_result.err) {
+				return Err(vp_token_result.val);
+			}
 
-			vp_token = await this.generateVerifiablePresentation(filteredVCJwtList, username);
-			const {presentation_definition, redirect_uri, state} = this.states.get(username);
+			const vp_token: string = vp_token_result.val as string;
+			const {presentation_definition, redirect_uri, state} = this.states.get(userDid);
 			// console.log("vp token = ", vp_token)
 			// console.log("Presentation definition from state is = ");
 			// console.dir(presentation_definition, { depth: null });
@@ -445,7 +456,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			});
 
 
-			return { redirect_to: newLocation };
+			return Ok({ redirect_to: newLocation });
 		}
 		catch(error) {
 			throw new Error(`Error generating Verifiable Presentation: ${error}`);

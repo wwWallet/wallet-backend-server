@@ -71,6 +71,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		}
 		const user = userRes.unwrap();
 		req.user.username = user.username;
+		req.user.did = user.did;
 		return next();
 	})
 	.catch(e => {

@@ -11,13 +11,14 @@ import { storageRouter } from './routers/storage.router';
 import { presentationRouter } from './routers/presentation.router';
 import { legalPersonRouter } from './routers/legal_person.router';
 import verifiersRouter from './routers/verifiers.router';
+import { reviverTaggedBase64UrlToBuffer } from './util/util';
 
 const app: Express = express();
 // __dirname is "/path/to/dist/src"
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ reviver: reviverTaggedBase64UrlToBuffer }));
 
 app.use(express.static('public'));
 // __dirname is "/path/to/dist/src"

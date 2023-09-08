@@ -24,6 +24,10 @@ export class VerifierRegistryService {
 					description: "Present your Verifiable ID"
 				},
 				{
+					name: "diploma",
+					description: "Present your Diploma"
+				},
+				{
 					name: "ver:test",
 					description: "Test"
 				}
