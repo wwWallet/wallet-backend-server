@@ -6,14 +6,19 @@ import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
 
 import config from '../../config';
-import { NaturalPersonWallet } from '@gunet/ssi-sdk';
 import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
 import * as scrypt from "../scrypt";
+import { appContainer } from '../services/inversify.config';
+import { DidKeyUtilityService } from '../services/interfaces';
+import { TYPES } from '../services/types';
 
+
+
+const didKeyUtilityService = appContainer.get<DidKeyUtilityService>(TYPES.DidKeyUtilityService);
 
 /**
  * "/user"
@@ -27,12 +32,13 @@ noAuthUserController.use('/session', userController);
 async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string }> {
 	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
 	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
-	const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet('ES256');
+	const { did, key } = await didKeyUtilityService.generateKeyPair();
+	console.log("Generated did = ", did)
 	return {
 		fcmToken,
 		browserFcmToken,
-		keys: Buffer.from(JSON.stringify(naturalPersonWallet.key)),
-		did: naturalPersonWallet.key.did,
+		keys: Buffer.from(JSON.stringify(key)),
+		did: did,
 		displayName: req.body.displayName,
 	};
 }

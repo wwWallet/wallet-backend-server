@@ -1,3 +1,4 @@
+import { JWK } from "jose";
 import { Result } from "ts-results";
 import { LegalPersonEntity } from "../entities/LegalPerson.entity";
 import { OutboundRequest } from "./types/OutboundRequest";
@@ -24,6 +25,9 @@ export type AdditionalKeystoreParameters = {
 
 
 export interface WalletKeystore {
+	// generateKeyPair(username: string): Promise<{ did: string }>;
+	// getIdentifier(username: string): Promise<string>; // later can be converted into getIdentifiers() for more than one
+
 	createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
 	signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
 	generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
@@ -36,6 +40,8 @@ export enum WalletKeystoreErr {
 
 export interface OutboundCommunication {
 	
+
+	initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
 	handleRequest(userDid: string, requestURL: string): Promise<Result<OutboundRequest, void>>;
 
 	/**
@@ -50,4 +56,9 @@ export interface OutboundCommunication {
 
 export interface LegalPersonsRegistry {
 	getByIdentifier(did: string): Promise<LegalPersonEntity>;
+}
+
+export interface DidKeyUtilityService {
+	getPublicKeyJwk(did: string): Promise<JWK>;
+	generateKeyPair(): Promise<{ did: string, key: any }>
 }

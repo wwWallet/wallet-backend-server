@@ -16,6 +16,7 @@
   "description": "",
   "dependencies": {
     "@gunet/ssi-sdk": "^1.0.0",
+    "@transmute/did-key-ed25519": "^0.3.0-unstable.10",
     "@simplewebauthn/server": "^7.4.0",
     "ajv": "^8.12.0",
     "apn": "^2.2.0",

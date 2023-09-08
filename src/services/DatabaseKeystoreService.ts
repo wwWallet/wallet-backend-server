@@ -1,6 +1,6 @@
 import { SignJWT, importJWK } from "jose";
 import { randomUUID } from "crypto";
-import { injectable } from "inversify";
+import { inject, injectable } from "inversify";
 import "reflect-metadata";
 import { Err, Ok, Result } from "ts-results";
 
@@ -8,15 +8,17 @@ import { SignVerifiablePresentationJWT, WalletKey } from "@gunet/ssi-sdk";
 import { AdditionalKeystoreParameters, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { verifiablePresentationSchemaURL } from "../util/util";
 import { getUserByDID } from "../entities/user.entity";
+import { TYPES } from "./types";
 
 
 @injectable()
 export class DatabaseKeystoreService implements WalletKeystore {
 
-	public static readonly identifier = "DatabaseKeystoreService"
+	private readonly algorithm = "EdDSA";
 
+	constructor(
+	) { }
 
-	constructor() { }
 	
 	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
 		const user = (await getUserByDID(userDid)).unwrap();
@@ -29,9 +31,9 @@ export class DatabaseKeystoreService implements WalletKeystore {
 		const privateKey = await importJWK(keys.privateKey, keys.alg);
 		const jws = await new SignJWT({ nonce: nonce })
 			.setProtectedHeader({
-				alg: keys.alg,
+				alg: this.algorithm,
 				typ: "JWT",
-				kid: keys.did + "#" + keys.did.split(":")[2],
+				kid: keys.verificationMethod,
 			})
 			.setSubject(user.did)
 			.setIssuer(user.did)
@@ -46,7 +48,6 @@ export class DatabaseKeystoreService implements WalletKeystore {
 	async signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>> {
 		const user = (await getUserByDID(userDid)).unwrap();
 		const keys = JSON.parse(user.keys.toString()) as WalletKey;
-
 		if (!keys.privateKey) {
 			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
 		}
@@ -54,9 +55,9 @@ export class DatabaseKeystoreService implements WalletKeystore {
 		const privateKey = await importJWK(keys.privateKey, keys.alg);
 		const jws = await new SignVerifiablePresentationJWT()
 			.setProtectedHeader({
-				alg: keys.alg,
+				alg: this.algorithm,
 				typ: "JWT",
-				kid: keys.did + "#" + keys.did.split(":")[2],
+				kid: keys.verificationMethod,
 			})
 			.setVerifiableCredential(verifiableCredentials)
 			.setContext(["https://www.w3.org/2018/credentials/v1"])
@@ -79,16 +80,15 @@ export class DatabaseKeystoreService implements WalletKeystore {
 	async generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>> {
 		const user = (await getUserByDID(userDid)).unwrap();
 		const keys = JSON.parse(user.keys.toString()) as WalletKey;
-
 		if (!keys.privateKey) {
 			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
 		}
 
 		const privateKey = await importJWK(keys.privateKey, keys.alg);
 		const header = {
-			alg: keys.alg,
+			alg: this.algorithm,
 			typ: "openid4vci-proof+jwt",
-			kid: keys.did + "#" + keys.did.split(":")[2]
+			kid: keys.verificationMethod
 		};
 
 		const jws = await new SignJWT({ nonce: nonce })
@@ -96,7 +96,7 @@ export class DatabaseKeystoreService implements WalletKeystore {
 			.setIssuedAt()
 			.setIssuer(user.did)
 			.setAudience(audience)
-			.setExpirationTime('1m')
+			// .setExpirationTime('1m')
 			.sign(privateKey);
 		return Ok({ proof_jwt: jws });
 	}
