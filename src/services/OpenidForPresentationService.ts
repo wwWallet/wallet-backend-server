@@ -394,7 +394,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 			const directPostPayload = {
 				vp_token: vp_token,
-				presentation_submission: JSON.stringify(presentationSubmission),
+				presentation_submission: presentationSubmission,
 				state: state
 			};
 			const { newLocation } = await axios.post(redirect_uri, qs.stringify(directPostPayload), {
