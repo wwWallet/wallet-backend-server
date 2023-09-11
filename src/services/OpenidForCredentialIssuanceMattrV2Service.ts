@@ -1,21 +1,21 @@
 import axios from "axios";
-import * as _ from 'lodash';
-import base64url from "base64url";
-import qs from "qs";
-import { injectable, inject } from "inversify";
-import "reflect-metadata";
-import { Err, Ok, Result } from "ts-results";
-
 import { LegalPersonEntity, getLegalPersonByDID, getLegalPersonByUrl } from "../entities/LegalPerson.entity";
 import { CredentialIssuerMetadata, CredentialResponseSchemaType, CredentialSupportedJwtVcJson, GrantType, OpenidConfiguration, TokenResponseSchemaType, VerifiableCredentialFormat } from "../types/oid4vci";
 import config from "../../config";
-import { getUserByDID } from "../entities/user.entity";
 import { sendPushNotification } from "../lib/firebase";
+import * as _ from 'lodash';
 import { generateCodeChallengeFromVerifier, generateCodeVerifier } from "../util/util";
+import base64url from "base64url";
 import { createVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
+import qs from "qs";
 import { TYPES } from "./types";
-import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr, WalletKeystoreRequest } from "./interfaces";
+import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreRequest  } from "./interfaces";
+import { injectable, inject } from "inversify";
+import "reflect-metadata";
+import { randomUUID } from "node:crypto";
+import { getUserByDID } from "../entities/user.entity";
+import { Err, Ok, Result } from "ts-results";
 
 
 type IssuanceState = {
@@ -34,13 +34,13 @@ type IssuanceState = {
 }
 
 @injectable()
-export class OpenidForCredentialIssuanceService implements OpenidCredentialReceiving {
+export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredentialReceiving {
 
 	// identifierService: IdentifierService = new IdentifierService();
 	// legalPersonService: LegalPersonService = new LegalPersonService();
 	
 
-	// key: userDid
+	// key: username
 	public states = new Map<string, IssuanceState>();
 
 
@@ -48,7 +48,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	// to be received.
 	// When a credential is ready to be received, the credential response
 	// is added for specific fcm token and a notification is sent to the device.
-	// key: userDid, value: array of credential responses
+	// key: username, value: array of credential responses
 	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
 
 	constructor(
@@ -56,8 +56,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	) { }
 
 
-	async getIssuerState(userDid: string): Promise<{ issuer_state?: string, error?: Error; }> {
-		const state = this.states.get(userDid);
+	async getIssuerState(username: string): Promise<{ issuer_state?: string, error?: Error; }> {
+		const state = this.states.get(username);
 		if (!state) {
 			return { issuer_state: null, error: new Error("No state found") };
 		}
@@ -84,14 +84,13 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 	/**
 	 * 
-	 * @param userDid
+	 * @param username 
 	 * @param legalPersonDID 
 	 * @returns 
 	 * @throws
 	 */
 	async generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to: string }> {
-		console.log("generateAuthorizationRequestURL userDid = ", userDid);
-		console.log("LP = ", legalPersonDID);
+		const user = (await getUserByDID(userDid)).unwrap();
 		let issuerUrlString: string | null = null;
 		let credential_offer = null;
 		let issuer_state = null;
@@ -104,6 +103,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			},
 			response_types_supported: [ "vp_token", "id_token" ]
 		};
+
 
 		let lp: LegalPersonEntity;
 
@@ -119,18 +119,27 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			console.log("Credential offer url = ", credentialOfferURL)
 
 			credential_offer = qs.parse(credentialOfferURL.split('?')[1]) as any;
-			if (credential_offer.credential_offer_uri && typeof credential_offer.credential_offer_uri == 'string') {
+			if (credential_offer?.credential_offer_uri && typeof credential_offer?.credential_offer_uri == 'string') {
 				credential_offer = (await axios.get(credential_offer.credential_offer_uri)).data;
 			}
-			console.log("Credential offer = ", credential_offer)
+			else {
+				credential_offer = JSON.parse(credential_offer.credential_offer);
+			}
 
+			console.log("Credential offer = ", credential_offer)
 			const credentialIssuerURL = credential_offer.credential_issuer as string;
+			console.log("Credential issuer url = ", credentialIssuerURL)
 			lp = (await getLegalPersonByUrl(credentialIssuerURL)).unwrap();
+			console.log("lp = ", lp == null)
+			if (!lp) {
+				lp = { id: -1,  friendlyName: "", did: "", url: credentialIssuerURL, client_id: "", client_secret: "" };
+			}
 			issuerUrlString = lp.url;
-			issuer_state = credential_offer?.grants.authorization_code?.issuer_state 
+			issuer_state = credential_offer?.grants?.authorization_code?.issuer_state 
 
 		}
 
+		console.log("Issuer url str = ", issuerUrlString)
 		if (!issuerUrlString) {
 			throw "No issuer url is defined"
 		}
@@ -140,7 +149,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		const credentialIssuerMetadata = (await axios.get(issuerUrlString + "/.well-known/openid-credential-issuer")).data as CredentialIssuerMetadata;
 		console.log("Credential issuer metadata")
 		console.dir(credentialIssuerMetadata, { depth: null })
-		const authorizationServerConfig = (await axios.get(credentialIssuerMetadata.authorization_server + "/.well-known/openid-configuration")).data;
+		const { authorization_endpoint, token_endpoint } = credentialIssuerMetadata as any;
+		const authorizationServerConfig = { authorization_endpoint, token_endpoint };
+		// const authorizationServerConfig = (await axios.get(credentialIssuerMetadata.authorization_server + "/.well-known/openid-configuration")).data;
 
 		// all credential supported will be added into the authorization details by default
 		const authorizationDetails: CredentialSupportedJwtVcJson[] = (credential_offer ? credential_offer.credentials : credentialIssuerMetadata.credentials_supported)
@@ -153,9 +164,11 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			};
 		});
 
+
+		console.log("Result = ", credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"])
 		if (credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]) {
 			this.states.set(userDid, {
-				userDid,
+				userDid: userDid,
 				credentialIssuerMetadata: credentialIssuerMetadata,
 				openidConfiguration: authorizationServerConfig,
 				legalPerson: lp,
@@ -165,8 +178,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 				code: credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["pre-authorized_code"]
 			});
 			const user_pin_required = credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["user_pin_required"];
-			console.log("Redirecting to ... ", config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}`)
-			return { redirect_to: config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}` }
+			console.log("Redirecting to ... ", config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required ? user_pin_required : false}`)
+			return { redirect_to: config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required ? user_pin_required : false}` }
 		}
 		
 		
@@ -190,7 +203,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		authorizationRequestURL.searchParams.append("client_metadata", JSON.stringify(client_metadata));
 		this.states.set(userDid, {
-			userDid,
+			userDid: userDid,
 			authorization_details: authorizationDetails,
 			credentialIssuerMetadata: credentialIssuerMetadata,
 			openidConfiguration: authorizationServerConfig,
@@ -205,15 +218,15 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 
-	public async requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string) {
-		let state = this.states.get(userDid)
+	public async requestCredentialsWithPreAuthorizedGrant(username: string, user_pin: string) {
+		let state = this.states.get(username)
 		state = { ...state, user_pin: user_pin };
-		this.states.set(userDid, state); // save state with pin
+		this.states.set(username, state); // save state with pin
 
 		this.tokenRequest(state).then(tokenResponse => {
 			state = { ...state, tokenResponse }
-			this.states.set(userDid, state);
-			this.credentialRequests(userDid, state, null).catch(e => {
+			this.states.set(username, state);
+			this.credentialRequests(username, state).catch(e => {
 				console.error("Credential requests failed with error : ", e)
 			});
 		})
@@ -230,15 +243,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			return Err(IssuanceErr.STATE_NOT_FOUND);
 		}
 
-		if (proof_jwt) {
-			const currentState = this.states.get(userDid);
-			try {
-				return await this.credentialRequests(userDid, currentState, proof_jwt);
-			} catch (e) {
-				console.error("Credential requests failed with error : ", e)
-			}
-		}
-
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
 		if (!code) {
@@ -251,7 +255,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		newState = { ...newState, tokenResponse }
 		this.states.set(userDid, newState);
 		try {
-			return await this.credentialRequests(userDid, newState, null);
+			await this.credentialRequests(userDid, newState);
+			return Ok.EMPTY;
 		} catch (e) {
 			console.error("Credential requests failed with error : ", e)
 		}
@@ -327,35 +332,18 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(userDid: string, state: IssuanceState, proof_jwt: string | null): Promise<Result<void, WalletKeystoreRequest>> {
+	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, void>> {
+
 		console.log("State = ", state)
-
-		if (proof_jwt) {
-			return Ok(await this.finishCredentialRequests(userDid, state, proof_jwt));
-		}
-
-		const c_nonce = state.tokenResponse.c_nonce;
-		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
-
-		if (res.ok) {
-			const { proof_jwt } = res.val;
-			return Ok(await this.finishCredentialRequests(userDid, state, proof_jwt));
-
-		} else if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
-			return Err({
-				action: "generateOpenid4vciProof",
-				audience: state.credentialIssuerMetadata.credential_issuer,
-				nonce: c_nonce,
-			});
-		}
-	}
-
-	private async finishCredentialRequests(userDid: string, state: IssuanceState, proof_jwt: string) {
-		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
-
-		const httpHeader = {
+		const httpHeader = { 
 			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
+
+		const c_nonce = state.tokenResponse.c_nonce;
+
+		const { proof_jwt } = (await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce)).unwrap();
+
+		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
 		let httpResponsePromises = state.authorization_details.map((authzDetail) => {
 			const httpBody = {
@@ -363,10 +351,12 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 					proof_type: "jwt",
 					jwt: proof_jwt
 				},
-				...authzDetail
+				format: authzDetail.format,
+				type: authzDetail.types[0]
 			}
 			return axios.post(credentialEndpoint, httpBody, { headers: httpHeader });
 		})
+		
 
 		const responses = await Promise.allSettled(httpResponsePromises);
 		responses
@@ -376,30 +366,27 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			.map(response => {
 				console.error(`Failed credential (status, body) : (${response.response.status}, ${JSON.stringify(response.response.data)})`, );
 			});
-			
+
 		let credentialResponses = responses
 			.filter(res => res.status == 'fulfilled')
-			.map((res) =>
+			.map((res) => 
 				res.status == "fulfilled" ? res.value.data as CredentialResponseSchemaType : null
 			);
 
-		// Prevent duplicate credential acceptance
-		this.states.delete(userDid);
 
 		for (const cr of credentialResponses) {
-			if (cr.acceptance_token)
-				this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
+			this.checkConstantlyForPendingCredential(state, cr.acceptance_token);
 		}
-
+		
 		// remove the ones that are for deferred endpoint
 		credentialResponses = credentialResponses.filter((cres) => !cres.acceptance_token);
 
 		for (const response of credentialResponses) {
 			console.log("Response = ", response)
-			this.handleCredentialStorage(state, response);
+			this.handleCredentialStorage(userDid, response);
 		}
 		console.log("=====FINISHED OID4VCI")
-		return;
+		return Ok.EMPTY;
 	}
 
 	// Deferred Credential only
@@ -412,7 +399,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			{}, 
 			{ headers: defferedCredentialReqHeader } )
 			.then((res) => {
-				this.handleCredentialStorage(state, res.data);
+				this.handleCredentialStorage(state.userDid, res.data);
 			})
 			.catch(err => {
 				setTimeout(() => {
@@ -423,24 +410,53 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 	}
 
-	private async handleCredentialStorage(state: IssuanceState, credentialResponse: CredentialResponseSchemaType) {
-		const userRes = await getUserByDID(state.userDid);
+	private async handleCredentialStorage(userDid: string, credentialResponse: CredentialResponseSchemaType) {
+		const userRes = await getUserByDID(userDid);
 		if (userRes.err) {
 			return;
 		}
 		const user = userRes.unwrap();
 
-		const { legalPerson } = state;
+		const { legalPerson } = this.states.get(userDid);
 		console.log("Legal person  = ", legalPerson)
-		const credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
-		const type = credentialPayload.vc.type as string[];
+		console.log("Credential response = ", credentialResponse)
+		let credentialPayload;
+		let type;
+		let credentiaIdentifier = null;
+		let credentialIssuerDID = null;
+		let credentialToBeStored = null;
+		let issuanceDate = null;
+		if (credentialResponse.format == 'w3cvc-jsonld') {
+			credentialPayload = credentialResponse.credential;
+			type = credentialPayload.type;
+			credentiaIdentifier = randomUUID();
+			credentialIssuerDID = credentialPayload.issuer.id;
+			credentialToBeStored = JSON.stringify(credentialPayload);
+			console.log("Credential issuance date = ", credentialPayload.issuanceDate)
+			issuanceDate = new Date(credentialPayload.issuanceDate);
+		}
+		else if (credentialResponse.format == 'jwt_vc') {
+			credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
+			type = credentialPayload.vc.type as string[];
+			credentiaIdentifier = credentialPayload.jti;
+			credentialIssuerDID = credentialPayload.iss;
+			credentialToBeStored = credentialPayload;
+			issuanceDate = new Date(credentialPayload.iat * 1000);
+		}
+		else {
+			throw new Error("Unknown VC format");
+		}
+		console.log("Metadata url = ", legalPerson.url + "/.well-known/openid-credential-issuer")
 		const metadata = (await axios.get(legalPerson.url + "/.well-known/openid-credential-issuer")).data as CredentialIssuerMetadata;
-		
+		console.log("metadta = ", metadata)
 		
 		let logoUrl = config.url + "/alt-vc-logo.png";
 		let background_color = "#D3D3D3";
 
-		const supportedCredential = metadata.credentials_supported.filter(cs => cs.format == credentialResponse.format && _.isEqual(cs.types, type))[0];
+		
+		const supportedCredential = type && credentialResponse.format && Array.isArray(metadata.credentials_supported) ?
+			metadata.credentials_supported.filter(cs => cs.format == credentialResponse.format && _.isEqual(cs.types, type))[0] :
+			null;
 		if (supportedCredential) {
 			if (supportedCredential.display && 
 					supportedCredential.display.length != 0 &&
@@ -458,15 +474,15 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 		createVerifiableCredential({
-			issuerDID: credentialPayload.iss,
-			credentialIdentifier: credentialPayload.jti,
-			credential: credentialResponse.credential,
+			issuerDID: credentialIssuerDID,
+			credentialIdentifier: credentiaIdentifier,
+			credential: credentialToBeStored,
 			holderDID: user.did,
 			issuerURL: legalPerson.url,
 			logoURL: logoUrl,
 			format: credentialResponse.format as VerifiableCredentialFormat,
 			backgroundColor: background_color,
-			issuanceDate: new Date(credentialPayload.iat * 1000),
+			issuanceDate: issuanceDate,
 			issuerFriendlyName: legalPerson.friendlyName
 		}).then(success => { // when credential is stored, then send notification
 			if (success.err) {

@@ -14,6 +14,9 @@ import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
 import { createVerifiablePresentation } from "../entities/VerifiablePresentation.entity";
 import { getUserByDID } from "../entities/user.entity";
+import { VerifierRegistryService } from "./VerifierRegistryService";
+import { randomUUID } from "node:crypto";
+import config from "../../config";
 
 
 type PresentationDefinition = {
@@ -54,6 +57,7 @@ type Field = {
 }
 
 type VerificationState = {
+	holder_state?: string;
 	presentation_definition?: PresentationDefinition;
 	audience?: string;
 	nonce?: string;
@@ -64,17 +68,38 @@ type VerificationState = {
 
 @injectable()
 export class OpenidForPresentationService implements OutboundCommunication {
-	public static readonly identifier = "OpenidForPresentationService"
 
+	// key: did
 	states = new Map<string, VerificationState>();
+
 
 
 	constructor(
 		@inject(TYPES.WalletKeystore) private walletKeystore: WalletKeystore,
+		@inject(TYPES.VerifierRegistryService) private verifierRegistryService: VerifierRegistryService,
 		@inject(TYPES.OpenidForCredentialIssuanceService) private OpenidCredentialReceivingService: OpenidCredentialReceiving
 	) { }
 
+	async initiateVerificationFlow(userDid: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
+		const verifier = (await this.verifierRegistryService.getAllVerifiers()).filter(ver => ver.id == verifierId)[0];
+		console.log("User did = ", userDid)
+		const userFetchRes = await getUserByDID(userDid);
+		if (userFetchRes.err) {
+			return {};
+		}
+		const holder_state = randomUUID();
+		this.states.set(userDid, { holder_state });
 
+		const user = userFetchRes.unwrap();
+		const url = new URL(verifier.url);
+		url.searchParams.append("scope", "openid " + scopeName);
+		url.searchParams.append("redirect_uri", config.walletClientUrl);
+		url.searchParams.append("client_id", user.did);
+		url.searchParams.append("response_type", "code");
+		url.searchParams.append("state", holder_state);
+		return { redirect_to: url.toString() };
+	}
+	
 	async handleRequest(userDid: string, requestURL: string, id_token: string | null): Promise<Result<OutboundRequest, WalletKeystoreRequest>> {
 		try {
 			return await this.parseIdTokenRequest(userDid, requestURL, id_token);
@@ -466,7 +491,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	private async fetchPresentationDefinition(authorizationRequestURL: URL): Promise<PresentationDefinition> {
 
 		const searchParams = authorizationRequestURL.searchParams;
-
+		console.log("Params = ", searchParams)
 		let presentation_definition = searchParams.get("presentation_definition");
 		let presentation_definition_uri = searchParams.get("presentation_definition_uri");
 
