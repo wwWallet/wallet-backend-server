@@ -12,7 +12,13 @@ import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
 import * as scrypt from "../scrypt";
+import { appContainer } from '../services/inversify.config';
+import { DidKeyUtilityService } from '../services/interfaces';
+import { TYPES } from '../services/types';
 
+
+
+const didKeyUtilityService = appContainer.get<DidKeyUtilityService>(TYPES.DidKeyUtilityService);
 
 /**
  * "/user"
@@ -27,6 +33,7 @@ noAuthUserController.use('/session', userController);
 async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string, privateData: Buffer }> {
 	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
 	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
+	console.log("Body = ", req.body)
 	return {
 		fcmToken,
 		browserFcmToken,

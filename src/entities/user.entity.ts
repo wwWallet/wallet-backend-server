@@ -114,7 +114,6 @@ type CreateUser = {
 	displayName: string,
 	did: string;
 	passwordHash: string;
-	keys: Buffer;
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
 	privateData: Buffer;
@@ -165,6 +164,23 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 	catch(e) {
 		console.log(e);
 		return Err(CreateUserErr.ALREADY_EXISTS);
+	}
+}
+
+async function storeKeypair(username: string, did: string, keys: Buffer): Promise<Result<{}, Error>> {
+	try {
+		const res = await AppDataSource
+			.createQueryBuilder()
+			.update(UserEntity)
+			.set({ keys: keys, did: did })
+			.where('username = :username', { username })
+			.execute();
+
+		return Ok({});
+	}
+	catch(e) {
+		console.log(e);
+		return Err(e);
 	}
 }
 

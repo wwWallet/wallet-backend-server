@@ -14,6 +14,9 @@ const TYPES = {
 	OpenidForPresentationService: Symbol.for("OpenidForPresentationService"),
 
 
+	DidKeyUtilityService: Symbol.for("DidKeyUtilityService"),
+	VerifierRegistryService: Symbol.for("VerifierRegistryService"),
+
 };
 
 export { TYPES };
