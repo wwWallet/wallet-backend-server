@@ -52,14 +52,13 @@ issuanceRouter.post('/handle/authorization/response', async (req, res) => {
 	try {
 		const {
 			authorization_response_url,
-			proof_jwt,
 		} = req.body;
 
 
 		if (!(new URL(authorization_response_url).searchParams.get("code"))) {
 			return res.status(500).send({});
 		}
-		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.did, authorization_response_url, proof_jwt);
+		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.did, authorization_response_url);
 		if (result.ok) {
 			res.send({});
 		} else if (result.val === IssuanceErr.STATE_NOT_FOUND) {

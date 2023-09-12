@@ -9,12 +9,13 @@ import { AdditionalKeystoreParameters, WalletKeystore, WalletKeystoreErr } from 
 import { verifiablePresentationSchemaURL } from "../util/util";
 import { getUserByDID } from "../entities/user.entity";
 import { TYPES } from "./types";
+import config from "../../config";
 
 
 @injectable()
 export class DatabaseKeystoreService implements WalletKeystore {
 
-	private readonly algorithm = "EdDSA";
+	private readonly algorithm = config.alg;
 
 	constructor(
 	) { }

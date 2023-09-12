@@ -10,12 +10,13 @@ import { createVerifiableCredential } from "../entities/VerifiableCredential.ent
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
 import qs from "qs";
 import { TYPES } from "./types";
-import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreRequest  } from "./interfaces";
+import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore  } from "./interfaces";
 import { injectable, inject } from "inversify";
 import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { getUserByDID } from "../entities/user.entity";
 import { Err, Ok, Result } from "ts-results";
+import { WalletKeystoreRequest } from "./shared.types";
 
 
 type IssuanceState = {
@@ -237,7 +238,7 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string, proof_jwt: string | null): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
 		const currentState = this.states.get(userDid);
 		if (!currentState) {
 			return Err(IssuanceErr.STATE_NOT_FOUND);
