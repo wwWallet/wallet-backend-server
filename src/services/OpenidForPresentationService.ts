@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Err, Ok, Result } from "ts-results";
 
 import { InputDescriptorType, Verify } from "@gunet/ssi-sdk";
-import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr, WalletKeystoreRequest } from "./interfaces";
+import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
@@ -17,6 +17,7 @@ import { getUserByDID } from "../entities/user.entity";
 import { VerifierRegistryService } from "./VerifierRegistryService";
 import { randomUUID } from "node:crypto";
 import config from "../../config";
+import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
 
 
 type PresentationDefinition = {
@@ -187,7 +188,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			const { id_token } = idTokenResult.val;
 			return Ok(await this.finishParseIdTokenRequest(userDid, state, redirect_uri, id_token));
 		} else if (idTokenResult.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
-			return Err({ action: "createIdToken", nonce, audience: client_id });
+			return Err({ action: SignatureAction.createIdToken, nonce, audience: client_id });
 		}
 	}
 
@@ -365,7 +366,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		const result = await this.walletKeystore.signJwtPresentation(userDid, nonce, audience, selectedVC);
 		if (!result.ok) {
 			return Err({
-				action: "signJwtPresentation",
+				action: SignatureAction.signJwtPresentation,
 				nonce,
 				audience,
 				verifiableCredentials: selectedVC,

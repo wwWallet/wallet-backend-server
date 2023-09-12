@@ -15,7 +15,8 @@ import { generateCodeChallengeFromVerifier, generateCodeVerifier } from "../util
 import { createVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
 import { TYPES } from "./types";
-import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr, WalletKeystoreRequest } from "./interfaces";
+import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
 
 
 type IssuanceState = {
@@ -213,7 +214,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		this.tokenRequest(state).then(tokenResponse => {
 			state = { ...state, tokenResponse }
 			this.states.set(userDid, state);
-			this.credentialRequests(userDid, state, null).catch(e => {
+			this.credentialRequests(userDid, state).catch(e => {
 				console.error("Credential requests failed with error : ", e)
 			});
 		})
@@ -224,20 +225,12 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string, proof_jwt: string | null): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
 		const currentState = this.states.get(userDid);
 		if (!currentState) {
 			return Err(IssuanceErr.STATE_NOT_FOUND);
 		}
 
-		if (proof_jwt) {
-			const currentState = this.states.get(userDid);
-			try {
-				return await this.credentialRequests(userDid, currentState, proof_jwt);
-			} catch (e) {
-				console.error("Credential requests failed with error : ", e)
-			}
-		}
 
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
@@ -251,7 +244,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		newState = { ...newState, tokenResponse }
 		this.states.set(userDid, newState);
 		try {
-			return await this.credentialRequests(userDid, newState, null);
+			return await this.credentialRequests(userDid, newState);
 		} catch (e) {
 			console.error("Credential requests failed with error : ", e)
 		}
@@ -327,12 +320,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(userDid: string, state: IssuanceState, proof_jwt: string | null): Promise<Result<void, WalletKeystoreRequest>> {
+	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, WalletKeystoreRequest>> {
 		console.log("State = ", state)
 
-		if (proof_jwt) {
-			return Ok(await this.finishCredentialRequests(userDid, state, proof_jwt));
-		}
 
 		const c_nonce = state.tokenResponse.c_nonce;
 		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
@@ -343,7 +333,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		} else if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
 			return Err({
-				action: "generateOpenid4vciProof",
+				action: SignatureAction.generateOpenid4vciProof,
 				audience: state.credentialIssuerMetadata.credential_issuer,
 				nonce: c_nonce,
 			});
