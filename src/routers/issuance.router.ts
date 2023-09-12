@@ -61,13 +61,14 @@ issuanceRouter.post('/handle/authorization/response', async (req, res) => {
 		const result = await openidForCredentialIssuanceService.handleAuthorizationResponse(req.user.did, authorization_response_url);
 		if (result.ok) {
 			res.send({});
-		} else if (result.val === IssuanceErr.STATE_NOT_FOUND) {
-			res.status(404).send({});
-		} else if (result.err && result.val.action === "generateOpenid4vciProof") {
-			res.status(409).send(result.val);
-		} else {
-			res.status(500).send({});
 		}
+		// else if (result.val === IssuanceErr.STATE_NOT_FOUND) {
+		// 	res.status(404).send({});
+		// } else if (result.err && result.val.action === "generateOpenid4vciProof") {
+		// 	res.status(409).send(result.val);
+		// } else {
+		// 	res.status(500).send({});
+		// }
 	}
 	catch(err) {
 		res.status(500).send({ error: "Failed to handle authorization response" });
