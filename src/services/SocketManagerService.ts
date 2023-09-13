@@ -31,12 +31,14 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 				// wait for appToken to authenticate
 				try {
 					const { appToken } = JSON.parse(message.toString());
+					console.log("HHSS appToken", appToken, "message ", message.toString())
 					const { payload } = await jwtVerify(appToken, secret);
+					console.log("HHSS payload.did", payload.did)
 					openSockets.set(payload.did as string, ws);
 					console.log("Handshake established");
 				}
 				catch(e) {
-					console.log("Handshake failed");
+					console.log("Handshake failed ", e);
 				}
 			});
 		
