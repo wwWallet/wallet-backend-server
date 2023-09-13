@@ -15,6 +15,7 @@ const secret = new TextEncoder().encode(config.appSecret);
 @injectable()
 export class SocketManagerService implements SocketManagerServiceInterface {
 	wss: WebSocket.Server;
+	handshakeMade: boolean;
 
 
 	constructor() { }
@@ -24,21 +25,25 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 
 		this.wss.on('connection', (ws) => {
 			console.log('WebSocket client connected');
+			this.handshakeMade = false;
 			// Handle incoming messages from the WebSocket client
 			ws.on('message', async (message) => {
 				console.log(`Received: ${message}`);
 				// Parse Handshake Request
 				// wait for appToken to authenticate
-				try {
-					const { appToken } = JSON.parse(message.toString());
-					console.log("HHSS appToken", appToken, "message ", message.toString())
-					const { payload } = await jwtVerify(appToken, secret);
-					console.log("HHSS payload.did", payload.did)
-					openSockets.set(payload.did as string, ws);
-					console.log("Handshake established");
-				}
-				catch(e) {
-					console.log("Handshake failed ", e);
+				if(!this.handshakeMade) {
+					try {
+						const { appToken } = JSON.parse(message.toString());
+						console.log("HHSS appToken", appToken, "message ", message.toString())
+						const { payload } = await jwtVerify(appToken, secret);
+						console.log("HHSS payload.did", payload.did)
+						openSockets.set(payload.did as string, ws);
+						this.handshakeMade = true;
+						console.log("Handshake established");
+					}
+					catch(e) {
+						console.log("Handshake failed ", e);
+					}
 				}
 			});
 		
