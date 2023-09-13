@@ -37,6 +37,7 @@ export interface WalletKeystore {
 
 export enum WalletKeystoreErr {
 	KEYS_UNAVAILABLE = "keys-unavailable",
+	REMOTE_SIGNING_FAILED = "remote-signing-failed"
 }
 
 
@@ -67,9 +68,15 @@ export interface DidKeyUtilityService {
 
 
 
+
+export enum ExpectingSocketMessageErr {
+	WRONG_MESSAGE_ID = 'wrong-message-id',
+	WRONG_ACTION = 'wrong-action',
+}
+
 export interface SocketManagerServiceInterface {
 	register(server: http.Server);
 
-	send(userDid: string, message: ServerSocketMessage): Promise<Result<{ message_id: string }, void>>;
-	expect(userDid: string, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, void>>;
+	send(userDid: string, message: ServerSocketMessage): Promise<Result<void, void>>;
+	expect(userDid: string, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;
 }
