@@ -72,6 +72,7 @@ export interface DidKeyUtilityService {
 export enum ExpectingSocketMessageErr {
 	WRONG_MESSAGE_ID = 'wrong-message-id',
 	WRONG_ACTION = 'wrong-action',
+	FAILED_TO_RECEIVE = 'failed-to-receive'
 }
 
 export interface SocketManagerServiceInterface {
