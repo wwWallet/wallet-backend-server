@@ -31,26 +31,23 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 				// wait for appToken to authenticate
 				try {
 					const { appToken } = JSON.parse(message.toString());
-					console.log("HHSS appToken", appToken, "message ", message.toString())
 					const { payload } = await jwtVerify(appToken, secret);
-					console.log("HHSS payload.did", payload.did)
 					openSockets.set(payload.did as string, ws);
+					ws.send("FIN_INIT")
 					console.log("Handshake established");
 				}
 				catch(e) {
 					console.log("Handshake failed ", e);
 				}
 			});
-		
 			ws.on('close', () => {
-				console.log('socket closedd----')
+				console.log('socket closed----')
 			})
 		});
 	}
 
 	async send(userDid: string, message: ServerSocketMessage): Promise<Result<void, void>> {
 		const ws = openSockets.get(userDid);
-		console.log("WS = ", ws)
 		ws.send(JSON.stringify(message));
 		return Ok.EMPTY;
 	}
@@ -63,17 +60,16 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					const clientMessage = JSON.parse(event.data.toString()) as ClientSocketMessage;
 					if (message_id !== clientMessage.message_id) {
 						console.error("Wrong message id")
-						return reject(ExpectingSocketMessageErr.WRONG_MESSAGE_ID);
+						return resolve(Err(ExpectingSocketMessageErr.WRONG_MESSAGE_ID));
 					}
 					if (action !== clientMessage.response.action) {
-						return reject(ExpectingSocketMessageErr.WRONG_ACTION);
+						return resolve(Err(ExpectingSocketMessageErr.WRONG_ACTION));
 					}
 					return resolve(Ok({ message: clientMessage }));
 				}
 				catch(e) {
-					reject
+					resolve(Err(ExpectingSocketMessageErr.FAILED_TO_RECEIVE));
 				}
-
 			}
 		})
 

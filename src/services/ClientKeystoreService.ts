@@ -23,7 +23,6 @@ export class ClientKeystoreService implements WalletKeystore {
 
 	
 	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
-		console.log("Running createIdToken")
 		let message_id_sent = randomUUID();
 		const msg = {
 			message_id: message_id_sent,
@@ -47,7 +46,6 @@ export class ClientKeystoreService implements WalletKeystore {
 	}
 
 	async signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>> {
-		console.log("Running signJwtPresentation")
 		let message_id_sent = randomUUID();
 		const msg = {
 			message_id: message_id_sent,
@@ -58,7 +56,6 @@ export class ClientKeystoreService implements WalletKeystore {
 				verifiableCredentials: verifiableCredentials
 			}
 		}
-		console.log("JWTP USERDID ", userDid, "MSG ", msg)
 		await this.socketManagerService.send(userDid, msg as ServerSocketMessage)
 
 		const result = await this.socketManagerService.expect(userDid, message_id_sent, SignatureAction.signJwtPresentation);
@@ -82,9 +79,7 @@ export class ClientKeystoreService implements WalletKeystore {
 				audience: audience
 			}
 		}
-		console.log("GENERATEOPEN USERDID ", userDid, "MSG ", msg)
 		await this.socketManagerService.send(userDid, msg as ServerSocketMessage);
-
 		const result = await this.socketManagerService.expect(userDid, message_id_sent, SignatureAction.generateOpenid4vciProof);
 		if (result.err) {
 			return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
