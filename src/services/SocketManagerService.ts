@@ -33,7 +33,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					const { appToken } = JSON.parse(message.toString());
 					const { payload } = await jwtVerify(appToken, secret);
 					openSockets.set(payload.did as string, ws);
-					ws.send("FIN_INIT")
+					ws.send(JSON.stringify({ type: "FIN_INIT" }));
 					console.log("Handshake established");
 				}
 				catch(e) {
