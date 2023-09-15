@@ -16,8 +16,8 @@
   "description": "",
   "dependencies": {
     "@gunet/ssi-sdk": "^1.0.0",
-    "@transmute/did-key-ed25519": "^0.3.0-unstable.10",
     "@simplewebauthn/server": "^7.4.0",
+    "@transmute/did-key-ed25519": "^0.3.0-unstable.10",
     "ajv": "^8.12.0",
     "apn": "^2.2.0",
     "axios": "^0.27.2",
@@ -26,6 +26,7 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "express": "^4.18.1",
+    "express-ws": "^5.0.2",
     "fcm-notification": "^2.0.0",
     "firebase-admin": "^11.5.0",
     "inversify": "^6.0.1",
@@ -38,9 +39,12 @@
     "randomstring": "^1.2.3",
     "reflect-metadata": "^0.1.13",
     "sequelize": "^6.29.3",
+    "socket.io": "^4.7.2",
+    "sockjs": "^0.3.24",
     "ts-results": "^3.3.0",
     "typeorm": "^0.3.9",
     "uuid": "^9.0.0",
+    "ws": "^8.14.1",
     "zod": "^3.21.4"
   },
   "devDependencies": {
@@ -54,6 +58,7 @@
     "@types/node-fetch": "^2.6.4",
     "@types/randomstring": "^1.1.8",
     "@types/uuid": "^9.0.2",
+    "@types/ws": "^8.5.5",
     "nodemon": "^2.0.19",
     "source-map-support": "^0.5.21",
     "ts-node": "^10.9.1",

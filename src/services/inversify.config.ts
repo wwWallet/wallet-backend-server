@@ -1,6 +1,6 @@
 import { Container } from "inversify";
 import { TYPES  } from "./types";
-import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, DidKeyUtilityService } from "./interfaces";
+import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, DidKeyUtilityService, SocketManagerServiceInterface } from "./interfaces";
 import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanceService";
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
@@ -10,12 +10,14 @@ import config from "../../config";
 import { W3CDidKeyUtilityService } from "./W3CDidKeyUtilityService";
 import { VerifierRegistryService } from "./VerifierRegistryService";
 import { EBSIDidKeyUtilityService } from "./EBSIDidKeyUtilityService";
+import { SocketManagerService } from "./SocketManagerService";
+import { ClientKeystoreService } from "./ClientKeystoreService";
 
 const appContainer = new Container();
 
 
 appContainer.bind<WalletKeystore>(TYPES.WalletKeystore)
-	.to(DatabaseKeystoreService)
+	.to(ClientKeystoreService)
 
 switch (config.servicesConfiguration.issuanceService) {
 case "OpenidForCredentialIssuanceService":
@@ -51,5 +53,9 @@ default:
 
 appContainer.bind<VerifierRegistryService>(TYPES.VerifierRegistryService)
 	.to(VerifierRegistryService)
+
+
+appContainer.bind<SocketManagerServiceInterface>(TYPES.SocketManagerService)
+	.to(SocketManagerService)
 
 export { appContainer }

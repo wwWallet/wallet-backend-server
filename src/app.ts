@@ -12,6 +12,12 @@ import { presentationRouter } from './routers/presentation.router';
 import { legalPersonRouter } from './routers/legal_person.router';
 import verifiersRouter from './routers/verifiers.router';
 import { reviverTaggedBase64UrlToBuffer } from './util/util';
+import * as WebSocket from 'ws';
+import http from 'http';
+import { appContainer } from './services/inversify.config';
+import { SocketManagerServiceInterface } from './services/interfaces';
+import { TYPES } from './services/types';
+
 
 const app: Express = express();
 // __dirname is "/path/to/dist/src"
@@ -56,6 +62,12 @@ app.use('/presentation', presentationRouter);
 app.use('/legal_person', legalPersonRouter);
 app.use('/verifiers', verifiersRouter);
 
-app.listen(config.port, () => {
+const server = http.createServer(app);
+
+appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
+
+
+
+server.listen(config.port, () => {
 	console.log(`eDiplomas Register app listening at ${config.url}`)
 });

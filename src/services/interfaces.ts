@@ -2,13 +2,15 @@ import { JWK } from "jose";
 import { Result } from "ts-results";
 import { LegalPersonEntity } from "../entities/LegalPerson.entity";
 import { OutboundRequest } from "./types/OutboundRequest";
+import http from 'http';
+import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
 
 export interface OpenidCredentialReceiving {
 	
 	getAvailableSupportedCredentials(userDid: string, legalPersonIdentifier: string): Promise<Array<{id: string, displayName: string}>>
 	generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to: string }>
 	
-	handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>>;
+	handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
 	requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string): Promise<void>;
 
 	getIssuerState(userDid: string): Promise<{ issuer_state?: string, error?: Error }>
@@ -35,14 +37,15 @@ export interface WalletKeystore {
 
 export enum WalletKeystoreErr {
 	KEYS_UNAVAILABLE = "keys-unavailable",
+	REMOTE_SIGNING_FAILED = "remote-signing-failed"
 }
 
 
-export interface OutboundCommunication {
-	
 
+export interface OutboundCommunication {
 	initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
-	handleRequest(userDid: string, requestURL: string): Promise<Result<OutboundRequest, void>>;
+
+	handleRequest(userDid: string, requestURL: string, id_token: string | null): Promise<Result<OutboundRequest, WalletKeystoreRequest>>;
 
 	/**
 	 * 
@@ -50,7 +53,7 @@ export interface OutboundCommunication {
 	 * @param req 
 	 * @param selection (key: descriptor_id, value: verifiable credential identifier)
 	 */
-	sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, void>>;
+	sendResponse(userDid: string, selection: Map<string, string>, vpjwt: string | null): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>>;
 }
 
 
@@ -61,4 +64,20 @@ export interface LegalPersonsRegistry {
 export interface DidKeyUtilityService {
 	getPublicKeyJwk(did: string): Promise<JWK>;
 	generateKeyPair(): Promise<{ did: string, key: any }>
+}
+
+
+
+
+export enum ExpectingSocketMessageErr {
+	WRONG_MESSAGE_ID = 'wrong-message-id',
+	WRONG_ACTION = 'wrong-action',
+	FAILED_TO_RECEIVE = 'failed-to-receive'
+}
+
+export interface SocketManagerServiceInterface {
+	register(server: http.Server);
+
+	send(userDid: string, message: ServerSocketMessage): Promise<Result<void, void>>;
+	expect(userDid: string, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;
 }

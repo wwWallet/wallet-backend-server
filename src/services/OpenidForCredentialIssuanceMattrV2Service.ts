@@ -16,6 +16,7 @@ import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { getUserByDID } from "../entities/user.entity";
 import { Err, Ok, Result } from "ts-results";
+import { WalletKeystoreRequest } from "./shared.types";
 
 
 type IssuanceState = {
@@ -237,7 +238,7 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
 		const currentState = this.states.get(userDid);
 		if (!currentState) {
 			return Err(IssuanceErr.STATE_NOT_FOUND);
@@ -255,7 +256,8 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 		newState = { ...newState, tokenResponse }
 		this.states.set(userDid, newState);
 		try {
-			return await this.credentialRequests(userDid, newState);
+			await this.credentialRequests(userDid, newState);
+			return Ok.EMPTY;
 		} catch (e) {
 			console.error("Credential requests failed with error : ", e)
 		}

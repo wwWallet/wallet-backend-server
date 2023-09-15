@@ -44,6 +44,9 @@ class UserEntity {
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 
+	@Column({ type: "blob", nullable: false })
+	privateData: Buffer;
+
 	@Column({ nullable: false })
 	@Generated("uuid")
 	webauthnUserHandle: string;
@@ -113,6 +116,7 @@ type CreateUser = {
 	passwordHash: string;
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
+	privateData: Buffer;
 	webauthnUserHandle: string;
 } | {
 	displayName: string,
@@ -120,6 +124,7 @@ type CreateUser = {
 	keys: Buffer;
 	fcmToken: Buffer;
 	browserFcmToken: Buffer;
+	privateData: Buffer;
 	webauthnUserHandle: string;
 	webauthnCredentials: WebauthnCredentialEntity[];
 }

@@ -6,7 +6,7 @@ import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
 
 import config from '../../config';
-import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential } from '../entities/user.entity';
+import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, UserEntity } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -29,35 +29,42 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string }> {
+
+async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string, privateData: Buffer }> {
 	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
 	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
-	const { did, key } = await didKeyUtilityService.generateKeyPair();
-	console.log("Generated did = ", did)
+	console.log("Body = ", req.body)
 	return {
 		fcmToken,
 		browserFcmToken,
-		keys: Buffer.from(JSON.stringify(key)),
-		did: did,
+		keys: Buffer.from(JSON.stringify(req.body.keys)),
+		did: req.body.keys.did,
 		displayName: req.body.displayName,
+		privateData: Buffer.from(req.body.privateData),
 	};
 }
 
-async function initSession(did: string, displayName: string): Promise<{ did: string, appToken: string, displayName: string }> {
+async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did })
+	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
 	return {
-		did,
 		appToken,
-		displayName,
+		did: user.did,
+		displayName: user.displayName || user.username,
+		privateData: user.privateData.toString(),
+		username: user.username,
 	};
 }
 
 noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;
 	const password = req.body.password;
+	if (!username || !password) {
+		res.status(500).send({ error: "No username or password was given" });
+		return;
+	}
 
 	const passwordHash = await scrypt.createHash(password);
 	const newUser: CreateUser = {
@@ -68,14 +75,13 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	};
 
 	const result = (await createUser(newUser));
-	if (result.err) {
+	if (result.ok) {
+		res.status(200).send(await initSession(result.val));
+
+	} else {
 		console.log("Failed to create user")
 		res.status(500).send({ error: result.val });
-		return;
 	}
-
-	const user = result.unwrap();
-	res.status(200).send(await initSession(user.did, user.displayName || username));
 });
 
 noAuthUserController.post('/login', async (req: Request, res: Response) => {
@@ -91,7 +97,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	res.status(200).send(await initSession(user.did, user.displayName || username));
+	res.status(200).send(await initSession(user));
 })
 
 noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
@@ -169,7 +175,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false, );
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send(await initSession(userRes.val.did, userRes.val.displayName));
+			res.status(200).send(await initSession(userRes.val));
 		} else {
 			res.status(500).send({});
 		}
@@ -241,10 +247,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send({
-				...await initSession(user.did, user.displayName),
-				username: user.username,
-			});
+			res.status(200).send(await initSession(user));
 		} else {
 			res.status(500).send({});
 		}

@@ -16,6 +16,7 @@ const TYPES = {
 
 	DidKeyUtilityService: Symbol.for("DidKeyUtilityService"),
 	VerifierRegistryService: Symbol.for("VerifierRegistryService"),
+	SocketManagerService: Symbol.for("SocketManagerService")
 
 };
 

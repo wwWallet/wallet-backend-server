@@ -16,6 +16,7 @@ import { createVerifiableCredential } from "../entities/VerifiableCredential.ent
 import { getLeafNodesWithPath } from "../lib/leafnodepaths";
 import { TYPES } from "./types";
 import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
 
 
 type IssuanceState = {
@@ -224,11 +225,12 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | void>> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
 		const currentState = this.states.get(userDid);
 		if (!currentState) {
 			return Err(IssuanceErr.STATE_NOT_FOUND);
 		}
+
 
 		const url = new URL(authorizationResponseURL);
 		const code = url.searchParams.get('code');
@@ -318,23 +320,32 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, void>> {
+	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, WalletKeystoreRequest>> {
 		console.log("State = ", state)
+
+
+		const c_nonce = state.tokenResponse.c_nonce;
+		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		console.log("Result = ", res)
+		if (res.ok) {
+			const { proof_jwt } = res.val;
+			return Ok(await this.finishCredentialRequests(userDid, state, proof_jwt));
+
+		} else if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
+			return Err({
+				action: SignatureAction.generateOpenid4vciProof,
+				audience: state.credentialIssuerMetadata.credential_issuer,
+				nonce: c_nonce,
+			});
+		}
+	}
+
+	private async finishCredentialRequests(userDid: string, state: IssuanceState, proof_jwt: string) {
+		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
 		const httpHeader = {
 			"authorization": `Bearer ${state.tokenResponse.access_token}`,
 		};
-
-		const c_nonce = state.tokenResponse.c_nonce;
-		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
-		if (!res.ok) {
-			if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
-				return Err.EMPTY;
-			}
-		}
-
-		const { proof_jwt } = res.val;
-		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
 		let httpResponsePromises = state.authorization_details.map((authzDetail) => {
 			const httpBody = {
@@ -378,7 +389,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			this.handleCredentialStorage(state, response);
 		}
 		console.log("=====FINISHED OID4VCI")
-		return Ok.EMPTY;
+		return;
 	}
 
 	// Deferred Credential only
