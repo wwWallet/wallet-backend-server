@@ -17,6 +17,9 @@ import http from 'http';
 import { appContainer } from './services/inversify.config';
 import { SocketManagerServiceInterface } from './services/interfaces';
 import { TYPES } from './services/types';
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
 
 
 const app: Express = express();
@@ -62,12 +65,26 @@ app.use('/presentation', presentationRouter);
 app.use('/legal_person', legalPersonRouter);
 app.use('/verifiers', verifiersRouter);
 
-const server = http.createServer(app);
-
-appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
 
 
 
-server.listen(config.port, () => {
-	console.log(`eDiplomas Register app listening at ${config.url}`)
-});
+
+if (config.ssl == "true") {
+	const privateKey = fs.readFileSync(path.join(__dirname, "../../keys/key.pem"), 'utf8');
+	const certificate = fs.readFileSync(path.join(__dirname, "../../keys/cert.pem"), 'utf8');
+	const passphrase = fs.readFileSync(path.join(__dirname, "../../keys/password.txt"), 'utf8');
+	const credentials = { key: privateKey, cert: certificate, passphrase: passphrase };
+	const server = https.createServer(credentials, app);
+
+	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
+
+}
+else {
+	const server = http.createServer(app);
+	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
+
+	server.listen(config.port, () => {
+		console.log(`eDiplomas Register app listening at ${config.url}`)
+	});
+}
+
