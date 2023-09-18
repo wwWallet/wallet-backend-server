@@ -77,14 +77,16 @@ if (config.ssl == "true") {
 	const server = https.createServer(credentials, app);
 
 	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
-
+	server.listen(config.port, () => {
+		console.log(`Wallet Backend Server listening with ${config.url}`)
+	});
 }
 else {
 	const server = http.createServer(app);
 	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
 
 	server.listen(config.port, () => {
-		console.log(`eDiplomas Register app listening at ${config.url}`)
+		console.log(`Wallet Backend Server listening with ${config.url}`)
 	});
 }
 

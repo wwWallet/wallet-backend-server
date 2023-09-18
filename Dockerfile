@@ -19,6 +19,6 @@ COPY --from=builder /home/node/app/public ./public
 RUN yarn install --production
 
 ENV NODE_ENV production
-EXPOSE 8003
+EXPOSE 8002
 
 CMD ["node", "./dist/src/app.js"]
