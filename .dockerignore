@@ -1,4 +1,9 @@
+.env
+.git
+.gitattributes
+.gitignore
 .npmrc.template
-node_modules
-dist
 .vscode
+README.md
+dist
+node_modules
