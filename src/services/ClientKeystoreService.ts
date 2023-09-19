@@ -3,10 +3,11 @@ import { inject, injectable } from "inversify";
 import "reflect-metadata";
 import { Err, Ok, Result } from "ts-results";
 
-import { AdditionalKeystoreParameters, SocketManagerServiceInterface, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { AdditionalKeystoreParameters, RegistrationParams, SocketManagerServiceInterface, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
 import config from "../../config";
 import { SignatureAction, ServerSocketMessage } from "./shared.types";
+import { WalletKey } from "@gunet/ssi-sdk";
 
 
 
@@ -21,7 +22,7 @@ export class ClientKeystoreService implements WalletKeystore {
 		@inject(TYPES.SocketManagerService) private socketManagerService: SocketManagerServiceInterface,
 	) { }
 
-	
+
 	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
 		let message_id_sent = randomUUID();
 		const msg = {

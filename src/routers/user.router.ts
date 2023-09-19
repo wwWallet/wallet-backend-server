@@ -13,12 +13,12 @@ import { ChallengeErr, createChallenge, popChallenge } from '../entities/Webauth
 import * as webauthn from '../webauthn';
 import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
-import { DidKeyUtilityService } from '../services/interfaces';
+import { DidKeyUtilityService, RegistrationParams, WalletKeystore, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
 
 
 
-const didKeyUtilityService = appContainer.get<DidKeyUtilityService>(TYPES.DidKeyUtilityService);
+const walletKeystoreManagerService = appContainer.get<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService);
 
 /**
  * "/user"
@@ -29,20 +29,6 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-
-async function initNewUser(req: Request): Promise<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string, privateData: Buffer }> {
-	const fcmToken = req.body.fcm_token ? Buffer.from(req.body.fcm_token) : Buffer.from("");
-	const browserFcmToken = req.body.browser_fcm_token ? Buffer.from(req.body.browser_fcm_token) : Buffer.from("");
-	console.log("Body = ", req.body)
-	return {
-		fcmToken,
-		browserFcmToken,
-		keys: Buffer.from(JSON.stringify(req.body.keys)),
-		did: req.body.keys.did,
-		displayName: req.body.displayName,
-		privateData: Buffer.from(req.body.privateData),
-	};
-}
 
 async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
@@ -58,6 +44,7 @@ async function initSession(user: UserEntity): Promise<{ did: string, appToken: s
 	};
 }
 
+
 noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;
 	const password = req.body.password;
@@ -66,9 +53,17 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 		return;
 	}
 
+	const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
+		{...req.body as RegistrationParams }
+	);
+
+	if (walletInitializationResult.err) {
+		return res.status(400).send({ error: walletInitializationResult.val })
+	}
+
 	const passwordHash = await scrypt.createHash(password);
 	const newUser: CreateUser = {
-		...await initNewUser(req),
+		...walletInitializationResult.unwrap(),
 		username: username ? username : "",
 		passwordHash: passwordHash,
 		webauthnUserHandle: uuid.v4(),
@@ -98,6 +93,13 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
 	res.status(200).send(await initSession(user));
+})
+
+noAuthUserController.post('/register/db-keys', async (req: Request, res: Response) => {
+})
+
+noAuthUserController.post('/login/db-keys', async (req: Request, res: Response) => {
+	
 })
 
 noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
@@ -153,9 +155,16 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			res.status(500).send({});
 			return;
 		}
+		const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
+			{...req.body as RegistrationParams }
+		);
+	
+		if (walletInitializationResult.err) {
+			return res.status(400).send({ error: walletInitializationResult.val })
+		}
 
 		const newUser: CreateUser = {
-			...await initNewUser(req),
+			...walletInitializationResult.unwrap(),
 			webauthnUserHandle,
 			webauthnCredentials: [
 				newWebauthnCredentialEntity({

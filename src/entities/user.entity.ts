@@ -6,6 +6,10 @@ import base64url from "base64url";
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
 
+export enum WalletType {
+	DB,
+	CLIENT
+}
 
 @Entity({ name: "user" })
 class UserEntity {
@@ -50,6 +54,10 @@ class UserEntity {
 	@Column({ nullable: false })
 	@Generated("uuid")
 	webauthnUserHandle: string;
+
+
+	@Column({ type: "enum" ,enum: WalletType, default: WalletType.DB })
+	walletType: WalletType;
 
 	@OneToMany(
 		() => WebauthnCredentialEntity, (credential) => credential.user,
@@ -147,6 +155,8 @@ enum UpdateUserErr {
 enum UpdateFcmError {
 	DB_ERR = "Failed to update FCM token list"
 }
+
+
 
 
 const userRepository: Repository<UserEntity> = AppDataSource.getRepository(UserEntity);

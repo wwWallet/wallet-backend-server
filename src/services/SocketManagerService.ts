@@ -15,8 +15,6 @@ const secret = new TextEncoder().encode(config.appSecret);
 @injectable()
 export class SocketManagerService implements SocketManagerServiceInterface {
 	wss: WebSocket.Server;
-	handshakeMade: boolean;
-
 
 	constructor() { }
 
@@ -25,7 +23,6 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 
 		this.wss.on('connection', (ws) => {
 			console.log('WebSocket client connected');
-			this.handshakeMade = false;
 			// Handle incoming messages from the WebSocket client
 			ws.on('message', async (message) => {
 				console.log(`Received: ${message}`);

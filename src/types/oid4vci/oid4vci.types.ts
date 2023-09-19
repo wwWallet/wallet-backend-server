@@ -134,7 +134,7 @@ export type ProofPayload = {
 
 export enum VerifiableCredentialFormat {
 	JWT_VC_JSON = "jwt_vc",
-	W3C_JSON_LD = "w3cvc-jsonld"
+	LDP_VC = "ldp_vc"
 }
 
 export enum ProofType {
