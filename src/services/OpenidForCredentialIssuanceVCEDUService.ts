@@ -436,7 +436,7 @@ export class OpenidForCredentialIssuanceVCEDUService implements OpenidCredential
 			console.log("Credential issuance date = ", credentialPayload.issuanceDate)
 			issuanceDate = new Date(credentialPayload.issuanceDate);
 		}
-		else if (credentialResponse.format == 'jwt_vc') {
+		else if (credentialResponse.format == VerifiableCredentialFormat.JWT_VC_JSON) {
 			credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
 			type = credentialPayload.vc.type as string[];
 			credentiaIdentifier = credentialPayload.jti;
