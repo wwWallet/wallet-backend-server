@@ -401,6 +401,10 @@ userController.delete('/webauthn/credential/:id', async (req: Request, res: Resp
 	} else {
 		if (deleteRes.val === UpdateUserErr.NOT_EXISTS) {
 			res.status(404).send();
+
+		} else if (deleteRes.val === UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL) {
+			res.status(409).send();
+
 		} else {
 			res.status(500).send();
 		}
