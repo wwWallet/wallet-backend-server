@@ -149,7 +149,8 @@ enum GetUserErr {
 
 enum UpdateUserErr {
 	NOT_EXISTS = "NOT_EXISTS",
-	DB_ERR = "DB_ERR"
+	DB_ERR = "DB_ERR",
+	LAST_WEBAUTHN_CREDENTIAL = "LAST_WEBAUTHN_CREDENTIAL",
 }
 
 enum UpdateFcmError {
@@ -357,16 +358,34 @@ async function updateWebauthnCredential(credential: WebauthnCredentialEntity, up
 
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string): Promise<Result<{}, UpdateUserErr>> {
 	try {
-		const res = await webauthnCredentialRepository.createQueryBuilder()
-			.delete()
-			.from(WebauthnCredentialEntity)
-			.where({ user, id: credentialUuid })
-			.execute();
-		if (res.affected > 0) {
-			return Ok({});
-		} else if (res.affected === 0) {
-			return Err(UpdateUserErr.NOT_EXISTS);
-		}
+
+		return await userRepository.manager.transaction(async (manager) => {
+			const userRes = await manager.findOne(UserEntity, { where: { did: user.did }});
+			if (!userRes) {
+				return Err(UpdateUserErr.NOT_EXISTS);
+			}
+
+			const numCredentials = await manager.createQueryBuilder()
+				.select()
+				.from(WebauthnCredentialEntity, "cred")
+				.where({ user })
+				.getCount();
+			if (numCredentials < 2) {
+				return Err(UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL);
+			}
+
+			const res = await manager.createQueryBuilder()
+				.delete()
+				.from(WebauthnCredentialEntity)
+				.where({ user, id: credentialUuid })
+				.execute();
+			if (res.affected > 0) {
+				return Ok({});
+			} else if (res.affected === 0) {
+				return Err(UpdateUserErr.NOT_EXISTS);
+			}
+		});
+
 	} catch (e) {
 		console.log(e);
 		return Err(UpdateUserErr.DB_ERR);

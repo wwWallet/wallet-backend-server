@@ -113,7 +113,20 @@ async function createUser({username, password}) {
 }
 
 async function createIssuer({friendlyName, url, did, client_id}) {
-
+	try {
+		const rows = await db.select("*")
+					.from("legal_person")
+					.where('did' , '=', did);
+		if (rows.length > 0) {
+			console.log(`Legal person already exists with DID:\t${did}`)
+			db.destroy();
+			return;
+		}
+	} catch (e) {
+		console.log(e);
+		db.destroy();
+		return;
+	}
 
 	db("legal_person")
   .insert({friendlyName, url, did, client_id})
