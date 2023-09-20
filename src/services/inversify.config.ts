@@ -5,7 +5,7 @@ import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanc
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
 import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
-import { OpenidForCredentialIssuanceMattrV2Service } from "./OpenidForCredentialIssuanceMattrV2Service";
+import { OpenidForCredentialIssuanceVCEDUService } from "./OpenidForCredentialIssuanceVCEDUService";
 import config from "../../config";
 import { W3CDidKeyUtilityService } from "./W3CDidKeyUtilityService";
 import { VerifierRegistryService } from "./VerifierRegistryService";
@@ -33,7 +33,7 @@ case "OpenidForCredentialIssuanceService":
 	break;
 case "OpenidForCredentialIssuanceMattrV2Service":
 	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
-		.to(OpenidForCredentialIssuanceMattrV2Service)
+		.to(OpenidForCredentialIssuanceVCEDUService)
 	break;
 }
 

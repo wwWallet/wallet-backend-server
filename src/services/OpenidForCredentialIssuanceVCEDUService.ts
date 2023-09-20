@@ -35,7 +35,7 @@ type IssuanceState = {
 }
 
 @injectable()
-export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredentialReceiving {
+export class OpenidForCredentialIssuanceVCEDUService implements OpenidCredentialReceiving {
 
 	// identifierService: IdentifierService = new IdentifierService();
 	// legalPersonService: LegalPersonService = new LegalPersonService();
