@@ -369,6 +369,9 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 				}, manager)
 			);
+			if (req.body.privateData) {
+				userEntity.privateData = Buffer.from(req.body.privateData);
+			}
 			return userEntity;
 		});
 
@@ -385,7 +388,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	}
 })
 
-userController.delete('/webauthn/credential/:id', async (req: Request, res: Response) => {
+userController.post('/webauthn/credential/:id/delete', async (req: Request, res: Response) => {
 	console.log("webauthn delete", req.params.id);
 
 	const userRes = await getUserByDID(req.user.did);
@@ -395,7 +398,7 @@ userController.delete('/webauthn/credential/:id', async (req: Request, res: Resp
 	}
 	const user = userRes.unwrap();
 
-	const deleteRes = await deleteWebauthnCredential(user, req.params.id);
+	const deleteRes = await deleteWebauthnCredential(user, req.params.id, Buffer.from(req.body.privateData));
 	if (deleteRes.ok) {
 		res.status(204).send();
 	} else {
