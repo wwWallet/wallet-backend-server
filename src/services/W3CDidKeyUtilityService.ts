@@ -17,7 +17,7 @@ export class W3CDidKeyUtilityService implements DidKeyUtilityService {
 		return verificationMethod.publicKeyJwk as JWK;
 	}
 
-	async generateKeyPair(): Promise<{ did: string, key: any }> {
+	async generateKeyPair(): Promise<{ did: string, key: WalletKey }> {
 		const { didDocument, keys } = await ed25519.generate(
 			{
 				secureRandom: () => {
