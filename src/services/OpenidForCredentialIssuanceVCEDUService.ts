@@ -35,7 +35,7 @@ type IssuanceState = {
 }
 
 @injectable()
-export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredentialReceiving {
+export class OpenidForCredentialIssuanceVCEDUService implements OpenidCredentialReceiving {
 
 	// identifierService: IdentifierService = new IdentifierService();
 	// legalPersonService: LegalPersonService = new LegalPersonService();
@@ -53,7 +53,7 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
 
 	constructor(
-		@inject(TYPES.WalletKeystore) private walletKeyStore: WalletKeystore,
+		@inject(TYPES.WalletKeystoreManagerService) private walletKeystoreManagerService: WalletKeystore,
 	) { }
 
 
@@ -342,7 +342,7 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 
 		const c_nonce = state.tokenResponse.c_nonce;
 
-		const { proof_jwt } = (await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce)).unwrap();
+		const { proof_jwt } = (await this.walletKeystoreManagerService.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce)).unwrap();
 
 		const credentialEndpoint = state.credentialIssuerMetadata.credential_endpoint;
 
@@ -427,7 +427,7 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 		let credentialIssuerDID = null;
 		let credentialToBeStored = null;
 		let issuanceDate = null;
-		if (credentialResponse.format == 'w3cvc-jsonld') {
+		if (credentialResponse.format == VerifiableCredentialFormat.LDP_VC) {
 			credentialPayload = credentialResponse.credential;
 			type = credentialPayload.type;
 			credentiaIdentifier = randomUUID();
@@ -436,7 +436,7 @@ export class OpenidForCredentialIssuanceMattrV2Service implements OpenidCredenti
 			console.log("Credential issuance date = ", credentialPayload.issuanceDate)
 			issuanceDate = new Date(credentialPayload.issuanceDate);
 		}
-		else if (credentialResponse.format == 'jwt_vc') {
+		else if (credentialResponse.format == VerifiableCredentialFormat.JWT_VC_JSON) {
 			credentialPayload = JSON.parse(base64url.decode(credentialResponse.credential.split('.')[1]))
 			type = credentialPayload.vc.type as string[];
 			credentiaIdentifier = credentialPayload.jti;

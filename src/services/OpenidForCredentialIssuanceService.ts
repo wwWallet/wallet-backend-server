@@ -53,7 +53,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
 
 	constructor(
-		@inject(TYPES.WalletKeystore) private walletKeyStore: WalletKeystore,
+		@inject(TYPES.WalletKeystoreManagerService) private walletKeystoreManagerService: WalletKeystore,
 	) { }
 
 
@@ -325,7 +325,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 		const c_nonce = state.tokenResponse.c_nonce;
-		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		const res = await this.walletKeystoreManagerService.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
 		console.log("Result = ", res)
 		if (res.ok) {
 			const { proof_jwt } = res.val;

@@ -21,7 +21,7 @@ export = {
 	},
 	alg: "EdDSA",
 	servicesConfiguration: {
-		issuanceService: "OpenidForCredentialIssuanceService", // OpenidForCredentialIssuanceService or OpenidForCredentialIssuanceMattrV2Service
+		issuanceService: "OpenidForCredentialIssuanceService", // OpenidForCredentialIssuanceService or OpenidForCredentialIssuanceVCEDUService
 		didKeyService: "EBSI", // W3C or EBSI
 	}
 }

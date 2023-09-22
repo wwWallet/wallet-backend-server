@@ -76,7 +76,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 	constructor(
-		@inject(TYPES.WalletKeystore) private walletKeystore: WalletKeystore,
+		@inject(TYPES.WalletKeystoreManagerService) private walletKeystoreManagerService: WalletKeystore,
 		@inject(TYPES.VerifierRegistryService) private verifierRegistryService: VerifierRegistryService,
 		@inject(TYPES.OpenidForCredentialIssuanceService) private OpenidCredentialReceivingService: OpenidCredentialReceiving
 	) { }
@@ -183,7 +183,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			redirect_uri,
 			state,
 		});
-		const idTokenResult = await this.walletKeystore.createIdToken(userDid, nonce, client_id);
+		const idTokenResult = await this.walletKeystoreManagerService.createIdToken(userDid, nonce, client_id);
 		if (idTokenResult.ok) {
 			const { id_token } = idTokenResult.val;
 			return Ok(await this.finishParseIdTokenRequest(userDid, state, redirect_uri, id_token));
@@ -363,7 +363,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
 		const { audience, nonce } = fetchedState;
-		const result = await this.walletKeystore.signJwtPresentation(userDid, nonce, audience, selectedVC);
+		const result = await this.walletKeystoreManagerService.signJwtPresentation(userDid, nonce, audience, selectedVC);
 		if (!result.ok) {
 			return Err({
 				action: SignatureAction.signJwtPresentation,
