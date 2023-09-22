@@ -6,5 +6,5 @@ keys/*
 yarn-error.log
 ssl_keys
 *.tar.gz
-config.production.*
+config.production*.*
 .npmrc

@@ -31,7 +31,7 @@ case "OpenidForCredentialIssuanceService":
 	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
 		.to(OpenidForCredentialIssuanceService)
 	break;
-case "OpenidForCredentialIssuanceMattrV2Service":
+case "OpenidForCredentialIssuanceVCEDUService":
 	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
 		.to(OpenidForCredentialIssuanceVCEDUService)
 	break;

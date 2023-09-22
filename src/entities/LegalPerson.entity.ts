@@ -22,11 +22,11 @@ class LegalPersonEntity {
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
-	client_id: string = "";
+	client_id?: string;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
-	client_secret: string = "";
+	client_secret?: string;
 }
 
 type CreateLegalPerson = {
