@@ -356,7 +356,7 @@ async function updateWebauthnCredential(credential: WebauthnCredentialEntity, up
 	}
 }
 
-async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string): Promise<Result<{}, UpdateUserErr>> {
+async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<{}, UpdateUserErr>> {
 	try {
 
 		return await userRepository.manager.transaction(async (manager) => {
@@ -380,6 +380,7 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 				.where({ user, id: credentialUuid })
 				.execute();
 			if (res.affected > 0) {
+				await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData });
 				return Ok({});
 			} else if (res.affected === 0) {
 				return Err(UpdateUserErr.NOT_EXISTS);
