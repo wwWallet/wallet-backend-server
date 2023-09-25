@@ -345,15 +345,28 @@ async function updateUserByDID(did: string, update: (user: UserEntity, entityMan
 	});
 }
 
-async function updateWebauthnCredential(credential: WebauthnCredentialEntity, update: (credential: WebauthnCredentialEntity) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+async function updateWebauthnCredentialWithManager(
+	credential: WebauthnCredentialEntity,
+	update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity,
+	manager: EntityManager,
+): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
 	try {
-		const updated = update(credential);
-		const res = await webauthnCredentialRepository.save(updated);
+		const updated = update(credential, manager);
+		const res = await manager.save(updated);
 		return Ok(res);
 	} catch (e) {
 		console.log(e);
 		return Err(UpdateUserErr.DB_ERR);
 	}
+}
+
+async function updateWebauthnCredential(
+	credential: WebauthnCredentialEntity,
+	update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity,
+): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	return await userRepository.manager.transaction(async (manager) => {
+		return await updateWebauthnCredentialWithManager(credential, update, manager);
+	});
 }
 
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<{}, UpdateUserErr>> {
