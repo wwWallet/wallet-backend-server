@@ -369,6 +369,21 @@ async function updateWebauthnCredential(
 	});
 }
 
+async function updateWebauthnCredentialById(userDid: string, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	console.log("updateWebauthnCredentialById", userDid, credentialUuid);
+	return await webauthnCredentialRepository.manager.transaction(async (manager) => {
+		const q = userRepository.createQueryBuilder("user")
+			.leftJoinAndSelect("user.webauthnCredentials", "credential")
+			.where("user.did = :userDid", { userDid })
+			.andWhere("credential.id = :credentialUuid", { credentialUuid });
+		console.log("q", q.getQueryAndParameters());
+		const userRes = await q.getOne();
+		console.log(userRes);
+
+		return updateWebauthnCredentialWithManager(userRes.webauthnCredentials[0], update, manager);
+	});
+}
+
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<{}, UpdateUserErr>> {
 	try {
 
@@ -422,4 +437,5 @@ export {
 	updateUserByDID,
 	deleteWebauthnCredential,
 	updateWebauthnCredential,
+	updateWebauthnCredentialById,
 }
