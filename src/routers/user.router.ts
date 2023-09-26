@@ -6,7 +6,7 @@ import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
 
 import config from '../../config';
-import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, UserEntity } from '../entities/user.entity';
+import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -394,6 +394,27 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 
 	} else {
 		res.status(400).send({});
+	}
+})
+
+userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
+	console.log("webauthn rename", req.params.id);
+
+	const updateRes = await updateWebauthnCredentialById(req.user.did, req.params.id, (credentialEntity, manager) => {
+		credentialEntity.nickname = req.body.nickname || null;
+		return credentialEntity;
+	});
+
+	if (updateRes.ok) {
+		res.status(204).send();
+
+	} else {
+		if (updateRes.val === UpdateUserErr.NOT_EXISTS) {
+			res.status(404).send();
+
+		} else {
+			res.status(500).send();
+		}
 	}
 })
 
