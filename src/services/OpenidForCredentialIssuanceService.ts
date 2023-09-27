@@ -17,7 +17,7 @@ import { getLeafNodesWithPath } from "../lib/leafnodepaths";
 import { TYPES } from "./types";
 import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
-
+import { randomUUID } from 'node:crypto';
 
 type IssuanceState = {
 	userDid: string;  // Before Authorization Req
@@ -237,6 +237,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		if (!code) {
 			throw new Error("Code not received");
 		}
+		if (currentState.code) { // if same code is received, then don't send Token Request again.
+			return;
+		}
 		let newState = { ...currentState, code };
 		this.states.set(userDid, newState);
 
@@ -449,7 +452,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		createVerifiableCredential({
 			issuerDID: credentialPayload.iss,
-			credentialIdentifier: credentialPayload.jti,
+			credentialIdentifier: randomUUID(),
 			credential: credentialResponse.credential,
 			holderDID: user.did,
 			issuerURL: legalPerson.url,
