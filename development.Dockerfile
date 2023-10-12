@@ -6,7 +6,7 @@ COPY package.json yarn.lock .npmrc ./
 # RUN apt update -y && apt install python3 -y
 
 RUN mkdir -p node_modules
-RUN yarn cache clean && yarn install --frozen-lockfile
+RUN yarn cache clean && yarn install
 
 ENV NODE_ENV development
 

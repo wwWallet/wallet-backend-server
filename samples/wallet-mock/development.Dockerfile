@@ -7,7 +7,7 @@ COPY package.json yarn.lock ./
 
 RUN mkdir -p /home/node/app/node_modules
 COPY --chown=node:node . .
-RUN yarn cache clean && yarn install --frozen-lockfile
+RUN yarn cache clean && yarn install
 
 
 # Copy the rest of the application code to the container

@@ -4,7 +4,7 @@ WORKDIR /home/node/app
 
 COPY . .
 
-RUN yarn cache clean && yarn install --frozen-lockfile
+RUN yarn cache clean && yarn install
 
 
 CMD ["tail", "-f", "/dev/null"]
