@@ -7,7 +7,7 @@ import { AdditionalKeystoreParameters, RegistrationParams, SocketManagerServiceI
 import { TYPES } from "./types";
 import config from "../../config";
 import { SignatureAction, ServerSocketMessage } from "./shared.types";
-import { WalletKey } from "@gunet/ssi-sdk";
+import { WalletKey } from "@wwWallet/ssi-sdk";
 
 
 

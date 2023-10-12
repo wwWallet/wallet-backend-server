@@ -4,7 +4,7 @@ import { LegalPersonEntity } from "../entities/LegalPerson.entity";
 import { OutboundRequest } from "./types/OutboundRequest";
 import http from 'http';
 import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
-import { WalletKey } from "@gunet/ssi-sdk";
+import { WalletKey } from "@wwWallet/ssi-sdk";
 import { WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {

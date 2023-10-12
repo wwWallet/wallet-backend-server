@@ -4,7 +4,7 @@ import { inject, injectable } from "inversify";
 import "reflect-metadata";
 import { Err, Ok, Result } from "ts-results";
 
-import { SignVerifiablePresentationJWT, WalletKey } from "@gunet/ssi-sdk";
+import { SignVerifiablePresentationJWT, WalletKey } from "@wwWallet/ssi-sdk";
 import { AdditionalKeystoreParameters, DidKeyUtilityService, RegistrationParams, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { verifiablePresentationSchemaURL } from "../util/util";
 import { getUserByDID } from "../entities/user.entity";

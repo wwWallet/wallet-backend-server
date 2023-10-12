@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { DidKeyUtilityService } from './interfaces';
 import { JWK } from 'jose';
 import config from '../../config';
-import { NaturalPersonWallet, WalletKey, getPublicKeyFromDid } from '@gunet/ssi-sdk';
+import { NaturalPersonWallet, WalletKey, getPublicKeyFromDid } from '@wwWallet/ssi-sdk';
 
 
 @injectable()
