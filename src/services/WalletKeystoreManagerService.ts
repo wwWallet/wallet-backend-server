@@ -4,7 +4,7 @@ import { Err, Ok, Result } from "ts-results";
 import 'reflect-metadata';
 import { TYPES } from "./types";
 import { WalletType, getUserByDID } from "../entities/user.entity";
-import { WalletKey } from "@wwWallet/ssi-sdk";
+import { WalletKey } from "@wwwallet/ssi-sdk";
 
 /**
  * This class is responsible for deciding which WalletKeystore will be used each time depending on the user

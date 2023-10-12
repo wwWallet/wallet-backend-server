@@ -5,7 +5,7 @@
 const yargs = require('yargs');
 require('dotenv').config();
 const knex = require('knex');
-const { NaturalPersonWallet } = require('@wwWallet/ssi-sdk')
+const { NaturalPersonWallet } = require('@wwwallet/ssi-sdk')
 const crypto = require('node:crypto');
 
 const db = knex({

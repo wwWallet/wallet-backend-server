@@ -4,7 +4,7 @@ import { DidKeyUtilityService } from './interfaces';
 import { JWK } from 'jose';
 import * as ed25519 from "@transmute/did-key-ed25519";
 import * as crypto from "node:crypto";
-import { WalletKey } from '@wwWallet/ssi-sdk';
+import { WalletKey } from '@wwwallet/ssi-sdk';
 
 
 @injectable()

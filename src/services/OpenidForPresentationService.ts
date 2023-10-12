@@ -7,7 +7,7 @@ import "reflect-metadata";
 import { z } from 'zod';
 import { Err, Ok, Result } from "ts-results";
 
-import { InputDescriptorType, Verify } from "@wwWallet/ssi-sdk";
+import { InputDescriptorType, Verify } from "@wwwallet/ssi-sdk";
 import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
