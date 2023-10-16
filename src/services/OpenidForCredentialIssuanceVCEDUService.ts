@@ -489,22 +489,15 @@ export class OpenidForCredentialIssuanceVCEDUService implements OpenidCredential
 			if (success.err) {
 				return;
 			}
-			console.log("FCM token = ", user.fcmToken)
-			if (user.fcmToken)
-				sendPushNotification(user.fcmToken.toString(), "New Credential", "A new verifiable credential is in your wallet").catch(err => {
-					console.log("Failed to send notification")
-					console.log(err)
-				});
-			if (user.browserFcmToken)
-				sendPushNotification(user.browserFcmToken.toString(), "New Credential", "A new verifiable credential is in your wallet").catch(err => {
-					console.log("Failed to send notification")
-					console.log(err)
-				});
+			if (user.fcmTokenList) {
+				for (const fcmToken of user.fcmTokenList) {
+					sendPushNotification(fcmToken.value, "New Credential", "A new verifiable credential is in your wallet").catch(err => {
+						console.log("Failed to send notification")
+						console.log(err)
+					});
+				}
+			}
 		});
 
-	}
-
-	private static generatePresentableFormat(credentialSubjectMetadata: any, verifiableCredential: any): any {
-		return getLeafNodesWithPath(verifiableCredential, credentialSubjectMetadata)
 	}
 }

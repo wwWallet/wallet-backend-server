@@ -4,7 +4,6 @@ import { Err, Ok, Result } from "ts-results";
 import 'reflect-metadata';
 import { TYPES } from "./types";
 import { WalletType, getUserByDID } from "../entities/user.entity";
-import { WalletKey } from "@wwwallet/ssi-sdk";
 
 /**
  * This class is responsible for deciding which WalletKeystore will be used each time depending on the user
@@ -18,15 +17,13 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		@inject(TYPES.DidKeyUtilityService) private didKeyUtilityService: DidKeyUtilityService
 	) { }
 
-	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
-		const fcmToken = registrationParams.fcm_token ? Buffer.from(registrationParams.fcm_token) : Buffer.from("");
-		const browserFcmToken = registrationParams.browser_fcm_token ? Buffer.from(registrationParams.browser_fcm_token) : Buffer.from("");
+	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
+		const fcmToken = registrationParams.fcm_token ? registrationParams.fcm_token : "";
 
 		// depending on additionalParameters, decide to use the corresponding keystore service
 		if (registrationParams.keys && registrationParams.privateData) {
 			return Ok({
 				fcmToken,
-				browserFcmToken,
 				keys: Buffer.from(JSON.stringify(registrationParams.keys)),
 				did: registrationParams.keys.did,
 				displayName: registrationParams.displayName,
@@ -40,7 +37,6 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 				const { did, key } = await this.didKeyUtilityService.generateKeyPair();
 				return Ok({
 					fcmToken,
-					browserFcmToken,
 					keys: Buffer.from(JSON.stringify(key)),
 					did: did,
 					displayName: registrationParams.displayName,
