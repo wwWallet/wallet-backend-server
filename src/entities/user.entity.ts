@@ -1,10 +1,11 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial, JoinColumn } from "typeorm"
 import crypto from "node:crypto";
 import base64url from "base64url";
 
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
+import { FcmTokenEntity } from "./FcmToken.entity";
 
 export enum WalletType {
 	DB,
@@ -37,14 +38,6 @@ class UserEntity {
 	keys: Buffer;
 
 
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "blob", nullable: true, default: () => "NULL" })
-	fcmToken: Buffer;
-
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "blob", nullable: true, default: () => "NULL" })
-	browserFcmToken: Buffer;
-
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 
@@ -63,6 +56,10 @@ class UserEntity {
 		() => WebauthnCredentialEntity, (credential) => credential.user,
 		{ cascade: true, onDelete: "CASCADE", orphanedRowAction: "delete", eager: true, nullable: false })
 	webauthnCredentials: WebauthnCredentialEntity[];
+
+
+	@OneToMany(() => FcmTokenEntity, (fcmToken) => fcmToken.user, { eager: true })
+	fcmTokenList: FcmTokenEntity[];
 }
 
 @Entity({ name: "webauthn_credential" })
@@ -122,16 +119,14 @@ type CreateUser = {
 	displayName: string,
 	did: string;
 	passwordHash: string;
-	fcmToken: Buffer;
-	browserFcmToken: Buffer;
+	fcmToken: string;
 	privateData: Buffer;
 	webauthnUserHandle: string;
 } | {
 	displayName: string,
 	did: string;
 	keys: Buffer;
-	fcmToken: Buffer;
-	browserFcmToken: Buffer;
+	fcmToken: string;
 	privateData: Buffer;
 	webauthnUserHandle: string;
 	webauthnCredentials: WebauthnCredentialEntity[];
@@ -170,6 +165,11 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 			...createUser,
 			isAdmin,
 		}));
+		const fcmTokenEntity = new FcmTokenEntity();
+		fcmTokenEntity.value = createUser.fcmToken;
+		fcmTokenEntity.user = user;
+		AppDataSource.getRepository(FcmTokenEntity).save(fcmTokenEntity);
+
 		return Ok(user);
 	}
 	catch(e) {

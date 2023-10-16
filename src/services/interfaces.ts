@@ -29,7 +29,6 @@ export type AdditionalKeystoreParameters = {
 
 export type RegistrationParams = {
 	fcm_token?: string;
-	browser_fcm_token?: string;
 	keys?: WalletKey;
 	privateData?: any;
 	displayName: string;
@@ -37,7 +36,7 @@ export type RegistrationParams = {
 
 
 export interface WalletKeystoreManager {
-	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: Buffer, browserFcmToken: Buffer, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
+	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
 
 	createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
 	signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;

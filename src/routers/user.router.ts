@@ -13,7 +13,7 @@ import { ChallengeErr, createChallenge, popChallenge } from '../entities/Webauth
 import * as webauthn from '../webauthn';
 import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
-import { DidKeyUtilityService, RegistrationParams, WalletKeystore, WalletKeystoreManager } from '../services/interfaces';
+import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
 
 
