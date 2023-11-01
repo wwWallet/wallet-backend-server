@@ -30,6 +30,9 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 				// wait for appToken to authenticate
 				try {
 					const { appToken } = JSON.parse(message.toString());
+					if (!appToken) {
+						return;
+					}
 					const { payload } = await jwtVerify(appToken, secret);
 					openSockets.set(payload.did as string, ws);
 					ws.send(JSON.stringify({ type: "FIN_INIT" }));
