@@ -1,32 +1,39 @@
 import { Container } from "inversify";
 import { TYPES  } from "./types";
-import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, DidKeyUtilityService, SocketManagerServiceInterface } from "./interfaces";
+import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, DidKeyUtilityService, SocketManagerServiceInterface, WalletKeystoreManager } from "./interfaces";
 import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanceService";
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
 import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
-import { OpenidForCredentialIssuanceMattrV2Service } from "./OpenidForCredentialIssuanceMattrV2Service";
+import { OpenidForCredentialIssuanceVCEDUService } from "./OpenidForCredentialIssuanceVCEDUService";
 import config from "../../config";
 import { W3CDidKeyUtilityService } from "./W3CDidKeyUtilityService";
 import { VerifierRegistryService } from "./VerifierRegistryService";
 import { EBSIDidKeyUtilityService } from "./EBSIDidKeyUtilityService";
 import { SocketManagerService } from "./SocketManagerService";
 import { ClientKeystoreService } from "./ClientKeystoreService";
+import { WalletKeystoreManagerService } from "./WalletKeystoreManagerService";
 
 const appContainer = new Container();
 
 
-appContainer.bind<WalletKeystore>(TYPES.WalletKeystore)
+appContainer.bind<WalletKeystore>(TYPES.ClientKeystoreService)
 	.to(ClientKeystoreService)
+
+appContainer.bind<WalletKeystore>(TYPES.DatabaseKeystoreService)
+	.to(DatabaseKeystoreService)
+
+appContainer.bind<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService)
+	.to(WalletKeystoreManagerService)
 
 switch (config.servicesConfiguration.issuanceService) {
 case "OpenidForCredentialIssuanceService":
 	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
 		.to(OpenidForCredentialIssuanceService)
 	break;
-case "OpenidForCredentialIssuanceMattrV2Service":
+case "OpenidForCredentialIssuanceVCEDUService":
 	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
-		.to(OpenidForCredentialIssuanceMattrV2Service)
+		.to(OpenidForCredentialIssuanceVCEDUService)
 	break;
 }
 

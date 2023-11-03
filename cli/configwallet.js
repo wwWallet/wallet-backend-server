@@ -5,7 +5,7 @@
 const yargs = require('yargs');
 require('dotenv').config();
 const knex = require('knex');
-const { NaturalPersonWallet } = require('@gunet/ssi-sdk')
+const { NaturalPersonWallet } = require('@wwwallet/ssi-sdk')
 const crypto = require('node:crypto');
 
 const db = knex({
@@ -113,7 +113,20 @@ async function createUser({username, password}) {
 }
 
 async function createIssuer({friendlyName, url, did, client_id}) {
-
+	try {
+		const rows = await db.select("*")
+					.from("legal_person")
+					.where('did' , '=', did);
+		if (rows.length > 0) {
+			console.log(`Legal person already exists with DID:\t${did}`)
+			db.destroy();
+			return;
+		}
+	} catch (e) {
+		console.log(e);
+		db.destroy();
+		return;
+	}
 
 	db("legal_person")
   .insert({friendlyName, url, did, client_id})

@@ -1,11 +1,16 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial, JoinColumn } from "typeorm"
 import crypto from "node:crypto";
 import base64url from "base64url";
 
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
+import { FcmTokenEntity } from "./FcmToken.entity";
 
+export enum WalletType {
+	DB,
+	CLIENT
+}
 
 @Entity({ name: "user" })
 class UserEntity {
@@ -33,14 +38,6 @@ class UserEntity {
 	keys: Buffer;
 
 
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "blob", nullable: true, default: () => "NULL" })
-	fcmToken: Buffer;
-
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "blob", nullable: true, default: () => "NULL" })
-	browserFcmToken: Buffer;
-
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 
@@ -51,10 +48,18 @@ class UserEntity {
 	@Generated("uuid")
 	webauthnUserHandle: string;
 
+
+	@Column({ type: "enum" ,enum: WalletType, default: WalletType.DB })
+	walletType: WalletType;
+
 	@OneToMany(
 		() => WebauthnCredentialEntity, (credential) => credential.user,
 		{ cascade: true, onDelete: "CASCADE", orphanedRowAction: "delete", eager: true, nullable: false })
 	webauthnCredentials: WebauthnCredentialEntity[];
+
+
+	@OneToMany(() => FcmTokenEntity, (fcmToken) => fcmToken.user, { eager: true })
+	fcmTokenList: FcmTokenEntity[];
 }
 
 @Entity({ name: "webauthn_credential" })
@@ -114,16 +119,14 @@ type CreateUser = {
 	displayName: string,
 	did: string;
 	passwordHash: string;
-	fcmToken: Buffer;
-	browserFcmToken: Buffer;
+	fcmToken: string;
 	privateData: Buffer;
 	webauthnUserHandle: string;
 } | {
 	displayName: string,
 	did: string;
 	keys: Buffer;
-	fcmToken: Buffer;
-	browserFcmToken: Buffer;
+	fcmToken: string;
 	privateData: Buffer;
 	webauthnUserHandle: string;
 	webauthnCredentials: WebauthnCredentialEntity[];
@@ -141,12 +144,15 @@ enum GetUserErr {
 
 enum UpdateUserErr {
 	NOT_EXISTS = "NOT_EXISTS",
-	DB_ERR = "DB_ERR"
+	DB_ERR = "DB_ERR",
+	LAST_WEBAUTHN_CREDENTIAL = "LAST_WEBAUTHN_CREDENTIAL",
 }
 
 enum UpdateFcmError {
 	DB_ERR = "Failed to update FCM token list"
 }
+
+
 
 
 const userRepository: Repository<UserEntity> = AppDataSource.getRepository(UserEntity);
@@ -159,6 +165,11 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 			...createUser,
 			isAdmin,
 		}));
+		const fcmTokenEntity = new FcmTokenEntity();
+		fcmTokenEntity.value = createUser.fcmToken;
+		fcmTokenEntity.user = user;
+		AppDataSource.getRepository(FcmTokenEntity).save(fcmTokenEntity);
+
 		return Ok(user);
 	}
 	catch(e) {
@@ -334,10 +345,14 @@ async function updateUserByDID(did: string, update: (user: UserEntity, entityMan
 	});
 }
 
-async function updateWebauthnCredential(credential: WebauthnCredentialEntity, update: (credential: WebauthnCredentialEntity) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+async function updateWebauthnCredentialWithManager(
+	credential: WebauthnCredentialEntity,
+	update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity,
+	manager: EntityManager,
+): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
 	try {
-		const updated = update(credential);
-		const res = await webauthnCredentialRepository.save(updated);
+		const updated = update(credential, manager);
+		const res = await manager.save(updated);
 		return Ok(res);
 	} catch (e) {
 		console.log(e);
@@ -345,18 +360,61 @@ async function updateWebauthnCredential(credential: WebauthnCredentialEntity, up
 	}
 }
 
-async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string): Promise<Result<{}, UpdateUserErr>> {
+async function updateWebauthnCredential(
+	credential: WebauthnCredentialEntity,
+	update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity,
+): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	return await userRepository.manager.transaction(async (manager) => {
+		return await updateWebauthnCredentialWithManager(credential, update, manager);
+	});
+}
+
+async function updateWebauthnCredentialById(userDid: string, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	console.log("updateWebauthnCredentialById", userDid, credentialUuid);
+	return await webauthnCredentialRepository.manager.transaction(async (manager) => {
+		const q = userRepository.createQueryBuilder("user")
+			.leftJoinAndSelect("user.webauthnCredentials", "credential")
+			.where("user.did = :userDid", { userDid })
+			.andWhere("credential.id = :credentialUuid", { credentialUuid });
+		console.log("q", q.getQueryAndParameters());
+		const userRes = await q.getOne();
+		console.log(userRes);
+
+		return updateWebauthnCredentialWithManager(userRes.webauthnCredentials[0], update, manager);
+	});
+}
+
+async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<{}, UpdateUserErr>> {
 	try {
-		const res = await webauthnCredentialRepository.createQueryBuilder()
-			.delete()
-			.from(WebauthnCredentialEntity)
-			.where({ user, id: credentialUuid })
-			.execute();
-		if (res.affected > 0) {
-			return Ok({});
-		} else if (res.affected === 0) {
-			return Err(UpdateUserErr.NOT_EXISTS);
-		}
+
+		return await userRepository.manager.transaction(async (manager) => {
+			const userRes = await manager.findOne(UserEntity, { where: { did: user.did }});
+			if (!userRes) {
+				return Err(UpdateUserErr.NOT_EXISTS);
+			}
+
+			const numCredentials = await manager.createQueryBuilder()
+				.select()
+				.from(WebauthnCredentialEntity, "cred")
+				.where({ user })
+				.getCount();
+			if (numCredentials < 2) {
+				return Err(UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL);
+			}
+
+			const res = await manager.createQueryBuilder()
+				.delete()
+				.from(WebauthnCredentialEntity)
+				.where({ user, id: credentialUuid })
+				.execute();
+			if (res.affected > 0) {
+				await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData });
+				return Ok({});
+			} else if (res.affected === 0) {
+				return Err(UpdateUserErr.NOT_EXISTS);
+			}
+		});
+
 	} catch (e) {
 		console.log(e);
 		return Err(UpdateUserErr.DB_ERR);
@@ -379,4 +437,5 @@ export {
 	updateUserByDID,
 	deleteWebauthnCredential,
 	updateWebauthnCredential,
+	updateWebauthnCredentialById,
 }

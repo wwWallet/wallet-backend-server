@@ -4,7 +4,7 @@ import { DidKeyUtilityService } from './interfaces';
 import { JWK } from 'jose';
 import * as ed25519 from "@transmute/did-key-ed25519";
 import * as crypto from "node:crypto";
-import { WalletKey } from '@gunet/ssi-sdk';
+import { WalletKey } from '@wwwallet/ssi-sdk';
 
 
 @injectable()
@@ -17,7 +17,7 @@ export class W3CDidKeyUtilityService implements DidKeyUtilityService {
 		return verificationMethod.publicKeyJwk as JWK;
 	}
 
-	async generateKeyPair(): Promise<{ did: string, key: any }> {
+	async generateKeyPair(): Promise<{ did: string, key: WalletKey }> {
 		const { didDocument, keys } = await ed25519.generate(
 			{
 				secureRandom: () => {

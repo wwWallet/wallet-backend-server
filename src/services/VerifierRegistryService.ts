@@ -14,10 +14,29 @@ type Verifier = {
 @injectable()
 export class VerifierRegistryService {
 	private readonly verifierRegistry: Verifier[] = [
+		// {
+		// 	id: 1,
+		// 	name: "ACME verifier",
+		// 	url: "http://wallet-enterprise-acme-verifier:8005/verification/authorize",
+		// 	scopes: [
+		// 		{
+		// 			name: "vid",
+		// 			description: "Present your Verifiable ID"
+		// 		},
+		// 		{
+		// 			name: "diploma",
+		// 			description: "Present your Diploma"
+		// 		},
+		// 		{
+		// 			name: "ver:test",
+		// 			description: "Test"
+		// 		}
+		// 	]
+		// },
 		{
 			id: 1,
 			name: "ACME verifier",
-			url: "http://wallet-enterprise-acme-verifier:8005/verification/authorize",
+			url: "https://verifier.ediplomas.gr/verification/authorize",
 			scopes: [
 				{
 					name: "vid",

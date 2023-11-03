@@ -4,8 +4,8 @@ import { inject, injectable } from "inversify";
 import "reflect-metadata";
 import { Err, Ok, Result } from "ts-results";
 
-import { SignVerifiablePresentationJWT, WalletKey } from "@gunet/ssi-sdk";
-import { AdditionalKeystoreParameters, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { SignVerifiablePresentationJWT, WalletKey } from "@wwwallet/ssi-sdk";
+import { AdditionalKeystoreParameters, DidKeyUtilityService, RegistrationParams, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { verifiablePresentationSchemaURL } from "../util/util";
 import { getUserByDID } from "../entities/user.entity";
 import { TYPES } from "./types";
@@ -18,7 +18,19 @@ export class DatabaseKeystoreService implements WalletKeystore {
 	private readonly algorithm = config.alg;
 
 	constructor(
+		@inject(TYPES.DidKeyUtilityService) private didKeyUtilityService: DidKeyUtilityService
 	) { }
+
+
+	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ did: string; key?: WalletKey }, WalletKeystoreErr>> {
+		try {
+			const { did, key } = await this.didKeyUtilityService.generateKeyPair();
+			return Ok({ did, key });
+		}
+		catch(e) {
+			return Err(WalletKeystoreErr.FAILED_TO_GENERATE_KEYS);
+		}
+	}
 
 	
 	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {

@@ -17,7 +17,7 @@ import { getLeafNodesWithPath } from "../lib/leafnodepaths";
 import { TYPES } from "./types";
 import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
-
+import { randomUUID } from 'node:crypto';
 
 type IssuanceState = {
 	userDid: string;  // Before Authorization Req
@@ -53,7 +53,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
 
 	constructor(
-		@inject(TYPES.WalletKeystore) private walletKeyStore: WalletKeystore,
+		@inject(TYPES.WalletKeystoreManagerService) private walletKeystoreManagerService: WalletKeystore,
 	) { }
 
 
@@ -237,6 +237,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		if (!code) {
 			throw new Error("Code not received");
 		}
+		if (currentState.code) { // if same code is received, then don't send Token Request again.
+			return;
+		}
 		let newState = { ...currentState, code };
 		this.states.set(userDid, newState);
 
@@ -325,7 +328,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 		const c_nonce = state.tokenResponse.c_nonce;
-		const res = await this.walletKeyStore.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
+		const res = await this.walletKeystoreManagerService.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
 		console.log("Result = ", res)
 		if (res.ok) {
 			const { proof_jwt } = res.val;
@@ -449,7 +452,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		createVerifiableCredential({
 			issuerDID: credentialPayload.iss,
-			credentialIdentifier: credentialPayload.jti,
+			credentialIdentifier: randomUUID(),
 			credential: credentialResponse.credential,
 			holderDID: user.did,
 			issuerURL: legalPerson.url,
@@ -462,22 +465,18 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			if (success.err) {
 				return;
 			}
-			console.log("FCM token = ", user.fcmToken)
-			if (user.fcmToken)
-				sendPushNotification(user.fcmToken.toString(), "New Credential", "A new verifiable credential is in your wallet").catch(err => {
-					console.log("Failed to send notification")
-					console.log(err)
-				});
-			if (user.browserFcmToken)
-				sendPushNotification(user.browserFcmToken.toString(), "New Credential", "A new verifiable credential is in your wallet").catch(err => {
-					console.log("Failed to send notification")
-					console.log(err)
-				});
+
+			console.log("Fcm token list = ", user.fcmTokenList)
+			if (user.fcmTokenList) {
+				for (const fcmToken of user.fcmTokenList) {
+					sendPushNotification(fcmToken.value, "New Credential", "A new verifiable credential is in your wallet").catch(err => {
+						console.log("Failed to send notification")
+						console.log(err)
+					});
+				}
+			}
+
 		});
 
-	}
-
-	private static generatePresentableFormat(credentialSubjectMetadata: any, verifiableCredential: any): any {
-		return getLeafNodesWithPath(verifiableCredential, credentialSubjectMetadata)
 	}
 }

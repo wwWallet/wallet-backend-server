@@ -4,6 +4,8 @@ import { LegalPersonEntity } from "../entities/LegalPerson.entity";
 import { OutboundRequest } from "./types/OutboundRequest";
 import http from 'http';
 import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
+import { WalletKey } from "@wwwallet/ssi-sdk";
+import { WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {
 	
@@ -22,13 +24,26 @@ export enum IssuanceErr {
 
 
 export type AdditionalKeystoreParameters = {
-	
+
+}
+
+export type RegistrationParams = {
+	fcm_token?: string;
+	keys?: WalletKey;
+	privateData?: any;
+	displayName: string;
 }
 
 
+export interface WalletKeystoreManager {
+	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
+
+	createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
+	signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
+	generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
+}
+
 export interface WalletKeystore {
-	// generateKeyPair(username: string): Promise<{ did: string }>;
-	// getIdentifier(username: string): Promise<string>; // later can be converted into getIdentifiers() for more than one
 
 	createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
 	signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
@@ -36,6 +51,8 @@ export interface WalletKeystore {
 }
 
 export enum WalletKeystoreErr {
+	ADDITIONAL_PARAMS_NOT_FOUND = "additional-params-not-found",
+	FAILED_TO_GENERATE_KEYS = "keys-failed-to-generate",
 	KEYS_UNAVAILABLE = "keys-unavailable",
 	REMOTE_SIGNING_FAILED = "remote-signing-failed"
 }
@@ -63,7 +80,7 @@ export interface LegalPersonsRegistry {
 
 export interface DidKeyUtilityService {
 	getPublicKeyJwk(did: string): Promise<JWK>;
-	generateKeyPair(): Promise<{ did: string, key: any }>
+	generateKeyPair(): Promise<{ did: string, key: WalletKey }>
 }
 
 

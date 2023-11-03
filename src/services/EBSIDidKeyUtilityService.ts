@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { DidKeyUtilityService } from './interfaces';
 import { JWK } from 'jose';
 import config from '../../config';
-import { NaturalPersonWallet, getPublicKeyFromDid } from '@gunet/ssi-sdk';
+import { NaturalPersonWallet, WalletKey, getPublicKeyFromDid } from '@wwwallet/ssi-sdk';
 
 
 @injectable()
@@ -14,7 +14,7 @@ export class EBSIDidKeyUtilityService implements DidKeyUtilityService {
 		return await getPublicKeyFromDid(did);
 	}
 
-	async generateKeyPair(): Promise<{ did: string, key: any }> {
+	async generateKeyPair(): Promise<{ did: string, key: WalletKey }> {
 		const naturalPersonWallet: NaturalPersonWallet = await new NaturalPersonWallet().createWallet(config.alg);
 		return { did: naturalPersonWallet.key.did, key: naturalPersonWallet.key };
 	}
