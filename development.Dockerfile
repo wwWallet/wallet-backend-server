@@ -3,8 +3,9 @@ FROM node:16-bullseye-slim as dependencies
 WORKDIR /dependencies
 
 # Install dependencies first so rebuild of these layers is only needed when dependencies change
-COPY package.json yarn.lock .npmrc ./
-RUN yarn cache clean && yarn install --frozen-lockfile
+COPY package.json yarn.lock ./
+RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
+    yarn cache clean && yarn install --frozen-lockfile
 
 
 FROM node:16-bullseye-slim as cli-dependencies
@@ -13,7 +14,7 @@ WORKDIR /dependencies
 
 # Install dependencies first so rebuild of these layers is only needed when dependencies change
 COPY cli/package.json cli/yarn.lock ./
-RUN --mount=type=secret,id=wallet-backend-server-npmrc,required=true,target=./.npmrc,uid=1000 \
+RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
     yarn cache clean && yarn install --frozen-lockfile
 
 
