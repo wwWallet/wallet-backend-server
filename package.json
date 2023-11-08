@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -rf dist && npx tsc",
     "dev": "nodemon --config nodemon.json --exec \"npx tsc && yarn start\"",
+    "dev-docker": "npx nodemon --config nodemon.json --exec \"npx tsc --outdir /dist && yarn start-docker\"",
     "start": "node -r source-map-support/register dist/src/app.js",
+    "start-docker": "node -r source-map-support/register /dist/src/app.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/AppDataSource.ts",
     "typeorm-raw": "typeorm-ts-node-commonjs"
   },
