@@ -119,9 +119,13 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		else if (credentialOfferURL) {
 			console.log("Credential offer url = ", credentialOfferURL)
 
-			credential_offer = qs.parse(credentialOfferURL.split('?')[1]) as any;
-			if (credential_offer.credential_offer_uri && typeof credential_offer.credential_offer_uri == 'string') {
-				credential_offer = (await axios.get(credential_offer.credential_offer_uri)).data;
+			credential_offer = new URL(credentialOfferURL).searchParams.get('credential_offer')
+			let credential_offer_uri = new URL(credentialOfferURL).searchParams.get('credential_offer_uri')
+			if (credential_offer_uri) {
+				credential_offer = (await axios.get(credential_offer_uri)).data;
+			}
+			else {
+				credential_offer = JSON.parse(credential_offer)
 			}
 			console.log("Credential offer = ", credential_offer)
 
@@ -154,6 +158,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			};
 		});
 
+		console.log("Credential offer = ", credential_offer)
 		if (credential_offer && credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]) {
 			this.states.set(userDid, {
 				userDid,
@@ -303,10 +308,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		// data.append('client_assertion', clientAssertionJWT);
 		// data.append('client_assertion_method', 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer');
 
-		console.log("Openid config = ", state.openidConfiguration)
-
-		const tokenEndpoint = state.openidConfiguration.token_endpoint;
 		try {
+			const tokenEndpoint = state.openidConfiguration.token_endpoint;
 			const httpResponse = await axios.post(tokenEndpoint, data, { headers: httpHeader });
 			const httpResponseBody = httpResponse.data as TokenResponseSchemaType;
 			return httpResponseBody;
@@ -315,7 +318,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			if (err.response) {
 				console.error("HTTP response error body = ", err.response.data)
 			}
-			throw "Token Request failed"
+			console.error("Token Request failed")
 		}
 
 	}

@@ -62,7 +62,7 @@ export enum WalletKeystoreErr {
 export interface OutboundCommunication {
 	initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
 
-	handleRequest(userDid: string, requestURL: string, id_token: string | null): Promise<Result<OutboundRequest, WalletKeystoreRequest>>;
+	handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest>>;
 
 	/**
 	 * 
@@ -70,7 +70,7 @@ export interface OutboundCommunication {
 	 * @param req 
 	 * @param selection (key: descriptor_id, value: verifiable credential identifier)
 	 */
-	sendResponse(userDid: string, selection: Map<string, string>, vpjwt: string | null): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>>;
+	sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>>;
 }
 
 

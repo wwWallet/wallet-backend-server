@@ -34,11 +34,11 @@ presentationRouter.post('/initiate', async (req, res) => {
 presentationRouter.post('/handle/authorization/request', async (req, res) => {
 	const {
 		authorization_request,
-		id_token,
+		camera_was_used
 	} = req.body;
 
 	try{
-		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.did, authorization_request, id_token);
+		const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.did, authorization_request, camera_was_used);
 		if (!outboundRequestResult.ok) {
 			if (outboundRequestResult.err && outboundRequestResult.val.action === "createIdToken") {
 				return res.status(409).send(outboundRequestResult.val);
@@ -73,18 +73,14 @@ presentationRouter.post('/handle/authorization/request', async (req, res) => {
 presentationRouter.post('/generate/authorization/response', async (req, res) => {
 	const {
 		verifiable_credentials_map, // { "descriptor_id1": "urn:vid:123", "descriptor_id1": "urn:vid:645" }
-		vpjwt,
 	} = req.body;
 
 	const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
 	try {
-		const result = await openidForPresentationService.sendResponse(req.user.did, selection, vpjwt);
+		const result = await openidForPresentationService.sendResponse(req.user.did, selection);
+
 		if (!result.ok) {
-			if (result.err && result.val.action === "signJwtPresentation") {
-				return res.status(409).send(result.val);
-			} else {
-				return res.status(500).send({});
-			}
+			return res.status(500).send({});
 		}
 
 		const { redirect_to, error } = result.val;

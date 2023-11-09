@@ -58,6 +58,7 @@ type Field = {
 }
 
 type VerificationState = {
+	camera_was_used?: boolean;
 	holder_state?: string;
 	presentation_definition?: PresentationDefinition;
 	audience?: string;
@@ -101,7 +102,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return { redirect_to: url.toString() };
 	}
 	
-	async handleRequest(userDid: string, requestURL: string): Promise<Result<OutboundRequest, WalletKeystoreRequest>> {
+	async handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest>> {
 		try {
 			return await this.parseIdTokenRequest(userDid, requestURL);
 		}
@@ -115,7 +116,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 			const jsonParams = Object.fromEntries(paramEntries);
 			authorizationRequestSchema.parse(jsonParams); // will throw error if input is not conforming to the schema
-
+			this.states.set(userDid, { camera_was_used: camera_was_used })
 			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(userDid, requestURL);
 			return Ok({
 				conformantCredentialsMap: conformantCredentialsMap,
@@ -130,9 +131,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	async sendResponse(userDid: string, selection: Map<string, string>, vpjwt: string | null): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>> {
+	async sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>> {
 		try {
-			return await this.generateAuthorizationResponse(userDid, selection, vpjwt)
+			return await this.generateAuthorizationResponse(userDid, selection)
 		}
 		catch(err) {
 			console.error("Failed to generate authorization response.\nError details: ", err);
@@ -275,8 +276,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		catch(error) {
 			throw new Error(`Error fetching authorization request search params: ${error}`);
 		}
-		
+		const currentState = this.states.get(userDid);
 		this.states.set(userDid, {
+			...currentState,
 			presentation_definition,
 			audience: client_id,
 			nonce,
@@ -346,10 +348,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	private async generateVerifiablePresentation(selectedVC: string[], userDid: string, vpjwt: string | null): Promise<Result<string, WalletKeystoreRequest>> {
-		if (vpjwt) {
-			return Ok(vpjwt);
-		}
+	private async generateVerifiablePresentation(selectedVC: string[], userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
 
 		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
@@ -367,7 +366,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return Ok(result.val.vpjwt);
 	}
 
-	private async generateAuthorizationResponse(userDid: string, selection: Map<string, string>, vpjwt: string | null): Promise<Result<{ redirect_to: string }, WalletKeystoreRequest>> {
+	private async generateAuthorizationResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest>> {
 		console.log("generateAuthorizationResponse userDid = ", userDid)
 		const allSelectedCredentialIdentifiers = Array.from(selection.values());
 
@@ -384,7 +383,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
 
 		try {
-			const vp_token_result = await this.generateVerifiablePresentation(filteredVCJwtList, userDid, vpjwt);
+			const vp_token_result = await this.generateVerifiablePresentation(filteredVCJwtList, userDid);
 			if (vp_token_result.err) {
 				return Err(vp_token_result.val);
 			}
@@ -458,7 +457,10 @@ export class OpenidForPresentationService implements OutboundCommunication {
 				format: "jwt_vp"
 			});
 
-
+			const verificationState = this.states.get(userDid);
+			if (verificationState && verificationState.camera_was_used) {
+				return Ok({ })
+			}
 			return Ok({ redirect_to: newLocation });
 		}
 		catch(error) {
