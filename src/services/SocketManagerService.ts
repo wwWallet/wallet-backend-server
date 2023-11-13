@@ -61,10 +61,10 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 				try {
 					const clientMessage = JSON.parse(event.data.toString()) as ClientSocketMessage;
 					if (message_id !== clientMessage.message_id) {
-						console.error("Wrong message id")
-						return resolve(Err(ExpectingSocketMessageErr.WRONG_MESSAGE_ID));
+						console.error("Wrong message id");
+						return;
 					}
-					if (action !== clientMessage.response.action) {
+					else if (action !== clientMessage.response.action) {
 						return resolve(Err(ExpectingSocketMessageErr.WRONG_ACTION));
 					}
 					return resolve(Ok({ message: clientMessage }));

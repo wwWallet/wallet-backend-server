@@ -217,6 +217,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		this.states.set(userDid, state); // save state with pin
 
 		this.tokenRequest(state).then(tokenResponse => {
+			console.log("Token response on pre authorized = ", tokenResponse)
 			state = { ...state, tokenResponse }
 			this.states.set(userDid, state);
 			this.credentialRequests(userDid, state).catch(e => {
@@ -230,7 +231,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @param authorizationResponseURL
 	 * @throws
 	 */
-	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>> {
+	public async handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr>> {
 		const currentState = this.states.get(userDid);
 		if (!currentState) {
 			return Err(IssuanceErr.STATE_NOT_FOUND);
@@ -252,7 +253,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		newState = { ...newState, tokenResponse }
 		this.states.set(userDid, newState);
 		try {
-			return await this.credentialRequests(userDid, newState);
+			await this.credentialRequests(userDid, newState);
 		} catch (e) {
 			console.error("Credential requests failed with error : ", e)
 		}
@@ -326,23 +327,13 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	/**
 	 * @throws
 	 */
-	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, WalletKeystoreRequest>> {
-		console.log("State = ", state)
-
-
+	private async credentialRequests(userDid: string, state: IssuanceState): Promise<Result<void, void>> {
 		const c_nonce = state.tokenResponse.c_nonce;
 		const res = await this.walletKeystoreManagerService.generateOpenid4vciProof(userDid, state.credentialIssuerMetadata.credential_issuer, c_nonce);
-		console.log("Result = ", res)
+		console.log("Result proof generation = ", res)
 		if (res.ok) {
 			const { proof_jwt } = res.val;
 			return Ok(await this.finishCredentialRequests(userDid, state, proof_jwt));
-
-		} else if (res.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
-			return Err({
-				action: SignatureAction.generateOpenid4vciProof,
-				audience: state.credentialIssuerMetadata.credential_issuer,
-				nonce: c_nonce,
-			});
 		}
 	}
 
