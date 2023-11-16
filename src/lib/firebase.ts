@@ -3,7 +3,7 @@ var admin;
 var serviceAccount;
 try {
 	admin = require("firebase-admin");
-	serviceAccount = require(__dirname + '/../../../keys/ediplomas-wallet-firebase-adminsdk-1f8cq-d1fd260d2e.json');
+	serviceAccount = require('/app/keys/ediplomas-wallet-firebase-adminsdk-1f8cq-d1fd260d2e.json');
 	// const certPath = admin.credential.cert(serviceAccount);
 	admin.initializeApp({
 		credential: admin.credential.cert(serviceAccount),
@@ -11,6 +11,7 @@ try {
 	});
 }
 catch(e) {
+	console.log(e)
 	console.error("Error: Notification capability is not enabled")
 }
 
