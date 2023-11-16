@@ -16,7 +16,7 @@ export = {
 		origin: "WEBAUTHN_ORIGIN",
 		rp: {
 			id: "WEBAUTHN_RP_ID",
-			name: "Digital Wallet demo",
+			name: "wwWallet demo",
 		},
 	},
 	alg: "EdDSA",
