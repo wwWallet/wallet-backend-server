@@ -80,6 +80,7 @@ export class ClientKeystoreService implements WalletKeystore {
 				audience: audience
 			}
 		}
+		console.log("MessageID = ", message_id_sent)
 		await this.socketManagerService.send(userDid, msg as ServerSocketMessage);
 		const result = await this.socketManagerService.expect(userDid, message_id_sent, SignatureAction.generateOpenid4vciProof);
 		if (result.err) {

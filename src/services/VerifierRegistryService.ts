@@ -36,7 +36,7 @@ export class VerifierRegistryService {
 		{
 			id: 1,
 			name: "ACME verifier",
-			url: "https://verifier.ediplomas.gr/verification/authorize",
+			url: "https://verifier.ediplomas.gr",
 			scopes: [
 				{
 					name: "vid",
