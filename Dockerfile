@@ -1,6 +1,6 @@
 # Builder stage
 FROM node:18-bullseye-slim AS builder
-WORKDIR /home/node/app
+WORKDIR /app
 
 COPY . .
 RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
@@ -8,11 +8,11 @@ RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
 
 # Production stage
 FROM node:18-bullseye-slim AS production
-WORKDIR /home/node/app
+WORKDIR /app
 
-COPY --from=builder /home/node/app/package.json .
-COPY --from=builder /home/node/app/dist ./dist
-COPY --from=builder /home/node/app/public ./public
+COPY --from=builder /app/package.json .
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
 
 
 
