@@ -69,24 +69,10 @@ app.use('/verifiers', verifiersRouter);
 
 
 
-if (config.ssl == "true") {
-	const privateKey = fs.readFileSync(path.join(__dirname, "../../keys/key.pem"), 'utf8');
-	const certificate = fs.readFileSync(path.join(__dirname, "../../keys/cert.pem"), 'utf8');
-	const passphrase = fs.readFileSync(path.join(__dirname, "../../keys/password.txt"), 'utf8');
-	const credentials = { key: privateKey, cert: certificate, passphrase: passphrase };
-	const server = https.createServer(credentials, app);
+const server = http.createServer(app);
+appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
 
-	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
-	server.listen(config.port, () => {
-		console.log(`Wallet Backend Server listening with ${config.url}`)
-	});
-}
-else {
-	const server = http.createServer(app);
-	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
-
-	server.listen(config.port, () => {
-		console.log(`Wallet Backend Server listening with ${config.url}`)
-	});
-}
+server.listen(config.port, () => {
+	console.log(`Wallet Backend Server listening with ${config.url}`)
+});
 
