@@ -116,9 +116,9 @@ async function createIssuer({friendlyName, url, did, client_id}) {
 	try {
 		const rows = await db.select("*")
 					.from("legal_person")
-					.where('did' , '=', did);
+					.where('friendlyName', '=', friendlyName);
 		if (rows.length > 0) {
-			console.log(`Legal person already exists with DID:\t${did}`)
+			console.log(`Legal person already exists with friendlyName:\t${friendlyName}`)
 			db.destroy();
 			return;
 		}
