@@ -249,19 +249,6 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		},
 	});
 
-
-	updateUserByDID(user.did, (userEntity, manager) => {
-		if (req.body.fcm_token &&
-				req.body.fcm_token != '' &&
-				!userEntity.fcmTokenList.includes(req.body.fcm_token)) {
-			const fcmTokenEntity = new FcmTokenEntity();
-			fcmTokenEntity.user = userEntity;
-			fcmTokenEntity.value = req.body.fcm_token;
-			userEntity.fcmTokenList.push(fcmTokenEntity);
-		}
-		return userEntity;
-	});
-
 	if (verification.verified) {
 		const updateCredentialRes = await updateWebauthnCredential(credentialRecord, (entity) => {
 			entity.signatureCount = verification.authenticationInfo.newCounter;
@@ -286,11 +273,13 @@ userController.post('/fcm_token/add', async (req: Request, res: Response) => {
 	updateUserByDID(userDID, (userEntity, manager) => {
 		if (req.body.fcm_token &&
 				req.body.fcm_token != '' &&
-				!userEntity.fcmTokenList.includes(req.body.fcm_token)) {
+				userEntity.fcmTokenList.filter((fcmTokenEntity) => fcmTokenEntity.value == req.body.fcm_token).length == 0) {
 			const fcmTokenEntity = new FcmTokenEntity();
 			fcmTokenEntity.user = userEntity;
 			fcmTokenEntity.value = req.body.fcm_token;
-			userEntity.fcmTokenList.push(fcmTokenEntity);
+			manager.save(fcmTokenEntity).then((result) => {
+				userEntity.fcmTokenList.push(result);
+			});
 		}
 		return userEntity;
 	});
