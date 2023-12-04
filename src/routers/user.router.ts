@@ -15,6 +15,7 @@ import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
+import { FcmTokenEntity } from '../entities/FcmToken.entity';
 
 
 
@@ -253,7 +254,10 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		if (req.body.fcm_token &&
 				req.body.fcm_token != '' &&
 				!userEntity.fcmTokenList.includes(req.body.fcm_token)) {
-			userEntity.fcmTokenList.push(req.body.fcm_token);
+			const fcmTokenEntity = new FcmTokenEntity();
+			fcmTokenEntity.user = userEntity;
+			fcmTokenEntity.value = req.body.fcm_token;
+			userEntity.fcmTokenList.push(fcmTokenEntity);
 		}
 		return userEntity;
 	});
@@ -283,7 +287,10 @@ userController.post('/fcm_token/add', async (req: Request, res: Response) => {
 		if (req.body.fcm_token &&
 				req.body.fcm_token != '' &&
 				!userEntity.fcmTokenList.includes(req.body.fcm_token)) {
-			userEntity.fcmTokenList.push(req.body.fcm_token);
+			const fcmTokenEntity = new FcmTokenEntity();
+			fcmTokenEntity.user = userEntity;
+			fcmTokenEntity.value = req.body.fcm_token;
+			userEntity.fcmTokenList.push(fcmTokenEntity);
 		}
 		return userEntity;
 	});
