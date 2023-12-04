@@ -248,6 +248,16 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		},
 	});
 
+
+	updateUserByDID(user.did, (userEntity, manager) => {
+		if (req.body.fcm_token &&
+				req.body.fcm_token != '' &&
+				!userEntity.fcmTokenList.includes(req.body.fcm_token)) {
+			userEntity.fcmTokenList.push(req.body.fcm_token);
+		}
+		return userEntity;
+	});
+
 	if (verification.verified) {
 		const updateCredentialRes = await updateWebauthnCredential(credentialRecord, (entity) => {
 			entity.signatureCount = verification.authenticationInfo.newCounter;
@@ -264,6 +274,20 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	} else {
 		res.status(400).send({});
 	}
+})
+
+
+userController.post('/fcm_token/add', async (req: Request, res: Response) => {
+	const userDID = req.user.did;
+	updateUserByDID(userDID, (userEntity, manager) => {
+		if (req.body.fcm_token &&
+				req.body.fcm_token != '' &&
+				!userEntity.fcmTokenList.includes(req.body.fcm_token)) {
+			userEntity.fcmTokenList.push(req.body.fcm_token);
+		}
+		return userEntity;
+	});
+	res.status(200).send({});
 })
 
 userController.get('/account-info', async (req: Request, res: Response) => {
