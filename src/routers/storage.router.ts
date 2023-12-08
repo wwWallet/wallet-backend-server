@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import { getAllVerifiableCredentials, getVerifiableCredentialByCredentialIdentifier } from "../entities/VerifiableCredential.entity";
+import { getAllVerifiableCredentials, getVerifiableCredentialByCredentialIdentifier, deleteVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getAllVerifiablePresentations, getPresentationByIdentifier } from "../entities/VerifiablePresentation.entity";
 
 
@@ -9,6 +9,7 @@ const storageRouter: Router = express.Router();
 
 storageRouter.get('/vc', getAllVerifiableCredentialsController);
 storageRouter.get('/vc/:credential_identifier', getVerifiableCredentialByCredentialIdentifierController);
+storageRouter.delete('/vc/:credential_identifier', deleteVerifiableCredentialController);
 storageRouter.get('/vp', getAllVerifiablePresentationsController);
 storageRouter.get('/vp/:presentation_identifier', getPresentationByPresentationIdentifierController);
 
@@ -45,6 +46,15 @@ async function getVerifiableCredentialByCredentialIdentifierController(req, res)
 	res.status(200).send(vc);
 }
 
+async function deleteVerifiableCredentialController(req, res) {
+	const holderDID = req.user.did;
+	const { credential_identifier } = req.params;
+	const deleteResult = await deleteVerifiableCredential(holderDID, credential_identifier);
+	if (deleteResult.err) {
+		return res.status(500).send({ error: deleteResult.val });
+	}
+	res.status(200).send({ message: "Verifiable Credential deleted successfully." });
+}
 
 
 

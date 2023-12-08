@@ -2,7 +2,7 @@ import { Err, Ok, Result } from "ts-results";
 import { Entity, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
 import AppDataSource from "../AppDataSource";
 import { VerifiableCredentialFormat } from "../types/oid4vci";
-
+import { deletePresentationsByCredentialId } from './VerifiablePresentation.entity';
 
 
 @Entity({ name: "verifiable_credential" })
@@ -61,6 +61,10 @@ enum GetVerifiableCredentialsErr {
 enum CreateVerifiableCredentialErr {
 	DB_ERR = "DB_ERR"
 }
+enum DeleteVerifiableCredentialErr {
+	DB_ERR = "DB_ERR",
+	CREDENTIAL_NOT_FOUND = "CREDENTIAL_NOT_FOUND"
+}
 
 type VerifiableCredential = {
 	id?: number;
@@ -98,7 +102,31 @@ async function createVerifiableCredential(createVc: VerifiableCredential) {
 	}
 }
 
+async function deleteVerifiableCredential(holderDID:string, credentialId: string) {
+	try {
+		console.log("Deleting VPs containing the VC", credentialId);
+		await deletePresentationsByCredentialId(holderDID, credentialId);
+		console.log("Deleting VC...");
 
+		const res = await AppDataSource
+			.createQueryBuilder()
+			.delete()
+			.from(VerifiableCredentialEntity)
+			.where("credentialIdentifier = :credentialId", { credentialId })
+			.execute();
+
+		// Check if any rows were affected to determine if the deletion was successful
+		if (res.affected && res.affected > 0) {
+			console.log("The VC was successfully deleted")
+			return Ok({});
+		} else {
+			return Err(DeleteVerifiableCredentialErr.CREDENTIAL_NOT_FOUND);
+		}
+	} catch (e) {
+		console.log(e);
+		return Err(DeleteVerifiableCredentialErr.DB_ERR);
+	}
+}
 
 async function getAllVerifiableCredentials(holderDID: string): Promise<Result<VerifiableCredential[], GetVerifiableCredentialsErr>> {
 	try {
@@ -149,7 +177,9 @@ export {
 	GetVerifiableCredentialsErr,
 	VerifiableCredential,
 	CreateVerifiableCredentialErr,
+	DeleteVerifiableCredentialErr,
 	getAllVerifiableCredentials,
 	createVerifiableCredential,
+	deleteVerifiableCredential,
 	getVerifiableCredentialByCredentialIdentifier
 }

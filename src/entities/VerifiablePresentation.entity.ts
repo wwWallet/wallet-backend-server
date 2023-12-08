@@ -65,6 +65,9 @@ enum CreateVerifiablePresentationErr {
 	DB_ERR = "DB_ERR"
 }
 
+enum DeleteVerifiablePresentationErr {
+	DB_ERR = "DB_ERR"
+}
 
 async function createVerifiablePresentation(createVp: VerifiablePresentation) {
 	try {
@@ -83,6 +86,47 @@ async function createVerifiablePresentation(createVp: VerifiablePresentation) {
 	catch(e) {
 		console.log(e);
 		return Err(CreateVerifiablePresentationErr);
+	}
+}
+
+async function deletePresentationsByCredentialId(holderDID:string, credentialIdentifier: string): Promise<Result<number, DeleteVerifiablePresentationErr >> {
+	try {
+		// Get all verifiable presentations for the given holderDID
+		const vpList = await getAllVerifiablePresentations(holderDID);
+
+		const deletePromises: Promise<any>[] = [];
+
+		for (const vp of vpList) {
+			// Check if credentialIdentifier is in includedVerifiableCredentialIdentifiers
+			if (vp.includedVerifiableCredentialIdentifiers.includes(credentialIdentifier)) {
+				// Delete the presentation and push the promise to the array
+				const deletePromise = verifiablePresentationRepository
+					.createQueryBuilder()
+					.delete()
+					.from(VerifiablePresentationEntity)
+					.where("id = :id", { id: vp.id })
+					.execute();
+
+				deletePromises.push(deletePromise);
+			}
+		}
+		const deleteResults = await Promise.all(deletePromises);
+
+		let totalAffectedRows = 0;
+		for (const result of deleteResults) {
+			totalAffectedRows += result.affected;
+		}
+
+		if (totalAffectedRows > 0) {
+			console.log(`Total presentations deleted: ${totalAffectedRows}`);
+			return Ok(totalAffectedRows);
+		} else {
+			console.log("No presentations were deleted");
+			return Ok(0);
+		}
+	} catch (e) {
+		console.log(e);
+		return Err(DeleteVerifiablePresentationErr.DB_ERR);
 	}
 }
 
@@ -142,5 +186,6 @@ export {
 	VerifiablePresentation,
 	getAllVerifiablePresentations,
 	createVerifiablePresentation,
+	deletePresentationsByCredentialId,
 	getPresentationByIdentifier
 }
