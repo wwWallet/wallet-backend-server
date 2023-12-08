@@ -15,6 +15,7 @@ import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
+import { FcmTokenEntity } from '../entities/FcmToken.entity';
 
 
 
@@ -264,6 +265,25 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	} else {
 		res.status(400).send({});
 	}
+})
+
+
+userController.post('/fcm_token/add', async (req: Request, res: Response) => {
+	const userDID = req.user.did;
+	updateUserByDID(userDID, (userEntity, manager) => {
+		if (req.body.fcm_token &&
+				req.body.fcm_token != '' &&
+				userEntity.fcmTokenList.filter((fcmTokenEntity) => fcmTokenEntity.value == req.body.fcm_token).length == 0) {
+			const fcmTokenEntity = new FcmTokenEntity();
+			fcmTokenEntity.user = userEntity;
+			fcmTokenEntity.value = req.body.fcm_token;
+			manager.save(fcmTokenEntity).then((result) => {
+				userEntity.fcmTokenList.push(result);
+			});
+		}
+		return userEntity;
+	});
+	res.status(200).send({});
 })
 
 userController.get('/account-info', async (req: Request, res: Response) => {
