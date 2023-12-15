@@ -1,20 +1,27 @@
 
 var admin;
 var serviceAccount;
-try {
-	admin = require("firebase-admin");
-	serviceAccount = require('/app/keys/ediplomas-wallet-firebase-adminsdk-1f8cq-d1fd260d2e.json');
-	// const certPath = admin.credential.cert(serviceAccount);
-	admin.initializeApp({
-		credential: admin.credential.cert(serviceAccount),
-		projectId: "ediplomas-wallet"
-	});
-}
-catch(e) {
-	console.log(e)
-	console.error("Error: Notification capability is not enabled")
-}
+var path = require('path');
+const config = require('../../config').default;
 
+if (config.notifications.enabled) {
+	try {
+		admin = require("firebase-admin");
+		serviceAccount = path.join('/', 'app', 'keys', config.notifications.serviceAccount)
+		// const certPath = admin.credential.cert(serviceAccount);
+		admin.initializeApp({
+			credential: admin.credential.cert(serviceAccount),
+			projectId: serviceAccount.project_id
+		});
+		console.log("Notification capability is enabled")
+	}
+	catch (e) {
+		console.log(e)
+		console.error("Error: Notification capability is not enabled")
+	}
+} else {
+	console.log("Notification capability is not enabled")
+}
 
 const sendPushNotification = async (fcm_token, title, body) => {
 	try {
