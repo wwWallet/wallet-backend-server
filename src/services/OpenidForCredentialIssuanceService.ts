@@ -182,7 +182,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 		const authorizationRequestURL = new URL(authorizationServerConfig.authorization_endpoint);
 		authorizationRequestURL.searchParams.append("scope", "openid");
-		authorizationRequestURL.searchParams.append("client_id", userDid);
+		authorizationRequestURL.searchParams.append("client_id", lp.client_id);
 		
 		authorizationRequestURL.searchParams.append("redirect_uri", config.walletClientUrl);
 
@@ -282,8 +282,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			data.append('code', state.code);
 			data.append('redirect_uri', config.walletClientUrl);
 			data.append('code_verifier', state.code_verifier);
-			const user = (await getUserByDID(state.userDid)).unwrap();
-			data.append('client_id', user.did);
+			data.append('client_id', state.legalPerson.client_id);
+			data.append('client_secret', state.legalPerson.client_secret);
 			break;
 		case GrantType.PRE_AUTHORIZED_CODE:
 			data.append('grant_type', 'urn:ietf:params:oauth:grant-type:pre-authorized_code');
