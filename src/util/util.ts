@@ -59,17 +59,30 @@ export function isValidUri(uri: string): boolean {
 }
 
 export async function generateCodeChallengeFromVerifier(v: any) {
-	const base64Digest = crypto
-		.createHash("sha256")
-		.update(v)
-		.digest("base64");
-	console.log(base64Digest); // +PCBxoCJMdDloUVl1ctjvA6VNbY6fTg1P7PNhymbydM=
-
-	return base64url.fromBase64(base64Digest);
+	try {
+		const challenge = base64url.encode(crypto
+			.createHash("sha256")
+			.update(v)
+			.digest());
+		console.log("code chall = ", challenge)
+		return challenge;
+	}
+	catch(e) {
+		console.log("Failed to generate code challenge")
+		return null;
+	}
 }
 
 export function generateCodeVerifier() {
-	return randomstring.generate(128);
+	try {
+		const verifier = base64url.encode(crypto.randomBytes(32));
+		console.log("ver = ", verifier)
+		return verifier;
+	}
+	catch(e) {
+		console.log("Failed to generate code verifier")
+		return null;
+	}
 }
 
 

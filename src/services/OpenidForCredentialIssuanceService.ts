@@ -103,7 +103,8 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 					alg: ["ES256"]
 				}
 			},
-			response_types_supported: [ "vp_token", "id_token" ]
+			response_types_supported: [ "vp_token", "id_token" ],
+			authorization_endpoint: config.walletClientUrl,
 		};
 
 		let lp: LegalPersonEntity;
@@ -131,13 +132,24 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 			const credentialIssuerURL = credential_offer.credential_issuer as string;
 			lp = (await getLegalPersonByUrl(credentialIssuerURL)).unwrap();
-			issuerUrlString = lp.url;
-			issuer_state = credential_offer?.grants.authorization_code?.issuer_state 
 
+			if (!lp) {
+				// as client id we are going to use the userDid
+				lp = { did: null, friendlyName: "Tmp", client_id: userDid, id: -1, url: credentialIssuerURL }
+			}
+
+			issuerUrlString = lp.url;
+			issuer_state = credential_offer?.grants.authorization_code?.issuer_state;
+			if (this.states.get(userDid) &&
+				this.states.get(userDid)?.issuer_state &&
+				this.states.get(userDid)?.issuer_state == issuer_state) {
+
+				throw new Error("Already used this credential offer");
+			}
 		}
 
 		if (!issuerUrlString) {
-			throw "No issuer url is defined"
+			throw new Error("No issuer url is defined");
 		}
 
 		
@@ -182,7 +194,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		
 		const authorizationRequestURL = new URL(authorizationServerConfig.authorization_endpoint);
 		authorizationRequestURL.searchParams.append("scope", "openid");
-		authorizationRequestURL.searchParams.append("client_id", userDid);
+		authorizationRequestURL.searchParams.append("client_id", lp.client_id);
 		
 		authorizationRequestURL.searchParams.append("redirect_uri", config.walletClientUrl);
 
@@ -250,6 +262,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		this.states.set(userDid, newState);
 
 		const tokenResponse = await this.tokenRequest(newState);
+		if (!tokenResponse) {
+			return;
+		}
 		newState = { ...newState, tokenResponse }
 		this.states.set(userDid, newState);
 		try {
@@ -267,8 +282,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @returns 
 	 */
 	private async tokenRequest(state: IssuanceState): Promise<TokenResponseSchemaType> {
-		console.info("State = ", state)
-		// Not adding authorization header
 		// const basicAuthorizationB64 = Buffer.from(`${state.legalPerson.client_id}:${state.legalPerson.client_secret}`).toString("base64");
 		const httpHeader = { 
 			// "authorization": `Basic ${basicAuthorizationB64}`,
@@ -282,8 +295,10 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			data.append('code', state.code);
 			data.append('redirect_uri', config.walletClientUrl);
 			data.append('code_verifier', state.code_verifier);
-			const user = (await getUserByDID(state.userDid)).unwrap();
-			data.append('client_id', user.did);
+			data.append('client_id', state.legalPerson.client_id);
+			if (state.legalPerson.client_secret) {
+				data.append('client_secret', state.legalPerson.client_secret);
+			}
 			break;
 		case GrantType.PRE_AUTHORIZED_CODE:
 			data.append('grant_type', 'urn:ietf:params:oauth:grant-type:pre-authorized_code');
@@ -294,21 +309,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			break;
 		}
 
-		
-		// const clientAssertionJWT = await new SignJWT({})
-		// 	.setProtectedHeader({ alg: wallet.key.alg, kid: wallet.key.did + "#" + wallet.key.did.split(':')[2] })
-		// 	.setAudience(state.legalPerson.url)
-		// 	.setIssuedAt()
-		// 	.setIssuer(user.did)
-		// 	.setSubject(user.did)
-		// 	.setExpirationTime('30s')
-		// 	.setJti(randomUUID())
-		// 	.sign(await importJWK(wallet.getPrivateKey(), wallet.key.alg));
-
-
-		// data.append('client_assertion', clientAssertionJWT);
-		// data.append('client_assertion_method', 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer');
-
 		try {
 			const tokenEndpoint = state.openidConfiguration.token_endpoint;
 			const httpResponse = await axios.post(tokenEndpoint, data, { headers: httpHeader });
@@ -317,9 +317,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		}
 		catch(err) {
 			if (err.response) {
-				console.error("HTTP response error body = ", err.response.data)
+				console.log("HTTP response error body = " + JSON.stringify(err.response.data));
+				return null;
 			}
-			console.error("Token Request failed")
 		}
 
 	}

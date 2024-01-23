@@ -30,7 +30,8 @@ const authorizationRequestSchema = z.object({
 	client_id: z.string(),
 	response_type: z.string(),
 	scope: z.string(),
-	response_uri: z.string(),
+	redirect_uri: z.string().optional(),
+	response_uri: z.string().optional(),
 	request: z.string().optional()
 });
 
@@ -118,6 +119,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			authorizationRequestSchema.parse(jsonParams); // will throw error if input is not conforming to the schema
 			this.states.set(userDid, { camera_was_used: camera_was_used })
 			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(userDid, requestURL);
+			console.log("Handle VP Req = " , { conformantCredentialsMap, verifierDomainName })
 			return Ok({
 				conformantCredentialsMap: conformantCredentialsMap,
 				verifierDomainName: verifierDomainName
@@ -163,14 +165,15 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			presentation_definition = searchParams.presentation_definition
 			state = searchParams.state;
 			console.log("Pre = ", presentation_definition)
+			if (searchParams.presentation_definition) {
+				console.log("Presentation definition is included")
+				throw new Error("This is not an id token request because presentation definition is included");
+			}
 		}
 		catch(error) {
 			throw new Error(`Error fetching authorization request search params: ${error}`);
 		}
 
-		if (presentation_definition) {
-			throw new Error("This is not an id token request")
-		}
 
 		const currentState = this.states.get(userDid);
 		this.states.set(userDid, {
@@ -410,7 +413,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 			const directPostPayload = {
 				vp_token: vp_token,
-				presentation_submission: encodeURI(JSON.stringify(presentationSubmission)),
+				// presentation_submission: encodeURI(JSON.stringify(presentationSubmission)),
+				presentation_submission: JSON.stringify(presentationSubmission),
 				state: state
 			};
 			const { newLocation } = await axios.post(response_uri, qs.stringify(directPostPayload), {
@@ -486,18 +490,16 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 		const searchParams = authorizationRequestURL.searchParams;
 		console.log("Params = ", searchParams)
-		let presentation_definition = searchParams.get("presentation_definition");
+		let presentation_definition = JSON.parse(searchParams.get("presentation_definition"));
 		let presentation_definition_uri = searchParams.get("presentation_definition_uri");
 
 		const request = searchParams.get("request");
-
-		const requestPayload = request ? JSON.parse(base64url.decode(request.split('.')[1])) : null;
+		console.log("Request payload = ", JSON.parse(base64url.decode(request.split('.')[1])))
+		const requestPayload: any = request ? JSON.parse(base64url.decode(request.split('.')[1])) : null;
 		if(requestPayload && requestPayload.presentation_definition)
 			presentation_definition = requestPayload.presentation_definition;
 		if(requestPayload && requestPayload.presentation_definition_uri)
 			presentation_definition_uri = requestPayload.presentation_definition_uri;
-
-		console.log(presentation_definition_uri, presentation_definition);
 
 		if(presentation_definition && presentation_definition_uri) {
 			const error = "Both presentation_definition and presentation_definition_uri parameters in authorization request URL";
@@ -513,7 +515,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 		let presentationDefinition: PresentationDefinition;
 		if(presentation_definition) {
-			presentationDefinition = JSON.parse(presentation_definition);
+			presentationDefinition = presentation_definition;
 			console.log("Parsed presentation definition = " , presentationDefinition)
 		}
 		else {

@@ -75,7 +75,10 @@ presentationRouter.post('/generate/authorization/response', async (req, res) => 
 		verifiable_credentials_map, // { "descriptor_id1": "urn:vid:123", "descriptor_id1": "urn:vid:645" }
 	} = req.body;
 
+	console.log("Credentials map = ", verifiable_credentials_map)
 	const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
+	console.log("Selection = ", verifiable_credentials_map)
+
 	try {
 		const result = await openidForPresentationService.sendResponse(req.user.did, selection);
 
