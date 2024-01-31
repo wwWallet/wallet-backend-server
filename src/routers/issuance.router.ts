@@ -78,8 +78,11 @@ issuanceRouter.post('/request/credentials/with/pre_authorized', async (req, res)
 			user_pin
 		} = req.body;
 
-		await openidForCredentialIssuanceService.requestCredentialsWithPreAuthorizedGrant(req.user.did, user_pin);
-		res.send({});
+		const response = await openidForCredentialIssuanceService.requestCredentialsWithPreAuthorizedGrant(req.user.did, user_pin);
+		if (response.error) {
+			return res.status(400).send(response);
+		}
+		return res.send(response);
 	}
 	catch(err) {
 		res.status(500).send({ error: "Failed to handle authorization response" });

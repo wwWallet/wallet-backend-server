@@ -18,6 +18,7 @@ import { TYPES } from "./types";
 import { IssuanceErr, OpenidCredentialReceiving, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
 import { randomUUID } from 'node:crypto';
+import { error } from "node:console";
 
 type IssuanceState = {
 	userDid: string;  // Before Authorization Req
@@ -223,19 +224,30 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 
 
-	public async requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string) {
+	public async requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string):  Promise<{error?: string}> {
 		let state = this.states.get(userDid)
 		state = { ...state, user_pin: user_pin };
 		this.states.set(userDid, state); // save state with pin
 
-		this.tokenRequest(state).then(tokenResponse => {
+
+		return this.tokenRequest(state).then(tokenResponse => {
 			console.log("Token response on pre authorized = ", tokenResponse)
 			state = { ...state, tokenResponse }
 			this.states.set(userDid, state);
 			this.credentialRequests(userDid, state).catch(e => {
 				console.error("Credential requests failed with error : ", e)
 			});
-		})
+			return {};
+		}).catch((err) => {
+			if (err.response && err.response.data.error == "invalid_request") {
+				return { ...err.response.data };
+			}
+			else {
+				return { error: "unkown_error" };
+			}
+		});
+
+
 	}
 
 	/**
@@ -318,7 +330,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		catch(err) {
 			if (err.response) {
 				console.log("HTTP response error body = " + JSON.stringify(err.response.data));
-				return null;
+				throw new Error(JSON.stringify(err.response.data));
 			}
 		}
 

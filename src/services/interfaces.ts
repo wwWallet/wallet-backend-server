@@ -13,7 +13,7 @@ export interface OpenidCredentialReceiving {
 	generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to: string }>
 	
 	handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
-	requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string): Promise<void>;
+	requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string): Promise<{error?: string}>;
 
 	getIssuerState(userDid: string): Promise<{ issuer_state?: string, error?: Error }>
 }

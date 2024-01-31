@@ -5,7 +5,6 @@ import { OpenidForCredentialIssuanceService } from "./OpenidForCredentialIssuanc
 import { OpenidForPresentationService } from "./OpenidForPresentationService";
 import "reflect-metadata";
 import { DatabaseKeystoreService } from "./DatabaseKeystoreService";
-import { OpenidForCredentialIssuanceVCEDUService } from "./OpenidForCredentialIssuanceVCEDUService";
 import config from "../../config";
 import { W3CDidKeyUtilityService } from "./W3CDidKeyUtilityService";
 import { VerifierRegistryService } from "./VerifierRegistryService";
@@ -30,10 +29,6 @@ switch (config.servicesConfiguration.issuanceService) {
 case "OpenidForCredentialIssuanceService":
 	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
 		.to(OpenidForCredentialIssuanceService)
-	break;
-case "OpenidForCredentialIssuanceVCEDUService":
-	appContainer.bind<OpenidCredentialReceiving>(TYPES.OpenidForCredentialIssuanceService)
-		.to(OpenidForCredentialIssuanceVCEDUService)
 	break;
 }
 
