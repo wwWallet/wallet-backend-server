@@ -45,14 +45,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	// key: userDid
 	public states = new Map<string, IssuanceState>();
 
-
-	// This is a queue of the credentials which are ready
-	// to be received.
-	// When a credential is ready to be received, the credential response
-	// is added for specific fcm token and a notification is sent to the device.
-	// key: userDid, value: array of credential responses
-	credentialQueue = new Map<string, CredentialResponseSchemaType[]>();
-
 	constructor(
 		@inject(TYPES.WalletKeystoreManagerService) private walletKeystoreManagerService: WalletKeystore,
 	) { }
@@ -91,7 +83,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	 * @returns 
 	 * @throws
 	 */
-	async generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to: string }> {
+	async generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }> {
 		console.log("generateAuthorizationRequestURL userDid = ", userDid);
 		console.log("LP = ", legalPersonDID);
 		let issuerUrlString: string | null = null;
@@ -185,7 +177,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			});
 			const user_pin_required = credential_offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"]["user_pin_required"];
 			console.log("Redirecting to ... ", config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}`)
-			return { redirect_to: config.walletClientUrl + `?preauth=true&ask_for_pin=${user_pin_required}` }
+			return { preauth: true, ask_for_pin: user_pin_required }
 		}
 		
 		
@@ -232,6 +224,9 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 		return this.tokenRequest(state).then(tokenResponse => {
 			console.log("Token response on pre authorized = ", tokenResponse)
+			if (!tokenResponse) {
+				throw new Error("Token response is undefined");
+			}
 			state = { ...state, tokenResponse }
 			this.states.set(userDid, state);
 			this.credentialRequests(userDid, state).catch(e => {
@@ -240,7 +235,7 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 			return {};
 		}).catch((err) => {
 			if (err.response && err.response.data.error == "invalid_request") {
-				return { ...err.response.data };
+				return { error: "invalid_request", ...err.response.data };
 			}
 			else {
 				return { error: "unkown_error" };
