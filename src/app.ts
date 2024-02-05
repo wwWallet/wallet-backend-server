@@ -6,9 +6,8 @@ import cors from 'cors';
 import userController from './routers/user.router';
 import { AuthMiddleware } from './middlewares/auth.middleware';
 import { statusRouter } from './routers/status.router';
-import { issuanceRouter } from './routers/issuance.router';
+import { communicationHandlerRouter } from './routers/communicationHandler.router';
 import { storageRouter } from './routers/storage.router';
-import { presentationRouter } from './routers/presentation.router';
 import { legalPersonRouter } from './routers/legal_person.router';
 import verifiersRouter from './routers/verifiers.router';
 import { reviverTaggedBase64UrlToBuffer } from './util/util';
@@ -59,9 +58,8 @@ app.use('/user', userController);
 app.use(AuthMiddleware);
 
 // all the following endpoints are guarded by the AuthMiddleware
-app.use('/issuance', issuanceRouter);
+app.use('/communication', communicationHandlerRouter);
 app.use('/storage', storageRouter);
-app.use('/presentation', presentationRouter);
 app.use('/legal_person', legalPersonRouter);
 app.use('/verifiers', verifiersRouter);
 
