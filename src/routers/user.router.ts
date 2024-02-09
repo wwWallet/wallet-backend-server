@@ -6,7 +6,7 @@ import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
 
 import config from '../../config';
-import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
+import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -15,7 +15,7 @@ import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
-import { FcmTokenEntity } from '../entities/FcmToken.entity';
+import { deleteAllFcmTokensForUser, FcmTokenEntity } from '../entities/FcmToken.entity';
 
 
 
@@ -464,7 +464,17 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	}
 })
 
-
+userController.delete('/', async (req: Request, res: Response) => {
+	const userDID = req.user.did;
+	await deleteAllFcmTokensForUser(userDID);
+	const result = await deleteUserByDID(userDID);
+	if (!result.err) {
+		return res.send({ result: "DELETED" });
+	}
+	else {
+		return res.status(400).send({ result: result.val })
+	}
+});
 // /**
 //  * expect 'alg' query parameter
 //  */

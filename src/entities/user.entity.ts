@@ -152,7 +152,9 @@ enum UpdateFcmError {
 	DB_ERR = "Failed to update FCM token list"
 }
 
-
+enum DeleteUserErr {
+	FAILED_TO_DELETE = "FAILED_TO_DELETE"
+}
 
 
 const userRepository: Repository<UserEntity> = AppDataSource.getRepository(UserEntity);
@@ -210,6 +212,26 @@ async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>
 	catch(e) {
 		console.log(e);
 		return Err(GetUserErr.NOT_EXISTS);
+	}
+}
+
+async function deleteUserByDID(did: string): Promise<Result<void, DeleteUserErr>> {
+	try {
+		const user = await userRepository.createQueryBuilder('user')
+			.where("user.did = :did", { did: did })
+			.getOne();
+		await webauthnCredentialRepository.delete({
+			user: { id: user.id }
+		});
+
+		await userRepository.delete({
+			did: did
+		});
+		return Ok.EMPTY;
+	}
+	catch(e) {
+		console.log(e);
+		return Err(DeleteUserErr.FAILED_TO_DELETE);
 	}
 }
 
@@ -438,4 +460,5 @@ export {
 	deleteWebauthnCredential,
 	updateWebauthnCredential,
 	updateWebauthnCredentialById,
+	deleteUserByDID
 }

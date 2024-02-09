@@ -172,6 +172,18 @@ async function getVerifiableCredentialByCredentialIdentifier(holderDID: string, 
 	}
 }
 
+async function deleteAllCredentialsWithHolderDID(holderDID: string): Promise<void> {
+	try {
+		await verifiableCredentialRepository
+			.createQueryBuilder("vc")
+			.delete()
+			.where("vc.holderDID = :did", { did: holderDID })
+			.execute();
+	}
+	catch(e) {
+		console.log(e);
+	}
+}
 
 export {
 	GetVerifiableCredentialsErr,
@@ -181,5 +193,6 @@ export {
 	getAllVerifiableCredentials,
 	createVerifiableCredential,
 	deleteVerifiableCredential,
-	getVerifiableCredentialByCredentialIdentifier
+	getVerifiableCredentialByCredentialIdentifier,
+	deleteAllCredentialsWithHolderDID
 }
