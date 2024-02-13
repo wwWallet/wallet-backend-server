@@ -215,19 +215,21 @@ async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>
 	}
 }
 
-async function deleteUserByDID(did: string): Promise<Result<void, DeleteUserErr>> {
+async function deleteUserByDID(did: string): Promise<Result<{}, DeleteUserErr>> {
 	try {
-		const user = await userRepository.createQueryBuilder('user')
-			.where("user.did = :did", { did: did })
-			.getOne();
-		await webauthnCredentialRepository.delete({
-			user: { id: user.id }
-		});
+		return await userRepository.manager.transaction(async (manager) => {
+			const userRes = await manager.findOne(UserEntity, { where: { did: did }});
 
-		await userRepository.delete({
-			did: did
+			await manager.delete(WebauthnCredentialEntity, {
+				user: { id: userRes.id }
+			});
+
+			await manager.delete(UserEntity, {
+				did: did
+			});
+
+			return Ok({})
 		});
-		return Ok.EMPTY;
 	}
 	catch(e) {
 		console.log(e);
