@@ -16,6 +16,8 @@ import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
 import { deleteAllFcmTokensForUser, FcmTokenEntity } from '../entities/FcmToken.entity';
+import { deleteAllPresentationsWithHolderDID } from '../entities/VerifiablePresentation.entity';
+import { deleteAllCredentialsWithHolderDID } from '../entities/VerifiableCredential.entity';
 
 
 
@@ -466,7 +468,24 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 
 userController.delete('/', async (req: Request, res: Response) => {
 	const userDID = req.user.did;
-	await deleteAllFcmTokensForUser(userDID);
+	const [ fcmTokenDeletionRes, credentialsDeletionRes, presentationsDeletionRes ] = await Promise.all([
+		deleteAllFcmTokensForUser(userDID),
+		deleteAllCredentialsWithHolderDID(userDID),
+		deleteAllPresentationsWithHolderDID(userDID)
+	]);
+
+	if (fcmTokenDeletionRes.err) {
+		return res.status(400).send({ result: fcmTokenDeletionRes.val })
+	}
+
+	if (credentialsDeletionRes.err) {
+		return res.status(400).send({ result: credentialsDeletionRes.val })
+	}
+
+	if (presentationsDeletionRes.err) {
+		return res.status(400).send({ result: presentationsDeletionRes.val })
+	}
+
 	const result = await deleteUserByDID(userDID);
 	if (!result.err) {
 		return res.send({ result: "DELETED" });

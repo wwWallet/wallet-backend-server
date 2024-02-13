@@ -179,16 +179,19 @@ async function getPresentationByIdentifier(holderDID: string, presentationIdenti
 
 }
 
-async function deleteAllPresentationsWithHolderDID(holderDID: string): Promise<void> {
+async function deleteAllPresentationsWithHolderDID(holderDID: string): Promise<Result<{}, DeleteVerifiablePresentationErr>> {
 	try {
 		await verifiablePresentationRepository
-			.createQueryBuilder("vp")
+			.createQueryBuilder()
+			.from(VerifiablePresentationEntity, "vp")
 			.delete()
-			.where("vp.holderDID = :did", { did: holderDID })
+			.where("holderDID = :did", { did: holderDID })
 			.execute();
+		return Ok({});
 	}
 	catch(e) {
 		console.log(e);
+		return Err(DeleteVerifiablePresentationErr.DB_ERR);
 	}
 }
 

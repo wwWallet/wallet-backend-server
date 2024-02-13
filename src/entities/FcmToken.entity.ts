@@ -1,6 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Repository } from "typeorm";
 import { UserEntity } from "./user.entity";
 import AppDataSource from "../AppDataSource";
+import { Err, Ok, Result } from "ts-results";
 
 @Entity({ name: "fcm_token" })
 export class FcmTokenEntity {
@@ -16,9 +17,21 @@ export class FcmTokenEntity {
 
 const fcmTokenRepository: Repository<FcmTokenEntity> = AppDataSource.getRepository(FcmTokenEntity);
 
-async function deleteAllFcmTokensForUser(did: string) {
-	const tokens = await fcmTokenRepository.find({ where: { user: { did: did } } });
-	await fcmTokenRepository.remove(tokens);
+enum DeleteFcmTokenErr {
+	DB_ERR = "DB_ERR"
+}
+async function deleteAllFcmTokensForUser(did: string): Promise<Result<{}, DeleteFcmTokenErr>> {
+	try {
+		return await fcmTokenRepository.manager.transaction(async (manager) => {
+			const tokens = await manager.find(FcmTokenEntity, { where: { user: { did: did } } });
+			await fcmTokenRepository.remove(tokens);
+			return Ok({});
+		});
+	}
+	catch(e) {
+		console.log(e);
+		return Err(DeleteFcmTokenErr.DB_ERR);
+	}
 }
 
 export {
