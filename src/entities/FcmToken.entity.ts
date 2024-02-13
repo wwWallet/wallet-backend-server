@@ -24,7 +24,7 @@ async function deleteAllFcmTokensForUser(did: string): Promise<Result<{}, Delete
 	try {
 		return await fcmTokenRepository.manager.transaction(async (manager) => {
 			const tokens = await manager.find(FcmTokenEntity, { where: { user: { did: did } } });
-			await fcmTokenRepository.remove(tokens);
+			await manager.remove(tokens);
 			return Ok({});
 		});
 	}
