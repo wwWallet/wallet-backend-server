@@ -215,9 +215,9 @@ async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>
 	}
 }
 
-async function deleteUserByDID(did: string): Promise<Result<{}, DeleteUserErr>> {
+async function deleteUserByDID(did: string, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteUserErr>> {
 	try {
-		return await userRepository.manager.transaction(async (manager) => {
+		return await (options?.entityManager || userRepository.manager).transaction(async (manager) => {
 			const userRes = await manager.findOne(UserEntity, { where: { did: did }});
 
 			await manager.delete(WebauthnCredentialEntity, {
