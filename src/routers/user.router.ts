@@ -4,9 +4,10 @@ import * as uuid from 'uuid';
 import crypto from 'node:crypto';
 import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
+import { EntityManager } from "typeorm"
 
 import config from '../../config';
-import { CreateUser, createUser, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
+import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -15,7 +16,11 @@ import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
-import { FcmTokenEntity } from '../entities/FcmToken.entity';
+import { runTransaction } from '../entities/common.entity';
+import { deleteAllFcmTokensForUser, FcmTokenEntity } from '../entities/FcmToken.entity';
+import { deleteAllPresentationsWithHolderDID } from '../entities/VerifiablePresentation.entity';
+import { deleteAllCredentialsWithHolderDID } from '../entities/VerifiableCredential.entity';
+import { Err, Ok, Result } from 'ts-results';
 
 
 
@@ -464,7 +469,26 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	}
 })
 
+userController.delete('/', async (req: Request, res: Response) => {
+	const userDID = req.user.did;
+	try {
+		await runTransaction(async (entityManager: EntityManager) => {
+			// Note: this executes all four branches before checking if any failed.
+			// ts-results does not seem to provide an async-optimized version of Result.all(),
+			// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
+			return Result.all(
+				await deleteAllFcmTokensForUser(userDID, { entityManager }),
+				await deleteAllCredentialsWithHolderDID(userDID, { entityManager }),
+				await deleteAllPresentationsWithHolderDID(userDID, { entityManager }),
+				await deleteUserByDID(userDID, { entityManager }),
+			);
+		});
 
+		return res.send({ result: "DELETED" });
+	} catch (e) {
+		return res.status(400).send({ result: e })
+	}
+});
 // /**
 //  * expect 'alg' query parameter
 //  */

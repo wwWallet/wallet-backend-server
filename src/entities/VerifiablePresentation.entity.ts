@@ -1,7 +1,6 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
+import { Entity, EntityManager, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
 import AppDataSource from "../AppDataSource";
-import { Col } from "sequelize/types/utils";
 
 // export enum PresentationTypes {
 // 	JWT_VP = 'jwt_vp',
@@ -179,7 +178,23 @@ async function getPresentationByIdentifier(holderDID: string, presentationIdenti
 
 }
 
-
+async function deleteAllPresentationsWithHolderDID(holderDID: string, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteVerifiablePresentationErr>> {
+	try {
+		return await (options?.entityManager || verifiablePresentationRepository.manager).transaction(async (manager) => {
+			await manager
+				.createQueryBuilder()
+				.from(VerifiablePresentationEntity, "vp")
+				.delete()
+				.where("holderDID = :did", { did: holderDID })
+				.execute();
+			return Ok({});
+		});
+	}
+	catch(e) {
+		console.log(e);
+		return Err(DeleteVerifiablePresentationErr.DB_ERR);
+	}
+}
 
 export {
 	CreateVerifiablePresentationErr,
@@ -187,5 +202,6 @@ export {
 	getAllVerifiablePresentations,
 	createVerifiablePresentation,
 	deletePresentationsByCredentialId,
-	getPresentationByIdentifier
+	getPresentationByIdentifier,
+	deleteAllPresentationsWithHolderDID
 }

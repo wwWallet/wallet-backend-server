@@ -1,5 +1,5 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
+import { Entity, EntityManager, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
 import AppDataSource from "../AppDataSource";
 import { VerifiableCredentialFormat } from "../types/oid4vci";
 import { deletePresentationsByCredentialId } from './VerifiablePresentation.entity';
@@ -172,6 +172,23 @@ async function getVerifiableCredentialByCredentialIdentifier(holderDID: string, 
 	}
 }
 
+async function deleteAllCredentialsWithHolderDID(holderDID: string, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteVerifiableCredentialErr>> {
+	try {
+		return await (options?.entityManager || verifiableCredentialRepository.manager).transaction(async (manager) => {
+			await manager
+				.createQueryBuilder()
+				.from(VerifiableCredentialEntity, "vc")
+				.delete()
+				.where("holderDID = :did", { did: holderDID })
+				.execute();
+			return Ok({});
+		});
+	}
+	catch(e) {
+		console.log(e);
+		return Err(DeleteVerifiableCredentialErr.DB_ERR);
+	}
+}
 
 export {
 	GetVerifiableCredentialsErr,
@@ -181,5 +198,6 @@ export {
 	getAllVerifiableCredentials,
 	createVerifiableCredential,
 	deleteVerifiableCredential,
-	getVerifiableCredentialByCredentialIdentifier
+	getVerifiableCredentialByCredentialIdentifier,
+	deleteAllCredentialsWithHolderDID
 }
