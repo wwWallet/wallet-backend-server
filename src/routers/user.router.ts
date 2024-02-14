@@ -472,7 +472,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 userController.delete('/', async (req: Request, res: Response) => {
 	const userDID = req.user.did;
 	try {
-		const result = await runTransaction(async (entityManager: EntityManager) => {
+		await runTransaction(async (entityManager: EntityManager) => {
 			// Note: this executes all four branches before checking if any failed.
 			// ts-results does not seem to provide an async-optimized version of Result.all(),
 			// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
@@ -484,11 +484,7 @@ userController.delete('/', async (req: Request, res: Response) => {
 			);
 		});
 
-		if (result.err) {
-			return res.status(400).send({ result: result.val })
-		} else {
-			return res.send({ result: "DELETED" });
-		}
+		return res.send({ result: "DELETED" });
 	} catch (e) {
 		return res.status(400).send({ result: e })
 	}
