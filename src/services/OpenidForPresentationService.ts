@@ -22,9 +22,33 @@ import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
 
 type PresentationDefinition = {
 	id: string,
+	format: any;
 	input_descriptors: InputDescriptor[]
 }
 
+/**
+ * 
+ * @param paths example: [ '$.credentialSubject.image', '$.credentialSubject.grade', '$.credentialSubject.val.x' ]
+ * @returns example: { credentialSubject: { image: true, grade: true, val: { x: true } } }
+ */
+const generatePresentationFrameForPaths = (paths) => {
+	const result = {};
+
+	paths.forEach(path => {
+		const keys = path.split('.').slice(1); // Splitting and removing the initial '$'
+		let nestedObj = result;
+
+		keys.forEach((key, index) => {
+			if (index === keys.length - 1) {
+				nestedObj[key] = true; // Setting the innermost key to true
+			} else {
+				nestedObj[key] = nestedObj[key] || {}; // Creating nested object if not exists
+				nestedObj = nestedObj[key]; // Moving to the next nested object
+			}
+		});
+	});
+	return result;
+}
 
 const authorizationRequestSchema = z.object({
 	client_id: z.string(),
@@ -323,6 +347,11 @@ export class OpenidForPresentationService implements OutboundCommunication {
 				console.dir(descriptor, { depth: null })
 				const conformingVcList = []
 				for (const vc of vcList) {
+					// if this vc format is not supported by the verifier, then skip this vc
+					if (!Object.keys(presentation_definition.format).includes(vc.format)) {
+						continue;
+					}
+
 					if (Verify.verifyVcJwtWithDescriptor(descriptor, vc.credential)) {
 						conformingVcList.push(vc.credentialIdentifier);
 					}
@@ -351,18 +380,18 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	private async generateVerifiablePresentation(selectedVC: string[], userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
+	private async generateVerifiablePresentation(selectedVCs: string[], userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
 
 		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
 		const { audience, nonce } = fetchedState;
-		const result = await this.walletKeystoreManagerService.signJwtPresentation(userDid, nonce, audience, selectedVC);
+		const result = await this.walletKeystoreManagerService.signJwtPresentation(userDid, nonce, audience, selectedVCs);
 		if (!result.ok) {
 			return Err({
 				action: SignatureAction.signJwtPresentation,
 				nonce,
 				audience,
-				verifiableCredentials: selectedVC,
+				verifiableCredentials: selectedVCs,
 			});
 		}
 
