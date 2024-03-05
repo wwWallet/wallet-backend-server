@@ -26,29 +26,6 @@ type PresentationDefinition = {
 	input_descriptors: InputDescriptor[]
 }
 
-/**
- * 
- * @param paths example: [ '$.credentialSubject.image', '$.credentialSubject.grade', '$.credentialSubject.val.x' ]
- * @returns example: { credentialSubject: { image: true, grade: true, val: { x: true } } }
- */
-const generatePresentationFrameForPaths = (paths) => {
-	const result = {};
-
-	paths.forEach(path => {
-		const keys = path.split('.').slice(1); // Splitting and removing the initial '$'
-		let nestedObj = result;
-
-		keys.forEach((key, index) => {
-			if (index === keys.length - 1) {
-				nestedObj[key] = true; // Setting the innermost key to true
-			} else {
-				nestedObj[key] = nestedObj[key] || {}; // Creating nested object if not exists
-				nestedObj = nestedObj[key]; // Moving to the next nested object
-			}
-		});
-	});
-	return result;
-}
 
 const authorizationRequestSchema = z.object({
 	client_id: z.string(),
