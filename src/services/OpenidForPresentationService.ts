@@ -15,10 +15,15 @@ import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.en
 import { createVerifiablePresentation } from "../entities/VerifiablePresentation.entity";
 import { getUserByDID } from "../entities/user.entity";
 import { VerifierRegistryService } from "./VerifierRegistryService";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import config from "../../config";
 import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
-
+import {
+	HasherAlgorithm,
+	HasherAndAlgorithm,
+	SaltGenerator,
+	SdJwt,
+} from '@sd-jwt/core';
 
 type PresentationDefinition = {
 	id: string,
@@ -39,16 +44,18 @@ const authorizationRequestSchema = z.object({
 
 type InputDescriptor = {
 	id: string,
-	constraints: Constraint[],
+	constraints: {
+		fields: Field[];
+	},
 	name?: string,
 	purpose?: string,
 	format?: any
 }
 
-type Constraint = {
-	fields: Field[],
-	limit_disclosure?: "required" | "preferred"
-}
+// type Constraint = {
+// 	fields: Field[],
+// 	limit_disclosure?: "required" | "preferred"
+// }
 
 type Field = {
 	path: string[],
@@ -75,7 +82,6 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 	// key: did
 	states = new Map<string, VerificationState>();
-
 
 
 	constructor(
@@ -143,7 +149,6 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			return Ok({ error: new Error("Failed to generate authorization response") });
 		}
 	}
-
 
 
 
@@ -357,11 +362,80 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	private async generateVerifiablePresentation(selectedVCs: string[], userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
+	/**
+	 * selection: (key: descriptor_id, value: credentialIdentifier from VerifiableCredential DB entity)
+	 */
+	private async generateVerifiablePresentation(selection: Map<string, string>, presentation_definition: PresentationDefinition, userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
+		
+		const hasherAndAlgorithm: HasherAndAlgorithm = {
+			hasher: (input: string) => createHash('sha256').update(input).digest(),
+			algorithm: HasherAlgorithm.Sha256
+		}
+	
+		/**
+		 *
+		 * @param paths example: [ '$.credentialSubject.image', '$.credentialSubject.grade', '$.credentialSubject.val.x' ]
+		 * @returns example: { credentialSubject: { image: true, grade: true, val: { x: true } } }
+		 */
+		const generatePresentationFrameForPaths = (paths) => {
+			const result = {};
 
+			paths.forEach((path) => {
+				const keys = path.split(".").slice(1); // Splitting and removing the initial '$'
+				let nestedObj = result;
+
+				keys.forEach((key, index) => {
+					if (index === keys.length - 1) {
+						nestedObj[key] = true; // Setting the innermost key to true
+					}
+					else {
+						nestedObj[key] = nestedObj[key] || {}; // Creating nested object if not exists
+						nestedObj = nestedObj[key]; // Moving to the next nested object
+					}
+				});
+			});
+			return result;
+		};
+		let vcListRes = await getAllVerifiableCredentials(userDid);
+    if (vcListRes.err) {
+      throw "Failed to fetch credentials";
+    }
+		const allSelectedCredentialIdentifiers = Array.from(selection.values());
+
+		const filteredVCEntities = vcListRes
+		.unwrap()
+		.filter((vc) =>
+			allSelectedCredentialIdentifiers.includes(vc.credentialIdentifier),
+		);
+
+		let selectedVCs = [];
+		for (const [descriptor_id, credentialIdentifier] of selection) {
+			const vcEntity = filteredVCEntities.filter((vc) => vc.credentialIdentifier == credentialIdentifier)[0];
+			if (vcEntity.format == "vc+sd-jwt") {
+				const descriptor = presentation_definition.input_descriptors.filter((desc) => desc.id == descriptor_id)[0];
+				const allPaths = descriptor.constraints.fields
+					.map((field) => field.path)
+					.reduce((accumulator, currentValue) => [...accumulator, ...currentValue]);
+				let presentationFrame = generatePresentationFrameForPaths(allPaths);
+				presentationFrame = { vc: presentationFrame }
+				const sdJwt = SdJwt.fromCompact<Record<string, unknown>, any>(
+					vcEntity.credential
+				).withHasher(hasherAndAlgorithm)
+				console.log(sdJwt);
+				const presentation = await sdJwt.present(presentationFrame);
+				selectedVCs.push(presentation);
+			}
+			else {
+				selectedVCs.push(vcEntity.credential);
+			}
+			
+		}
+		
 		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
 		const { audience, nonce } = fetchedState;
+
+
 		const result = await this.walletKeystoreManagerService.signJwtPresentation(userDid, nonce, audience, selectedVCs);
 		if (!result.ok) {
 			return Err({
@@ -390,9 +464,10 @@ export class OpenidForPresentationService implements OutboundCommunication {
 				allSelectedCredentialIdentifiers.includes(vc.credentialIdentifier)
 			);
 		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
-
+		
 		try {
-			const vp_token_result = await this.generateVerifiablePresentation(filteredVCJwtList, userDid);
+			const fetchedState = this.states.get(userDid);
+			const vp_token_result = await this.generateVerifiablePresentation(selection, fetchedState.presentation_definition, userDid);
 			if (vp_token_result.err) {
 				return Err(vp_token_result.val);
 			}
