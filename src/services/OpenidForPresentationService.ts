@@ -254,7 +254,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	 * @param authorizationRequestURL 
 	 * @returns 
 	 */
-	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, string[]>, verifierDomainName: string}> {
+	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}> {
 		console.log("parseAuthorizationRequest userDid = ", userDid)
 		const { did } = (await getUserByDID(userDid)).unwrap();
 		let client_id: string,
@@ -323,7 +323,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			console.log("VC list size = ", vcList.length)
 
 
-			const mapping = new Map<string, string[]>();
+			const mapping = new Map<string, { credentials: string[], requestedFields: string[] }>();
 			for (const descriptor of descriptors) {
 				console.log("Descriptor :")
 				console.dir(descriptor, { depth: null })
@@ -343,7 +343,11 @@ export class OpenidForPresentationService implements OutboundCommunication {
 					console.log("No conformant credentials were found");
 					continue;
 				}
-				mapping.set(descriptor.id, [ ...conformingVcList ]);
+				const requestedFieldNames = descriptor.constraints.fields
+					.map((field) => field.path)
+					.reduce((accumulator, currentValue) => [...accumulator, ...currentValue])
+					.map((field) => field.split('.')[field.split('.').length - 1]);
+				mapping.set(descriptor.id, { credentials: [ ...conformingVcList ], requestedFields: requestedFieldNames });
 			}
 			console.log("Mapping1 = ", mapping)
 			console.log("Redirect uri = ", response_uri)
