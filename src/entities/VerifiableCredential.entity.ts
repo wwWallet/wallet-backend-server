@@ -37,7 +37,7 @@ export class VerifiableCredentialEntity {
 	issuerFriendlyName: string = "";
 
 	@Column({ nullable: false })
-	format: string; // = CredentialTypes.JWT_VC; // 'ldp_vc' or 'jwt_vc'
+	format: string; // = CredentialTypes.JWT_VC; // 'ldp_vc' or 'jwt_vc' or "vc+sd-jwt"
 
 
 	@Column({ nullable: false })
