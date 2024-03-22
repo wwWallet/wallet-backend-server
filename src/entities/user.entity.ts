@@ -6,6 +6,7 @@ import base64url from "base64url";
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
 import { FcmTokenEntity } from "./FcmToken.entity";
+import { isResult } from "../util/util";
 
 export enum WalletType {
 	DB,
@@ -348,26 +349,30 @@ function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>
 }
 
 async function updateUserByDID(did: string, update: (user: UserEntity, entityManager: EntityManager) => UserEntity): Promise<Result<UserEntity, UpdateUserErr>> {
-	return await userRepository.manager.transaction(async (manager) => {
-		const res = await manager.findOne(UserEntity, {
-			where: {
-				did: did
+	try {
+		return await userRepository.manager.transaction(async (manager) => {
+			const res = await manager.findOne(UserEntity, {
+				where: {
+					did: did
+				}
+			});
+			if (!res) {
+				return Promise.reject(Err(UpdateUserErr.NOT_EXISTS));
 			}
-		});
-		if (!res) {
-			return Err(UpdateUserErr.NOT_EXISTS);
-		}
 
-		const updatedUser = update(res, manager);
-
-		try {
+			const updatedUser = update(res, manager);
 			await manager.save(updatedUser);
-			return Ok(res);
-		} catch (e) {
+		});
+	} catch (e) {
+		if (isResult(e)) {
+			if (e.err) {
+				return e as Result<UserEntity, UpdateUserErr>;
+			}
+		} else {
 			console.log(e);
 			return Err(UpdateUserErr.DB_ERR);
 		}
-	});
+	}
 }
 
 async function updateWebauthnCredentialWithManager(
