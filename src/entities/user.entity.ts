@@ -414,7 +414,7 @@ async function updateWebauthnCredentialById(userDid: string, credentialUuid: str
 	});
 }
 
-async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<{}, UpdateUserErr>> {
+async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<void, UpdateUserErr>> {
 	try {
 
 		return await userRepository.manager.transaction(async (manager) => {
@@ -439,7 +439,7 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 				.execute();
 			if (res.affected > 0) {
 				await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData });
-				return Ok({});
+				return Ok.EMPTY;
 			} else if (res.affected === 0) {
 				return Err(UpdateUserErr.NOT_EXISTS);
 			}
