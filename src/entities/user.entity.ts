@@ -7,6 +7,7 @@ import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
 import { FcmTokenEntity } from "./FcmToken.entity";
 import { isResult } from "../util/util";
+import { runTransaction } from "./common.entity";
 
 export enum WalletType {
 	DB,
@@ -417,7 +418,7 @@ async function updateWebauthnCredentialById(userDid: string, credentialUuid: str
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<void, UpdateUserErr>> {
 	try {
 
-		return await userRepository.manager.transaction(async (manager) => {
+		return Ok(await runTransaction(async (manager) => {
 			const userRes = await manager.findOne(UserEntity, { where: { did: user.did }});
 			if (!userRes) {
 				return Err(UpdateUserErr.NOT_EXISTS);
@@ -443,7 +444,7 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 			} else if (res.affected === 0) {
 				return Err(UpdateUserErr.NOT_EXISTS);
 			}
-		});
+		}));
 
 	} catch (e) {
 		console.log(e);
