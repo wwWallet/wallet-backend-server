@@ -1,7 +1,11 @@
-
-import * as randomstring from 'randomstring';
 import * as crypto from 'crypto';
 import base64url from "base64url";
+import { Result } from 'ts-results';
+
+
+export function isResult<T>(a: T | Result<T, unknown>): a is Result<T, unknown> {
+	return "val" in a && "ok" in a && "err" in a;
+}
 
 /**
  * 
