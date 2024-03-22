@@ -469,6 +469,29 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	}
 })
 
+userController.post('/update-private-data', async (req: Request, res: Response) => {
+	console.log("update private data", req.body);
+
+	const updateUserRes = await updateUserByDID(req.user.did, userEntity => {
+		userEntity.privateData = req.body;
+		return userEntity;
+	});
+
+	if (updateUserRes.ok) {
+		res.status(204).send();
+	} else {
+		if (updateUserRes.val === UpdateUserErr.NOT_EXISTS) {
+			res.status(404).send();
+
+		} else if (updateUserRes.val === UpdateUserErr.CONFLICT) {
+			res.status(409).send();
+
+		} else {
+			res.status(500).send();
+		}
+	}
+})
+
 userController.delete('/', async (req: Request, res: Response) => {
 	const userDID = req.user.did;
 	try {
