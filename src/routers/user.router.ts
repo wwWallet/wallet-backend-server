@@ -36,7 +36,7 @@ userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
 
-async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
+async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: Buffer }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
@@ -45,7 +45,7 @@ async function initSession(user: UserEntity): Promise<{ did: string, appToken: s
 		appToken,
 		did: user.did,
 		displayName: user.displayName || user.username,
-		privateData: user.privateData.toString(),
+		privateData: user.privateData,
 		username: user.username,
 	};
 }
@@ -404,7 +404,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 				}, manager)
 			);
 			if (req.body.privateData) {
-				userEntity.privateData = Buffer.from(req.body.privateData);
+				userEntity.privateData = req.body.privateData;
 			}
 			return userEntity;
 		});
@@ -453,7 +453,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	}
 	const user = userRes.unwrap();
 
-	const deleteRes = await deleteWebauthnCredential(user, req.params.id, Buffer.from(req.body.privateData));
+	const deleteRes = await deleteWebauthnCredential(user, req.params.id, req.body.privateData);
 	if (deleteRes.ok) {
 		res.status(204).send();
 	} else {

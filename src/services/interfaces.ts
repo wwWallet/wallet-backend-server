@@ -38,7 +38,7 @@ export type AdditionalKeystoreParameters = {
 export type RegistrationParams = {
 	fcm_token?: string;
 	keys?: WalletKey;
-	privateData?: any;
+	privateData?: Buffer;
 	displayName: string;
 }
 
