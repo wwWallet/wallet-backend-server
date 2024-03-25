@@ -349,7 +349,7 @@ function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>
 	return entity;
 }
 
-async function updateUserByDID(did: string, update: (user: UserEntity, entityManager: EntityManager) => UserEntity): Promise<Result<UserEntity, UpdateUserErr>> {
+async function updateUserByDID<E = never>(did: string, update: (user: UserEntity, entityManager: EntityManager) => UserEntity | Result<UserEntity, E>): Promise<Result<UserEntity, UpdateUserErr | E>> {
 	try {
 		return await userRepository.manager.transaction(async (manager) => {
 			const res = await manager.findOne(UserEntity, {
@@ -362,12 +362,22 @@ async function updateUserByDID(did: string, update: (user: UserEntity, entityMan
 			}
 
 			const updatedUser = update(res, manager);
-			await manager.save(updatedUser);
+			if (isResult(updatedUser)) {
+				if (updatedUser.ok) {
+					await manager.save(updatedUser.val);
+					return updatedUser;
+				} else {
+					return updatedUser;
+				}
+			} else {
+				await manager.save(updatedUser);
+				return Ok(updatedUser);
+			}
 		});
 	} catch (e) {
 		if (isResult(e)) {
 			if (e.err) {
-				return e as Result<UserEntity, UpdateUserErr>;
+				return e as Result<UserEntity, UpdateUserErr | E>;
 			}
 		} else {
 			console.log(e);
