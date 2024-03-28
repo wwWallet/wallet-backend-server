@@ -22,6 +22,9 @@ export enum IssuanceErr {
 	STATE_NOT_FOUND = "STATE_NOT_FOUND",
 }
 
+export enum HandleOutboundRequestError {
+	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
+}
 
 export type AdditionalKeystoreParameters = {
 
@@ -62,7 +65,7 @@ export enum WalletKeystoreErr {
 export interface OutboundCommunication {
 	initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
 
-	handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest>>;
+	handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>>;
 
 	/**
 	 * 
