@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Err, Ok, Result } from "ts-results";
 
 import { InputDescriptorType, Verify } from "@wwwallet/ssi-sdk";
-import { OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { HandleOutboundRequestError, OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
@@ -30,6 +30,7 @@ type PresentationDefinition = {
 	format: any;
 	input_descriptors: InputDescriptor[]
 }
+
 
 
 const authorizationRequestSchema = z.object({
@@ -110,7 +111,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return { redirect_to: url.toString() };
 	}
 	
-	async handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest>> {
+	async handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>> {
 		try {
 			return await this.parseIdTokenRequest(userDid, requestURL);
 		}
@@ -125,7 +126,11 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			const jsonParams = Object.fromEntries(paramEntries);
 			authorizationRequestSchema.parse(jsonParams); // will throw error if input is not conforming to the schema
 			this.states.set(userDid, { camera_was_used: camera_was_used })
-			const { conformantCredentialsMap, verifierDomainName } = await this.parseAuthorizationRequest(userDid, requestURL);
+			const result = await this.parseAuthorizationRequest(userDid, requestURL);
+			if (result.err) {
+				return Err(result.val);
+			}
+			const { conformantCredentialsMap, verifierDomainName } = result.unwrap();
 			console.log("Handle VP Req = " , { conformantCredentialsMap, verifierDomainName })
 			return Ok({
 				conformantCredentialsMap: conformantCredentialsMap,
@@ -254,7 +259,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	 * @param authorizationRequestURL 
 	 * @returns 
 	 */
-	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}> {
+	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}, HandleOutboundRequestError>> {
 		console.log("parseAuthorizationRequest userDid = ", userDid)
 		const { did } = (await getUserByDID(userDid)).unwrap();
 		let client_id: string,
@@ -339,9 +344,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 					}
 				}
 				if (conformingVcList.length == 0) {
-					// throw "No conformant credential was found for at least one descriptor";
-					console.log("No conformant credentials were found");
-					continue;
+					return Err(HandleOutboundRequestError.INSUFFICIENT_CREDENTIALS);
 				}
 				const requestedFieldNames = descriptor.constraints.fields
 					.map((field) => field.path)
@@ -358,7 +361,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 				throw new Error("Credentials don't satisfy any descriptor");
 			}
 			console.log("Mapping = ", mapping)
-			return { conformantCredentialsMap: mapping, verifierDomainName: verifierDomainName }
+			return Ok({ conformantCredentialsMap: mapping, verifierDomainName: verifierDomainName })
 		}
 		catch(error) {
 			throw new Error(`Error verifying credentials meeting requirements from input_descriptors: ${error}`)

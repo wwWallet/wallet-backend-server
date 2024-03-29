@@ -3,7 +3,7 @@ import express, { Router } from 'express';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import _ from 'lodash';
 import { appContainer } from '../services/inversify.config';
-import { IssuanceErr, OpenidCredentialReceiving, OutboundCommunication } from '../services/interfaces';
+import { HandleOutboundRequestError, IssuanceErr, OpenidCredentialReceiving, OutboundCommunication } from '../services/interfaces';
 import { TYPES } from '../services/types';
 import * as z from 'zod';
 
@@ -107,7 +107,10 @@ communicationHandlerRouter.post('/handle', async (req, res) => {
 		try {
 			const outboundRequestResult = await openidForPresentationService.handleRequest(req.user.did, url, camera_was_used);
 			if (!outboundRequestResult.ok) {
-				throw new Error("handling SIOP request failed");
+				if (outboundRequestResult.val == HandleOutboundRequestError.INSUFFICIENT_CREDENTIALS) {
+					return res.send({ error: HandleOutboundRequestError.INSUFFICIENT_CREDENTIALS });
+				}
+				throw new Error("Failed to handle outbound request")
 			}
 			const outboundRequest = outboundRequestResult.val;
 			console.log("Outbound request = ", outboundRequest)
