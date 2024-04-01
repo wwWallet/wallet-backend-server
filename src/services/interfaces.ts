@@ -26,6 +26,11 @@ export enum HandleOutboundRequestError {
 	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
 }
 
+export enum SendResponseError {
+	SEND_RESPONSE_ERROR = "SEND_RESPONSE_ERROR",
+}
+
+
 export type AdditionalKeystoreParameters = {
 
 }
@@ -73,7 +78,7 @@ export interface OutboundCommunication {
 	 * @param req 
 	 * @param selection (key: descriptor_id, value: verifiable credential identifier)
 	 */
-	sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>>;
+	sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>>;
 }
 
 
