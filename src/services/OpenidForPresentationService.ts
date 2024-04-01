@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Err, Ok, Result } from "ts-results";
 
 import { InputDescriptorType, Verify } from "@wwwallet/ssi-sdk";
-import { HandleOutboundRequestError, OpenidCredentialReceiving, OutboundCommunication, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { HandleOutboundRequestError, OpenidCredentialReceiving, OutboundCommunication, SendResponseError, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
@@ -145,13 +145,13 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	async sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string, error?: Error }, WalletKeystoreRequest>> {
+	async sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>> {
 		try {
 			return await this.generateAuthorizationResponse(userDid, selection)
 		}
 		catch(err) {
 			console.error("Failed to generate authorization response.\nError details: ", err);
-			return Ok({ error: new Error("Failed to generate authorization response") });
+			return Err(SendResponseError.SEND_RESPONSE_ERROR);
 		}
 	}
 

@@ -3,7 +3,7 @@ import express, { Router } from 'express';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import _ from 'lodash';
 import { appContainer } from '../services/inversify.config';
-import { HandleOutboundRequestError, IssuanceErr, OpenidCredentialReceiving, OutboundCommunication } from '../services/interfaces';
+import { HandleOutboundRequestError, IssuanceErr, OpenidCredentialReceiving, OutboundCommunication, SendResponseError } from '../services/interfaces';
 import { TYPES } from '../services/types';
 import * as z from 'zod';
 
@@ -147,15 +147,10 @@ communicationHandlerRouter.post('/handle', async (req, res) => {
 			const result = await openidForPresentationService.sendResponse(req.user.did, selection);
 	
 			if (!result.ok) {
-				throw new Error("send SIOP response returned error")
+				return res.send({ error: SendResponseError.SEND_RESPONSE_ERROR });
 			}
 	
-			const { redirect_to, error } = result.val;
-			if (error) {
-				const errText = `Error generating authorization response: ${error}`;
-				console.error(errText);
-				throw new Error(errText);
-			}
+			const { redirect_to } = result.val;
 			console.log("Successfully handled by sendResponse");
 			return res.send({ redirect_to });
 		}
