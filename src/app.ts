@@ -10,6 +10,7 @@ import { communicationHandlerRouter } from './routers/communicationHandler.route
 import { storageRouter } from './routers/storage.router';
 import { legalPersonRouter } from './routers/legal_person.router';
 import verifiersRouter from './routers/verifiers.router';
+import { versionRouter } from './routers/version.router';
 import { reviverTaggedBase64UrlToBuffer } from './util/util';
 import * as WebSocket from 'ws';
 import http from 'http';
@@ -62,6 +63,7 @@ app.use('/communication', communicationHandlerRouter);
 app.use('/storage', storageRouter);
 app.use('/legal_person', legalPersonRouter);
 app.use('/verifiers', verifiersRouter);
+app.use('/version', versionRouter);
 
 
 
