@@ -281,7 +281,10 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send(await initSession(user));
+			res.status(200).send({
+				session: await initSession(user),
+				newUser: await filterUserData(user)
+			});		
 		} else {
 			res.status(500).send({});
 		}
