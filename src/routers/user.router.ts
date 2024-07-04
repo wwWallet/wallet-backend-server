@@ -36,12 +36,13 @@ userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
 
-async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
+async function initSession(user: UserEntity): Promise<{id: number; did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
 	return {
+		id:user.id,
 		appToken,
 		did: user.did,
 		displayName: user.displayName || user.username,
