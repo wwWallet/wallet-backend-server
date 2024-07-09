@@ -133,12 +133,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 
 			issuerUrlString = lp.url;
 			issuer_state = credential_offer?.grants.authorization_code?.issuer_state;
-			if (this.states.get(userDid) &&
-				this.states.get(userDid)?.issuer_state &&
-				this.states.get(userDid)?.issuer_state == issuer_state) {
-
-				throw new Error("Already used this credential offer");
-			}
 		}
 
 		if (!issuerUrlString) {
