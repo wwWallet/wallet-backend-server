@@ -6,8 +6,8 @@ import AppDataSource from "../AppDataSource";
 
 @Entity({ name: "legal_person" })
 class LegalPersonEntity {
-  @PrimaryGeneratedColumn()
-  id: number = -1;
+	@PrimaryGeneratedColumn()
+	id: number = -1;
 
 
 	@Column({ nullable: false })
@@ -125,10 +125,10 @@ async function getLegalPersonsBySearchParams(friendlyNameSubstring: string): Pro
 }
 
 /**
- * Will also update the issuer DB entity with the latest metadata
- * @param id
- * @returns
- */
+* Will also update the issuer DB entity with the latest metadata
+* @param id
+* @returns
+*/
 async function getLegalPersonById(id: number): Promise<Result<LegalPersonEntity, GetLegalPersonErr>> {
 
 	try {
@@ -146,10 +146,10 @@ async function getLegalPersonById(id: number): Promise<Result<LegalPersonEntity,
 }
 
 /**
- * Will also update the issuer DB entity with the latest metadata
- * @param id
- * @returns
- */
+* Will also update the issuer DB entity with the latest metadata
+* @param id
+* @returns
+*/
 async function getLegalPersonByDID(did: string): Promise<Result<LegalPersonEntity | null, GetLegalPersonErr>> {
 
 	try {
@@ -168,10 +168,10 @@ async function getLegalPersonByDID(did: string): Promise<Result<LegalPersonEntit
 
 
 /**
- * Will also update the issuer DB entity with the latest metadata
- * @param id
- * @returns
- */
+* Will also update the issuer DB entity with the latest metadata
+* @param id
+* @returns
+*/
 async function getLegalPersonByUrl(url: string): Promise<Result<LegalPersonEntity | null, GetLegalPersonErr>> {
 
 	try {

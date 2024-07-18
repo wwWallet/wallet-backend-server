@@ -254,19 +254,19 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 	/**
-	 * @throws
-	 * @param userDid
-	 * @param authorizationRequestURL
-	 * @returns
-	 */
+	* @throws
+	* @param userDid
+	* @param authorizationRequestURL
+	* @returns
+	*/
 	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}, HandleOutboundRequestError>> {
 		console.log("parseAuthorizationRequest userDid = ", userDid)
 		const { did } = (await getUserByDID(userDid)).unwrap();
 		let client_id: string,
-				response_uri: string,
-				nonce: string,
-				presentation_definition: PresentationDefinition | null,
-				state: string | null;
+			response_uri: string,
+			nonce: string,
+			presentation_definition: PresentationDefinition | null,
+			state: string | null;
 		try {
 			console.log("All search params = ", new URL(authorizationRequestURL).searchParams)
 			const params = new URL(authorizationRequestURL).searchParams;
@@ -370,8 +370,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 	/**
-	 * selection: (key: descriptor_id, value: credentialIdentifier from VerifiableCredential DB entity)
-	 */
+	* selection: (key: descriptor_id, value: credentialIdentifier from VerifiableCredential DB entity)
+	*/
 	private async generateVerifiablePresentation(selection: Map<string, string>, presentation_definition: PresentationDefinition, userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
 
 		const hasherAndAlgorithm: HasherAndAlgorithm = {
@@ -380,10 +380,10 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		}
 
 		/**
-		 *
-		 * @param paths example: [ '$.credentialSubject.image', '$.credentialSubject.grade', '$.credentialSubject.val.x' ]
-		 * @returns example: { credentialSubject: { image: true, grade: true, val: { x: true } } }
-		 */
+		*
+		* @param paths example: [ '$.credentialSubject.image', '$.credentialSubject.grade', '$.credentialSubject.val.x' ]
+		* @returns example: { credentialSubject: { image: true, grade: true, val: { x: true } } }
+		*/
 		const generatePresentationFrameForPaths = (paths) => {
 			const result = {};
 
@@ -404,9 +404,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			return result;
 		};
 		let vcListRes = await getAllVerifiableCredentials(userDid);
-    if (vcListRes.err) {
-      throw "Failed to fetch credentials";
-    }
+		if (vcListRes.err) {
+			throw "Failed to fetch credentials";
+		}
 		const allSelectedCredentialIdentifiers = Array.from(selection.values());
 
 		const filteredVCEntities = vcListRes
@@ -561,19 +561,19 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 	/**
-	 * Extract a Presentation Definition contained in an Authorization Request URL.
-	 * The Presentation Definition may be contained as a plain, uri-encoded JSON object in the presentation_definition parameter,
-	 * or as the response of an API indicated on the presentation_definition_uri parameter.
-	 * Usage of both presentation_definition and presentation_definition_uri parameters is invalid.
-	 * The function checks which of the two url parameters is present, and handles fetching appropriately.
-	 * After a presentation definition has been fetched, its validity is examined.
-	 * If the presentation definition is valid, it is returned.
-	 * @param authorizationRequestURL
-	 * @returns PresentationDefinition
-	 * @throws InvalidAuthorizationRequestURLError
-	 * @throws InvalidPresentationDefinitionURIError
-	 * @throws InvalidPresentationDefinitionError
-	 */
+	* Extract a Presentation Definition contained in an Authorization Request URL.
+	* The Presentation Definition may be contained as a plain, uri-encoded JSON object in the presentation_definition parameter,
+	* or as the response of an API indicated on the presentation_definition_uri parameter.
+	* Usage of both presentation_definition and presentation_definition_uri parameters is invalid.
+	* The function checks which of the two url parameters is present, and handles fetching appropriately.
+	* After a presentation definition has been fetched, its validity is examined.
+	* If the presentation definition is valid, it is returned.
+	* @param authorizationRequestURL
+	* @returns PresentationDefinition
+	* @throws InvalidAuthorizationRequestURLError
+	* @throws InvalidPresentationDefinitionURIError
+	* @throws InvalidPresentationDefinitionError
+	*/
 	private async fetchPresentationDefinition(authorizationRequestURL: URL): Promise<PresentationDefinition> {
 
 		const searchParams = authorizationRequestURL.searchParams;
@@ -643,10 +643,10 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 	/**
-	 * Handle Authorization Request search Parameters.
-	 * @param authorizationRequest a string of the authorization request URL
-	 * @returns An object containing Authorization Request Parameters
-	 */
+	* Handle Authorization Request search Parameters.
+	* @param authorizationRequest a string of the authorization request URL
+	* @returns An object containing Authorization Request Parameters
+	*/
 	private async authorizationRequestSearchParams(authorizationRequest: string) {
 
 		// let response_type, client_id, redirect_uri, scope, response_mode, presentation_definition, nonce;

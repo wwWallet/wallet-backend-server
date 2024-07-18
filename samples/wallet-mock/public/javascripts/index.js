@@ -1,7 +1,7 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 	/**
-	 * Created by r1ch4 on 02/10/2016.
-	 */
+	* Created by r1ch4 on 02/10/2016.
+	*/
 
 	var JSONView = require('json-view');
 
@@ -653,12 +653,12 @@
 
 
 	/**
-	 * Echos the value of a value. Trys to print the value out
-	 * in the best way possible given the different types.
-	 *
-	 * @param {Object} obj The object to print out.
-	 * @param {Object} opts Optional options object that alters the output.
-	 */
+	* Echos the value of a value. Trys to print the value out
+	* in the best way possible given the different types.
+	*
+	* @param {Object} obj The object to print out.
+	* @param {Object} opts Optional options object that alters the output.
+	*/
 	/* legacy: obj, showHidden, depth, colors*/
 	function inspect(obj, opts) {
 		// default options
@@ -723,7 +723,7 @@
 
 		if (style) {
 			return '\u001b[' + inspect.colors[style][0] + 'm' + str +
-						 '\u001b[' + inspect.colors[style][1] + 'm';
+						'\u001b[' + inspect.colors[style][1] + 'm';
 		} else {
 			return str;
 		}
@@ -864,8 +864,8 @@
 			return ctx.stylize('undefined', 'undefined');
 		if (isString(value)) {
 			var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-																							 .replace(/'/g, "\\'")
-																							 .replace(/\\"/g, '"') + '\'';
+																							.replace(/'/g, "\\'")
+																							.replace(/\\"/g, '"') + '\'';
 			return ctx.stylize(simple, 'string');
 		}
 		if (isNumber(value))
@@ -952,8 +952,8 @@
 				name = ctx.stylize(name, 'name');
 			} else {
 				name = name.replace(/'/g, "\\'")
-									 .replace(/\\"/g, '"')
-									 .replace(/(^"|"$)/g, "'");
+									.replace(/\\"/g, '"')
+									.replace(/(^"|"$)/g, "'");
 				name = ctx.stylize(name, 'string');
 			}
 		}
@@ -972,11 +972,11 @@
 
 		if (length > 60) {
 			return braces[0] +
-						 (base === '' ? '' : base + '\n ') +
-						 ' ' +
-						 output.join(',\n  ') +
-						 ' ' +
-						 braces[1];
+						(base === '' ? '' : base + '\n ') +
+						' ' +
+						output.join(',\n  ') +
+						' ' +
+						braces[1];
 		}
 
 		return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
@@ -1053,11 +1053,11 @@
 
 	function isPrimitive(arg) {
 		return arg === null ||
-					 typeof arg === 'boolean' ||
-					 typeof arg === 'number' ||
-					 typeof arg === 'string' ||
-					 typeof arg === 'symbol' ||  // ES6 symbol
-					 typeof arg === 'undefined';
+					typeof arg === 'boolean' ||
+					typeof arg === 'number' ||
+					typeof arg === 'string' ||
+					typeof arg === 'symbol' ||  // ES6 symbol
+					typeof arg === 'undefined';
 	}
 	exports.isPrimitive = isPrimitive;
 

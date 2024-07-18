@@ -172,11 +172,11 @@ app.get('/init/verification/vid', async (req, res) => {
 
 
 /**
- * For OpenID 4 VCI (Issuance)
- * @param {*} req
- * @param {*} res
- * @param {*} next
- */
+* For OpenID 4 VCI (Issuance)
+* @param {*} req
+* @param {*} res
+* @param {*} next
+*/
 async function handleCredentialOffer(req, res, next) {
 	const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
 
@@ -192,13 +192,13 @@ async function handleCredentialOffer(req, res, next) {
 }
 
 /**
- * For OpenID 4 VCI (Issuance)
- * @param {*} req
- * @param {*} res
- * @param {*} next
- */
+* For OpenID 4 VCI (Issuance)
+* @param {*} req
+* @param {*} res
+* @param {*} next
+*/
 async function handleAuthorizationResponse(req, res, next) {
-  const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
+	const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
 
 	axios.post(walletBackendUrl + "/issuance/handle/authorization/response",
 		{ authorization_response_url: url },
@@ -214,13 +214,13 @@ async function handleAuthorizationResponse(req, res, next) {
 
 
 /**
- * For OpenID 4 VP (Verification)
- * @param {*} req
- * @param {*} res
- * @param {*} next
- */
+* For OpenID 4 VP (Verification)
+* @param {*} req
+* @param {*} res
+* @param {*} next
+*/
 async function handleAuthorizationRequest(req, res, next) {
-  const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
+	const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
 	console.log("URL = ", url)
 	axios.post(walletBackendUrl + "/presentation/handle/authorization/request",
 		{ authorization_request: url },
@@ -246,33 +246,33 @@ async function handleAuthorizationRequest(req, res, next) {
 app.post('/select-vc', async (req, res) => {
 	console.log("Req = ", req.body)
 	axios.post(walletBackendUrl + "/presentation/generate/authorization/response",
-			{ verifiable_credentials_map: req.body },
-			{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
-		).then(success => {
-			const { redirect_to } = success.data;
-			res.redirect(redirect_to);
-		}).catch(e => {
-			// console.error("Failed to generate authorization response")
-			// console.error(e.response.data);
-			res.render('error', { title: "Error", error: { status: 500 } })
-		});
+		{ verifiable_credentials_map: req.body },
+		{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
+	).then(success => {
+		const { redirect_to } = success.data;
+		res.redirect(redirect_to);
+	}).catch(e => {
+		// console.error("Failed to generate authorization response")
+		// console.error(e.response.data);
+		res.render('error', { title: "Error", error: { status: 500 } })
+	});
 })
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  next(createError(404));
+	next(createError(404));
 });
 
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+	// set locals, only providing error in development
+	res.locals.message = err.message;
+	res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+	// render the error page
+	res.status(err.status || 500);
+	res.render('error');
 });
 
 console.log("Started wallet mock server...")

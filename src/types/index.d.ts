@@ -4,9 +4,9 @@ import { AppTokenUser } from "../middlewares/auth.middleware";
 export {}
 
 declare global {
-  namespace Express {
-    export interface Request {
-      user?: AppTokenUser;
-    }
-  }
+	namespace Express {
+		export interface Request {
+			user?: AppTokenUser;
+		}
+	}
 }

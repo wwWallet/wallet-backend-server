@@ -29,7 +29,7 @@ export type CredentialOffer = {
 		},
 		"urn:ietf:params:oauth:grant-type:pre-authorized_code"?: {
 			"pre-authorized_code": string,
-      "user_pin_required": boolean
+			"user_pin_required": boolean
 		}
 	}
 }
@@ -98,36 +98,36 @@ export type ProofHeader = {
 	alg: string;
 
 	/**
-	 * CONDITIONAL. JWT header containing the key ID.
-	 * If the credential shall be bound to a DID, the kid refers to a DID URL which identifies a particular key in the DID Document that the credential shall be bound to.
-	 */
+	* CONDITIONAL. JWT header containing the key ID.
+	* If the credential shall be bound to a DID, the kid refers to a DID URL which identifies a particular key in the DID Document that the credential shall be bound to.
+	*/
 	kid?: string;
 
 	/**
-	 * CONDITIONAL. JWT header containing the key material the new credential shall be bound to. MUST NOT be present if kid is present.
-	 * REQUIRED for EBSI DID Method for Natural Persons.
-	 */
+	* CONDITIONAL. JWT header containing the key material the new credential shall be bound to. MUST NOT be present if kid is present.
+	* REQUIRED for EBSI DID Method for Natural Persons.
+	*/
 	jwk?: JWK;
 }
 
 export type ProofPayload = {
 	/**
-	 * REQUIRED. MUST contain the client_id of the sender.
-	 * in DID format
-	 */
+	* REQUIRED. MUST contain the client_id of the sender.
+	* in DID format
+	*/
 	iss: string;
 
 	/**
-	 * REQUIRED. MUST contain the issuer URL of the credential issuer.
-	 */
+	* REQUIRED. MUST contain the issuer URL of the credential issuer.
+	*/
 	aud: string;
 
 	iat: number;
 
 
 	/**
-	 * REQUIRED. MUST be Token Response c_nonce as provided by the issuer.
-	 */
+	* REQUIRED. MUST be Token Response c_nonce as provided by the issuer.
+	*/
 	nonce: string;
 }
 
