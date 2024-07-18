@@ -36,7 +36,7 @@ export class VerifiablePresentationEntity {
 
 	// @Column({ enum: PresentationTypes, type: 'enum', nullable: false })
 	// format: PresentationTypes | null = null; // = PresentationTypes.JWT_VP; // 'ldp_vp' or 'jwt_vp'
-	
+
 	@Column({ type: "datetime", nullable: false })
 	issuanceDate: Date = new Date();
 }
@@ -131,7 +131,7 @@ async function deletePresentationsByCredentialId(holderDID:string, credentialIde
 
 async function getAllVerifiablePresentations(holderDID: string): Promise<Result<VerifiablePresentation[], GetAllVerifiablePresentationsErr>> {
 	try {
-		const vpList = await verifiablePresentationRepository 
+		const vpList = await verifiablePresentationRepository
 			.createQueryBuilder("vp")
 			.where("vp.holderDID = :did", { did: holderDID })
 			.getMany();
@@ -158,7 +158,7 @@ async function getAllVerifiablePresentations(holderDID: string): Promise<Result<
 
 async function getPresentationByIdentifier(holderDID: string, presentationIdentifier: string): Promise<Result<VerifiablePresentation, GetAllVerifiablePresentationsErr>> {
 	try {
-		const vp = await verifiablePresentationRepository 
+		const vp = await verifiablePresentationRepository
 			.createQueryBuilder("vp")
 			.where("vp.presentationIdentifier = :presentationIdentifier and vp.holderDID = :holderDID", { holderDID, presentationIdentifier })
 			.getOne();

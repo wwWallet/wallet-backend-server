@@ -9,7 +9,7 @@ export function getLeafNodesWithPath(verifiableCredential, obj, path = "$.creden
     for (let key in obj) {
       const newPath = currentPath !== "$.credentialSubject." ? `${currentPath}.${key}` : `${currentPath}${key}`;
 
-      
+
 			// Add leaf node with path to the array
 			if (Object.keys(obj[key]).length === 1 && !(obj[key] instanceof Array) && obj[key].display) {
 				console.log("Path = ", newPath)
@@ -20,8 +20,8 @@ export function getLeafNodesWithPath(verifiableCredential, obj, path = "$.creden
 			else if (typeof obj[key] === "object" && obj[key] !== null) {
         // Recursively traverse nested objects
         traverse(obj[key], newPath);
-      } 
-      
+      }
+
     }
   }
 

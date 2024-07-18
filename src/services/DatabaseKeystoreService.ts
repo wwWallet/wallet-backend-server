@@ -32,7 +32,7 @@ export class DatabaseKeystoreService implements WalletKeystore {
 		}
 	}
 
-	
+
 	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
 		const user = (await getUserByDID(userDid)).unwrap();
 		const keys = JSON.parse(user.keys.toString()) as WalletKey;

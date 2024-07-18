@@ -105,7 +105,7 @@ noAuthUserController.post('/register/db-keys', async (req: Request, res: Respons
 })
 
 noAuthUserController.post('/login/db-keys', async (req: Request, res: Response) => {
-	
+
 })
 
 noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
@@ -164,7 +164,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
 			{...req.body as RegistrationParams }
 		);
-	
+
 		if (walletInitializationResult.err) {
 			return res.status(400).send({ error: walletInitializationResult.val })
 		}

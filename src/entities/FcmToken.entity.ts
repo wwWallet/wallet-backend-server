@@ -10,7 +10,7 @@ export class FcmTokenEntity {
 
 	@Column({ name: "value", type: "varchar", nullable: false })
 	value: string;
-	
+
 	@ManyToOne(() => UserEntity, (user) => user.fcmTokenList)
 	user: UserEntity;
 }

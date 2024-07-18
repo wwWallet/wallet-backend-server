@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import base64url from "base64url";
 
 /**
- * 
+ *
  * @param type is the 'type' attribute of a VC in JSON-LD format
  */
 export function decideVerifiableCredentialType(type: string[]): 'Diploma' | 'Attestation' | 'Presentation' {

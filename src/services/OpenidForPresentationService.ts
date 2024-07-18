@@ -110,7 +110,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		url.searchParams.append("state", holder_state);
 		return { redirect_to: url.toString() };
 	}
-	
+
 	async handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>> {
 		try {
 			return await this.parseIdTokenRequest(userDid, requestURL);
@@ -256,8 +256,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	/**
 	 * @throws
 	 * @param userDid
-	 * @param authorizationRequestURL 
-	 * @returns 
+	 * @param authorizationRequestURL
+	 * @returns
 	 */
 	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}, HandleOutboundRequestError>> {
 		console.log("parseAuthorizationRequest userDid = ", userDid)
@@ -305,7 +305,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 		console.log("Definition = ", presentation_definition)
-		
+
 		let descriptors: InputDescriptorType[];
 		try {
 			descriptors = JSONPath({
@@ -373,12 +373,12 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	 * selection: (key: descriptor_id, value: credentialIdentifier from VerifiableCredential DB entity)
 	 */
 	private async generateVerifiablePresentation(selection: Map<string, string>, presentation_definition: PresentationDefinition, userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
-		
+
 		const hasherAndAlgorithm: HasherAndAlgorithm = {
 			hasher: (input: string) => createHash('sha256').update(input).digest(),
 			algorithm: HasherAlgorithm.Sha256
 		}
-	
+
 		/**
 		 *
 		 * @param paths example: [ '$.credentialSubject.image', '$.credentialSubject.grade', '$.credentialSubject.val.x' ]
@@ -435,9 +435,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			else {
 				selectedVCs.push(vcEntity.credential);
 			}
-			
+
 		}
-		
+
 		const fetchedState = this.states.get(userDid);
 		console.log(fetchedState);
 		const { audience, nonce } = fetchedState;
@@ -467,11 +467,11 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			throw "Failed to fetch credentials"
 		}
 		const filteredVCEntities = vcListRes.unwrap()
-			.filter((vc) => 
+			.filter((vc) =>
 				allSelectedCredentialIdentifiers.includes(vc.credentialIdentifier)
 			);
 		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
-		
+
 		try {
 			const fetchedState = this.states.get(userDid);
 			const vp_token_result = await this.generateVerifiablePresentation(selection, fetchedState.presentation_definition, userDid);
@@ -488,9 +488,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			if(matchesPresentationDefinitionRes == null) {
 				throw new Error("Credentials presented do not match presentation definition requested");
 			}
-	
+
 			const {presentationSubmission} = matchesPresentationDefinitionRes;
-	
+
 			// let counter = 0
 
 			// for (let i = 0; i < presentationSubmission.descriptor_map.length; i++) {
@@ -637,7 +637,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			console.error(`Error fetching Presentation Definition from URI: ${fetchPresentationDefinitionRes.data}`);
 			throw new Error(`Error fetching Presentation Definition from URI`);
 		}
-		
+
 		return fetchPresentationDefinitionRes.data;
 	}
 
@@ -648,7 +648,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	 * @returns An object containing Authorization Request Parameters
 	 */
 	private async authorizationRequestSearchParams(authorizationRequest: string) {
-	
+
 		// let response_type, client_id, redirect_uri, scope, response_mode, presentation_definition, nonce;
 
 		// Attempt to convert authorizationRequest to URL form, in order to parse searchparams easily
@@ -672,7 +672,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		let request_uri = authorizationRequestUrl.searchParams.get("request_uri") as string | null;
 		const request = authorizationRequestUrl.searchParams.get("request");
 
-	
+
 		try {
 			if(request) {
 				let requestPayload: any;
@@ -701,7 +701,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 				if(requestPayload.response_mode)
 					response_mode = requestPayload.response_mode;
-				
+
 				if(requestPayload.nonce)
 					nonce = requestPayload.nonce
 			}

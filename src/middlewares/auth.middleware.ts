@@ -17,7 +17,7 @@ function getCookieDictionary(cookies: any) {
 
     const val = cookie.split('=')[1];
     cookieDict[key] = val;
-    
+
   }
   return cookieDict;
 }

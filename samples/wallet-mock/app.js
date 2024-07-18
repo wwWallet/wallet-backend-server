@@ -77,7 +77,7 @@ app.get('/vp', async (req, res) => {
 			const payload = JSON.parse(base64url.decode(vpjwt.split('.')[1]));
 			return payload;
 		})
-	
+
 
 		res.render('presentations', {
 			vp_list: vp_list
@@ -121,7 +121,7 @@ app.get('/vp/:vp_id', async (req, res) => {
 		console.dir(vp, { depth: null})
 		const vpjwt = vp.presentation;
 		const payload = base64url.decode(vpjwt.split('.')[1]);
-		
+
 		res.render('vc', {
 			title: "Wallet Mock",
 			vc: payload
@@ -143,7 +143,7 @@ app.get('/init/issuance/:iss', async (req, res) => {
 	const selectedIssuerDID = iss == 'vid' ? vidTrustedIssuerDID : uoaTrustedIssuerDID;
 
 	try {
-		const issuanceInitiation = await axios.post(walletBackendUrl + '/issuance/generate/authorization/request', 
+		const issuanceInitiation = await axios.post(walletBackendUrl + '/issuance/generate/authorization/request',
 			{ legal_person_did: selectedIssuerDID },
 			{ headers: { "Authorization": `Bearer ${global.user.appToken}` }}
 		);
@@ -173,9 +173,9 @@ app.get('/init/verification/vid', async (req, res) => {
 
 /**
  * For OpenID 4 VCI (Issuance)
- * @param {*} req 
- * @param {*} res 
- * @param {*} next 
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
  */
 async function handleCredentialOffer(req, res, next) {
 	const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
@@ -193,9 +193,9 @@ async function handleCredentialOffer(req, res, next) {
 
 /**
  * For OpenID 4 VCI (Issuance)
- * @param {*} req 
- * @param {*} res 
- * @param {*} next 
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
  */
 async function handleAuthorizationResponse(req, res, next) {
   const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
@@ -215,9 +215,9 @@ async function handleAuthorizationResponse(req, res, next) {
 
 /**
  * For OpenID 4 VP (Verification)
- * @param {*} req 
- * @param {*} res 
- * @param {*} next 
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
  */
 async function handleAuthorizationRequest(req, res, next) {
   const url = `${req.protocol}://${req.hostname}${req.originalUrl}`;
