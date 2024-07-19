@@ -4,9 +4,9 @@ import * as crypto from 'crypto';
 import base64url from "base64url";
 
 /**
- * 
- * @param type is the 'type' attribute of a VC in JSON-LD format
- */
+*
+* @param type is the 'type' attribute of a VC in JSON-LD format
+*/
 export function decideVerifiableCredentialType(type: string[]): 'Diploma' | 'Attestation' | 'Presentation' {
 
 	if (type.includes('VerifiablePresentation')) return 'Presentation';
@@ -15,10 +15,10 @@ export function decideVerifiableCredentialType(type: string[]): 'Diploma' | 'Att
 	for (const t of type) {
 		const lower = t.toLowerCase();
 		if (lower.includes('europass') ||
-				lower.includes('universitydegree') ||
-				lower.includes('diploma')) {
+			lower.includes('universitydegree') ||
+			lower.includes('diploma')) {
 
-					return 'Diploma';
+			return 'Diploma';
 		}
 	}
 
@@ -26,19 +26,19 @@ export function decideVerifiableCredentialType(type: string[]): 'Diploma' | 'Att
 }
 
 export function jsonStringifyTaggedBinary(value: any): string {
-  return JSON.stringify(value, replacerBufferToTaggedBase64Url);
+	return JSON.stringify(value, replacerBufferToTaggedBase64Url);
 }
 
 export function jsonParseTaggedBinary(json: string): any {
-  return JSON.parse(json, reviverTaggedBase64UrlToBuffer);
+	return JSON.parse(json, reviverTaggedBase64UrlToBuffer);
 }
 
 export function replacerBufferToTaggedBase64Url(key: string, value: any): any {
-  if (this[key] instanceof Buffer) {
-    return { '$b64u': base64url.encode(this[key]) };
-  } else {
-    return value;
-  }
+	if (this[key] instanceof Buffer) {
+		return { '$b64u': base64url.encode(this[key]) };
+	} else {
+		return value;
+	}
 }
 
 export function reviverTaggedBase64UrlToBuffer(key: string, value: any): any {

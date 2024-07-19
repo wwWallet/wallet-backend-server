@@ -1,19 +1,19 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 	/**
-	 * Created by r1ch4 on 02/10/2016.
-	 */
-	
+	* Created by r1ch4 on 02/10/2016.
+	*/
+
 	var JSONView = require('json-view');
-	
+
 	const vc_list = document.getElementById('vc').value;
 	var view = new JSONView('Payload', JSON.parse(vc_list));
-	
+
 	// view.on('change', function(key, oldValue, newValue){
 	// 		console.log('change', key, oldValue, '=>', newValue);
 	// });
-	
+
 	view.expand(true);
-	
+
 	document.body.appendChild(view.dom);
 	window.view = view;
 	},{"json-view":7}],2:[function(require,module,exports){
@@ -37,23 +37,23 @@
 	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 	// USE OR OTHER DEALINGS IN THE SOFTWARE.
-	
+
 	function EventEmitter() {
 		this._events = this._events || {};
 		this._maxListeners = this._maxListeners || undefined;
 	}
 	module.exports = EventEmitter;
-	
+
 	// Backwards-compat with node 0.10.x
 	EventEmitter.EventEmitter = EventEmitter;
-	
+
 	EventEmitter.prototype._events = undefined;
 	EventEmitter.prototype._maxListeners = undefined;
-	
+
 	// By default EventEmitters will print a warning if more than 10 listeners are
 	// added to it. This is a useful default which helps finding memory leaks.
 	EventEmitter.defaultMaxListeners = 10;
-	
+
 	// Obviously not all Emitters should be limited to 10. This function allows
 	// that to be increased. Set to zero for unlimited.
 	EventEmitter.prototype.setMaxListeners = function(n) {
@@ -62,13 +62,13 @@
 		this._maxListeners = n;
 		return this;
 	};
-	
+
 	EventEmitter.prototype.emit = function(type) {
 		var er, handler, len, args, i, listeners;
-	
+
 		if (!this._events)
 			this._events = {};
-	
+
 		// If there is no 'error' event listener then throw.
 		if (type === 'error') {
 			if (!this._events.error ||
@@ -84,12 +84,12 @@
 				}
 			}
 		}
-	
+
 		handler = this._events[type];
-	
+
 		if (isUndefined(handler))
 			return false;
-	
+
 		if (isFunction(handler)) {
 			switch (arguments.length) {
 				// fast cases
@@ -114,26 +114,26 @@
 			for (i = 0; i < len; i++)
 				listeners[i].apply(this, args);
 		}
-	
+
 		return true;
 	};
-	
+
 	EventEmitter.prototype.addListener = function(type, listener) {
 		var m;
-	
+
 		if (!isFunction(listener))
 			throw TypeError('listener must be a function');
-	
+
 		if (!this._events)
 			this._events = {};
-	
+
 		// To avoid recursion in the case that type === "newListener"! Before
 		// adding it to the listeners, first emit "newListener".
 		if (this._events.newListener)
 			this.emit('newListener', type,
 								isFunction(listener.listener) ?
 								listener.listener : listener);
-	
+
 		if (!this._events[type])
 			// Optimize the case of one listener. Don't need the extra array object.
 			this._events[type] = listener;
@@ -143,7 +143,7 @@
 		else
 			// Adding the second element, need to change to array.
 			this._events[type] = [this._events[type], listener];
-	
+
 		// Check for listener leak
 		if (isObject(this._events[type]) && !this._events[type].warned) {
 			if (!isUndefined(this._maxListeners)) {
@@ -151,7 +151,7 @@
 			} else {
 				m = EventEmitter.defaultMaxListeners;
 			}
-	
+
 			if (m && m > 0 && this._events[type].length > m) {
 				this._events[type].warned = true;
 				console.error('(node) warning: possible EventEmitter memory ' +
@@ -164,53 +164,53 @@
 				}
 			}
 		}
-	
+
 		return this;
 	};
-	
+
 	EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-	
+
 	EventEmitter.prototype.once = function(type, listener) {
 		if (!isFunction(listener))
 			throw TypeError('listener must be a function');
-	
+
 		var fired = false;
-	
+
 		function g() {
 			this.removeListener(type, g);
-	
+
 			if (!fired) {
 				fired = true;
 				listener.apply(this, arguments);
 			}
 		}
-	
+
 		g.listener = listener;
 		this.on(type, g);
-	
+
 		return this;
 	};
-	
+
 	// emits a 'removeListener' event iff the listener was removed
 	EventEmitter.prototype.removeListener = function(type, listener) {
 		var list, position, length, i;
-	
+
 		if (!isFunction(listener))
 			throw TypeError('listener must be a function');
-	
+
 		if (!this._events || !this._events[type])
 			return this;
-	
+
 		list = this._events[type];
 		length = list.length;
 		position = -1;
-	
+
 		if (list === listener ||
 				(isFunction(list.listener) && list.listener === listener)) {
 			delete this._events[type];
 			if (this._events.removeListener)
 				this.emit('removeListener', type, listener);
-	
+
 		} else if (isObject(list)) {
 			for (i = length; i-- > 0;) {
 				if (list[i] === listener ||
@@ -219,30 +219,30 @@
 					break;
 				}
 			}
-	
+
 			if (position < 0)
 				return this;
-	
+
 			if (list.length === 1) {
 				list.length = 0;
 				delete this._events[type];
 			} else {
 				list.splice(position, 1);
 			}
-	
+
 			if (this._events.removeListener)
 				this.emit('removeListener', type, listener);
 		}
-	
+
 		return this;
 	};
-	
+
 	EventEmitter.prototype.removeAllListeners = function(type) {
 		var key, listeners;
-	
+
 		if (!this._events)
 			return this;
-	
+
 		// not listening for removeListener, no need to emit
 		if (!this._events.removeListener) {
 			if (arguments.length === 0)
@@ -251,7 +251,7 @@
 				delete this._events[type];
 			return this;
 		}
-	
+
 		// emit removeListener for all listeners on all events
 		if (arguments.length === 0) {
 			for (key in this._events) {
@@ -262,9 +262,9 @@
 			this._events = {};
 			return this;
 		}
-	
+
 		listeners = this._events[type];
-	
+
 		if (isFunction(listeners)) {
 			this.removeListener(type, listeners);
 		} else if (listeners) {
@@ -273,10 +273,10 @@
 				this.removeListener(type, listeners[listeners.length - 1]);
 		}
 		delete this._events[type];
-	
+
 		return this;
 	};
-	
+
 	EventEmitter.prototype.listeners = function(type) {
 		var ret;
 		if (!this._events || !this._events[type])
@@ -287,11 +287,11 @@
 			ret = this._events[type].slice();
 		return ret;
 	};
-	
+
 	EventEmitter.prototype.listenerCount = function(type) {
 		if (this._events) {
 			var evlistener = this._events[type];
-	
+
 			if (isFunction(evlistener))
 				return 1;
 			else if (evlistener)
@@ -299,39 +299,39 @@
 		}
 		return 0;
 	};
-	
+
 	EventEmitter.listenerCount = function(emitter, type) {
 		return emitter.listenerCount(type);
 	};
-	
+
 	function isFunction(arg) {
 		return typeof arg === 'function';
 	}
-	
+
 	function isNumber(arg) {
 		return typeof arg === 'number';
 	}
-	
+
 	function isObject(arg) {
 		return typeof arg === 'object' && arg !== null;
 	}
-	
+
 	function isUndefined(arg) {
 		return arg === void 0;
 	}
-	
+
 	},{}],3:[function(require,module,exports){
 	// shim for using process in browser
 	var process = module.exports = {};
-	
+
 	// cached from whatever global is present so that test runners that stub it
 	// don't break things.  But we need to wrap it in a try catch in case it is
 	// wrapped in strict mode code which doesn't define any globals.  It's inside a
 	// function because try/catches deoptimize in certain engines.
-	
+
 	var cachedSetTimeout;
 	var cachedClearTimeout;
-	
+
 	function defaultSetTimout() {
 			throw new Error('setTimeout has not been defined');
 	}
@@ -380,8 +380,8 @@
 							return cachedSetTimeout.call(this, fun, 0);
 					}
 			}
-	
-	
+
+
 	}
 	function runClearTimeout(marker) {
 			if (cachedClearTimeout === clearTimeout) {
@@ -406,15 +406,15 @@
 							return cachedClearTimeout.call(this, marker);
 					}
 			}
-	
-	
-	
+
+
+
 	}
 	var queue = [];
 	var draining = false;
 	var currentQueue;
 	var queueIndex = -1;
-	
+
 	function cleanUpNextTick() {
 			if (!draining || !currentQueue) {
 					return;
@@ -429,14 +429,14 @@
 					drainQueue();
 			}
 	}
-	
+
 	function drainQueue() {
 			if (draining) {
 					return;
 			}
 			var timeout = runTimeout(cleanUpNextTick);
 			draining = true;
-	
+
 			var len = queue.length;
 			while(len) {
 					currentQueue = queue;
@@ -453,7 +453,7 @@
 			draining = false;
 			runClearTimeout(timeout);
 	}
-	
+
 	process.nextTick = function (fun) {
 			var args = new Array(arguments.length - 1);
 			if (arguments.length > 1) {
@@ -466,7 +466,7 @@
 					runTimeout(drainQueue);
 			}
 	};
-	
+
 	// v8 likes predictible objects
 	function Item(fun, array) {
 			this.fun = fun;
@@ -481,9 +481,9 @@
 	process.argv = [];
 	process.version = ''; // empty string to avoid regexp issues
 	process.versions = {};
-	
+
 	function noop() {}
-	
+
 	process.on = noop;
 	process.addListener = noop;
 	process.once = noop;
@@ -491,17 +491,17 @@
 	process.removeListener = noop;
 	process.removeAllListeners = noop;
 	process.emit = noop;
-	
+
 	process.binding = function (name) {
 			throw new Error('process.binding is not supported');
 	};
-	
+
 	process.cwd = function () { return '/' };
 	process.chdir = function (dir) {
 			throw new Error('process.chdir is not supported');
 	};
 	process.umask = function() { return 0; };
-	
+
 	},{}],4:[function(require,module,exports){
 	if (typeof Object.create === 'function') {
 		// implementation from standard node.js 'util' module
@@ -526,7 +526,7 @@
 			ctor.prototype.constructor = ctor
 		}
 	}
-	
+
 	},{}],5:[function(require,module,exports){
 	module.exports = function isBuffer(arg) {
 		return arg && typeof arg === 'object'
@@ -556,7 +556,7 @@
 	// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 	// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 	// USE OR OTHER DEALINGS IN THE SOFTWARE.
-	
+
 	var formatRegExp = /%[sdj%]/g;
 	exports.format = function(f) {
 		if (!isString(f)) {
@@ -566,7 +566,7 @@
 			}
 			return objects.join(' ');
 		}
-	
+
 		var i = 1;
 		var args = arguments;
 		var len = args.length;
@@ -595,8 +595,8 @@
 		}
 		return str;
 	};
-	
-	
+
+
 	// Mark that a method should not be used.
 	// Returns a modified function which warns once by default.
 	// If --no-deprecation is set, then it is a no-op.
@@ -607,11 +607,11 @@
 				return exports.deprecate(fn, msg).apply(this, arguments);
 			};
 		}
-	
+
 		if (process.noDeprecation === true) {
 			return fn;
 		}
-	
+
 		var warned = false;
 		function deprecated() {
 			if (!warned) {
@@ -626,11 +626,11 @@
 			}
 			return fn.apply(this, arguments);
 		}
-	
+
 		return deprecated;
 	};
-	
-	
+
+
 	var debugs = {};
 	var debugEnviron;
 	exports.debuglog = function(set) {
@@ -650,15 +650,15 @@
 		}
 		return debugs[set];
 	};
-	
-	
+
+
 	/**
-	 * Echos the value of a value. Trys to print the value out
-	 * in the best way possible given the different types.
-	 *
-	 * @param {Object} obj The object to print out.
-	 * @param {Object} opts Optional options object that alters the output.
-	 */
+	* Echos the value of a value. Trys to print the value out
+	* in the best way possible given the different types.
+	*
+	* @param {Object} obj The object to print out.
+	* @param {Object} opts Optional options object that alters the output.
+	*/
 	/* legacy: obj, showHidden, depth, colors*/
 	function inspect(obj, opts) {
 		// default options
@@ -685,8 +685,8 @@
 		return formatValue(ctx, obj, ctx.depth);
 	}
 	exports.inspect = inspect;
-	
-	
+
+
 	// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
 	inspect.colors = {
 		'bold' : [1, 22],
@@ -703,7 +703,7 @@
 		'red' : [31, 39],
 		'yellow' : [33, 39]
 	};
-	
+
 	// Don't use 'blue' not visible on cmd.exe
 	inspect.styles = {
 		'special': 'cyan',
@@ -716,36 +716,36 @@
 		// "name": intentionally not styling
 		'regexp': 'red'
 	};
-	
-	
+
+
 	function stylizeWithColor(str, styleType) {
 		var style = inspect.styles[styleType];
-	
+
 		if (style) {
 			return '\u001b[' + inspect.colors[style][0] + 'm' + str +
-						 '\u001b[' + inspect.colors[style][1] + 'm';
+						'\u001b[' + inspect.colors[style][1] + 'm';
 		} else {
 			return str;
 		}
 	}
-	
-	
+
+
 	function stylizeNoColor(str, styleType) {
 		return str;
 	}
-	
-	
+
+
 	function arrayToHash(array) {
 		var hash = {};
-	
+
 		array.forEach(function(val, idx) {
 			hash[val] = true;
 		});
-	
+
 		return hash;
 	}
-	
-	
+
+
 	function formatValue(ctx, value, recurseTimes) {
 		// Provide a hook for user-specified inspect functions.
 		// Check that value is an object with an inspect function on it
@@ -762,28 +762,28 @@
 			}
 			return ret;
 		}
-	
+
 		// Primitive types cannot have properties
 		var primitive = formatPrimitive(ctx, value);
 		if (primitive) {
 			return primitive;
 		}
-	
+
 		// Look up the keys of the object.
 		var keys = Object.keys(value);
 		var visibleKeys = arrayToHash(keys);
-	
+
 		if (ctx.showHidden) {
 			keys = Object.getOwnPropertyNames(value);
 		}
-	
+
 		// IE doesn't make error fields non-enumerable
 		// http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
 		if (isError(value)
 				&& (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
 			return formatError(value);
 		}
-	
+
 		// Some type of object without properties can be shortcutted.
 		if (keys.length === 0) {
 			if (isFunction(value)) {
@@ -800,40 +800,40 @@
 				return formatError(value);
 			}
 		}
-	
+
 		var base = '', array = false, braces = ['{', '}'];
-	
+
 		// Make Array say that they are Array
 		if (isArray(value)) {
 			array = true;
 			braces = ['[', ']'];
 		}
-	
+
 		// Make functions say that they are functions
 		if (isFunction(value)) {
 			var n = value.name ? ': ' + value.name : '';
 			base = ' [Function' + n + ']';
 		}
-	
+
 		// Make RegExps say that they are RegExps
 		if (isRegExp(value)) {
 			base = ' ' + RegExp.prototype.toString.call(value);
 		}
-	
+
 		// Make dates with properties first say the date
 		if (isDate(value)) {
 			base = ' ' + Date.prototype.toUTCString.call(value);
 		}
-	
+
 		// Make error with message first say the error
 		if (isError(value)) {
 			base = ' ' + formatError(value);
 		}
-	
+
 		if (keys.length === 0 && (!array || value.length == 0)) {
 			return braces[0] + base + braces[1];
 		}
-	
+
 		if (recurseTimes < 0) {
 			if (isRegExp(value)) {
 				return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
@@ -841,9 +841,9 @@
 				return ctx.stylize('[Object]', 'special');
 			}
 		}
-	
+
 		ctx.seen.push(value);
-	
+
 		var output;
 		if (array) {
 			output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
@@ -852,20 +852,20 @@
 				return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
 			});
 		}
-	
+
 		ctx.seen.pop();
-	
+
 		return reduceToSingleString(output, base, braces);
 	}
-	
-	
+
+
 	function formatPrimitive(ctx, value) {
 		if (isUndefined(value))
 			return ctx.stylize('undefined', 'undefined');
 		if (isString(value)) {
 			var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-																							 .replace(/'/g, "\\'")
-																							 .replace(/\\"/g, '"') + '\'';
+																							.replace(/'/g, "\\'")
+																							.replace(/\\"/g, '"') + '\'';
 			return ctx.stylize(simple, 'string');
 		}
 		if (isNumber(value))
@@ -876,13 +876,13 @@
 		if (isNull(value))
 			return ctx.stylize('null', 'null');
 	}
-	
-	
+
+
 	function formatError(value) {
 		return '[' + Error.prototype.toString.call(value) + ']';
 	}
-	
-	
+
+
 	function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
 		var output = [];
 		for (var i = 0, l = value.length; i < l; ++i) {
@@ -901,8 +901,8 @@
 		});
 		return output;
 	}
-	
-	
+
+
 	function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
 		var name, str, desc;
 		desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
@@ -952,16 +952,16 @@
 				name = ctx.stylize(name, 'name');
 			} else {
 				name = name.replace(/'/g, "\\'")
-									 .replace(/\\"/g, '"')
-									 .replace(/(^"|"$)/g, "'");
+									.replace(/\\"/g, '"')
+									.replace(/(^"|"$)/g, "'");
 				name = ctx.stylize(name, 'string');
 			}
 		}
-	
+
 		return name + ': ' + str;
 	}
-	
-	
+
+
 	function reduceToSingleString(output, base, braces) {
 		var numLinesEst = 0;
 		var length = output.reduce(function(prev, cur) {
@@ -969,113 +969,113 @@
 			if (cur.indexOf('\n') >= 0) numLinesEst++;
 			return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
 		}, 0);
-	
+
 		if (length > 60) {
 			return braces[0] +
-						 (base === '' ? '' : base + '\n ') +
-						 ' ' +
-						 output.join(',\n  ') +
-						 ' ' +
-						 braces[1];
+						(base === '' ? '' : base + '\n ') +
+						' ' +
+						output.join(',\n  ') +
+						' ' +
+						braces[1];
 		}
-	
+
 		return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
 	}
-	
-	
+
+
 	// NOTE: These type checking functions intentionally don't use `instanceof`
 	// because it is fragile and can be easily faked with `Object.create()`.
 	function isArray(ar) {
 		return Array.isArray(ar);
 	}
 	exports.isArray = isArray;
-	
+
 	function isBoolean(arg) {
 		return typeof arg === 'boolean';
 	}
 	exports.isBoolean = isBoolean;
-	
+
 	function isNull(arg) {
 		return arg === null;
 	}
 	exports.isNull = isNull;
-	
+
 	function isNullOrUndefined(arg) {
 		return arg == null;
 	}
 	exports.isNullOrUndefined = isNullOrUndefined;
-	
+
 	function isNumber(arg) {
 		return typeof arg === 'number';
 	}
 	exports.isNumber = isNumber;
-	
+
 	function isString(arg) {
 		return typeof arg === 'string';
 	}
 	exports.isString = isString;
-	
+
 	function isSymbol(arg) {
 		return typeof arg === 'symbol';
 	}
 	exports.isSymbol = isSymbol;
-	
+
 	function isUndefined(arg) {
 		return arg === void 0;
 	}
 	exports.isUndefined = isUndefined;
-	
+
 	function isRegExp(re) {
 		return isObject(re) && objectToString(re) === '[object RegExp]';
 	}
 	exports.isRegExp = isRegExp;
-	
+
 	function isObject(arg) {
 		return typeof arg === 'object' && arg !== null;
 	}
 	exports.isObject = isObject;
-	
+
 	function isDate(d) {
 		return isObject(d) && objectToString(d) === '[object Date]';
 	}
 	exports.isDate = isDate;
-	
+
 	function isError(e) {
 		return isObject(e) &&
 				(objectToString(e) === '[object Error]' || e instanceof Error);
 	}
 	exports.isError = isError;
-	
+
 	function isFunction(arg) {
 		return typeof arg === 'function';
 	}
 	exports.isFunction = isFunction;
-	
+
 	function isPrimitive(arg) {
 		return arg === null ||
-					 typeof arg === 'boolean' ||
-					 typeof arg === 'number' ||
-					 typeof arg === 'string' ||
-					 typeof arg === 'symbol' ||  // ES6 symbol
-					 typeof arg === 'undefined';
+					typeof arg === 'boolean' ||
+					typeof arg === 'number' ||
+					typeof arg === 'string' ||
+					typeof arg === 'symbol' ||  // ES6 symbol
+					typeof arg === 'undefined';
 	}
 	exports.isPrimitive = isPrimitive;
-	
+
 	exports.isBuffer = require('./support/isBuffer');
-	
+
 	function objectToString(o) {
 		return Object.prototype.toString.call(o);
 	}
-	
-	
+
+
 	function pad(n) {
 		return n < 10 ? '0' + n.toString(10) : n.toString(10);
 	}
-	
-	
+
+
 	var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
 								'Oct', 'Nov', 'Dec'];
-	
+
 	// 26 Feb 16:19:34
 	function timestamp() {
 		var d = new Date();
@@ -1084,14 +1084,14 @@
 								pad(d.getSeconds())].join(':');
 		return [d.getDate(), months[d.getMonth()], time].join(' ');
 	}
-	
-	
+
+
 	// log is just a thin wrapper to console.log that prepends a timestamp
 	exports.log = function() {
 		console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
 	};
-	
-	
+
+
 	/**
 	 * Inherit the prototype methods from one constructor into another.
 	 *
@@ -1106,11 +1106,11 @@
 	 * @param {function} superCtor Constructor function to inherit prototype from.
 	 */
 	exports.inherits = require('inherits');
-	
+
 	exports._extend = function(origin, add) {
 		// Don't do anything if add isn't an object
 		if (!add || !isObject(add)) return origin;
-	
+
 		var keys = Object.keys(add);
 		var i = keys.length;
 		while (i--) {
@@ -1118,42 +1118,42 @@
 		}
 		return origin;
 	};
-	
+
 	function hasOwnProperty(obj, prop) {
 		return Object.prototype.hasOwnProperty.call(obj, prop);
 	}
-	
+
 	}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-	
+
 	},{"./support/isBuffer":5,"_process":3,"inherits":4}],7:[function(require,module,exports){
 	/**
 	 * Created by richard.livingston on 18/02/2017.
 	 */
 	'use strict';
-	
+
 	var util = require('util'),
 		EE = require('events').EventEmitter;
-	
-	
+
+
 	module.exports = JSONView;
 	util.inherits(JSONView, EE);
-	
-	
+
+
 	function JSONView(name_, value_){
 		var self = this;
-	
+
 		EE.call(self);
-	
+
 		if(arguments.length < 2){
 			value_ = name_;
 			name_ = undefined;
 		}
-	
+
 		var name, value, type,
 			domEventListeners = [], children = [], expanded = false,
 			edittingName = false, edittingValue = false,
 			nameEditable = true, valueEditable = true;
-	
+
 		var dom = {
 			container : document.createElement('div'),
 			collapseExpand : document.createElement('div'),
@@ -1164,142 +1164,142 @@
 			children : document.createElement('div'),
 			insert : document.createElement('div')
 		};
-	
-	
+
+
 		Object.defineProperties(self, {
-	
+
 			dom : {
 				value : dom.container,
 				enumerable : true
 			},
-	
+
 			name : {
 				get : function(){
 					return name;
 				},
-	
+
 				set : setName,
 				enumerable : true
 			},
-	
+
 			value : {
 				get : function(){
 					return value;
 				},
-	
+
 				set : setValue,
 				enumerable : true
 			},
-	
+
 			type : {
 				get : function(){
 					return type;
 				},
-	
+
 				enumerable : true
 			},
-	
+
 			nameEditable : {
 				get : function(){
 					return nameEditable;
 				},
-	
+
 				set : function(value){
 					nameEditable = !!value;
 				},
-	
+
 				enumerable : true
 			},
-	
+
 			valueEditable : {
 				get : function(){
 					return valueEditable;
 				},
-	
+
 				set : function(value){
 					valueEditable = !!value;
 				},
-	
+
 				enumerable : true
 			},
-	
+
 			refresh : {
 				value : refresh,
 				enumerable : true
 			},
-	
+
 			collapse : {
 				value : collapse,
 				enumerable : true
 			},
-	
+
 			expand : {
 				value : expand,
 				enumerable : true
 			},
-	
+
 			destroy : {
 				value : destroy,
 				enumerable : true
 			},
-	
+
 			editName : {
 				value : editField.bind(null, 'name'),
 				enumerable : true
 			},
-	
+
 			editValue : {
 				value : editField.bind(null, 'value'),
 				enumerable : true
 			}
-	
+
 		});
-	
-	
+
+
 		Object.keys(dom).forEach(function(k){
 			var element = dom[k];
-	
+
 			if(k == 'container'){
 				return;
 			}
-	
+
 			element.className = k;
 			dom.container.appendChild(element);
 		});
-	
+
 		dom.container.className = 'jsonView';
-	
+
 		addDomEventListener(dom.collapseExpand, 'click', onCollapseExpandClick);
 		addDomEventListener(dom.value, 'click', expand.bind(null, false));
 		addDomEventListener(dom.name, 'click', expand.bind(null, false));
-	
+
 		addDomEventListener(dom.name, 'dblclick', editField.bind(null, 'name'));
 		addDomEventListener(dom.name, 'blur', editFieldStop.bind(null, 'name'));
 		addDomEventListener(dom.name, 'keypress', editFieldKeyPressed.bind(null, 'name'));
 		addDomEventListener(dom.name, 'keydown', editFieldTabPressed.bind(null, 'name'));
-	
+
 		addDomEventListener(dom.value, 'dblclick', editField.bind(null, 'value'));
 		addDomEventListener(dom.value, 'blur', editFieldStop.bind(null, 'value'));
 		addDomEventListener(dom.value, 'keypress', editFieldKeyPressed.bind(null, 'value'));
 		addDomEventListener(dom.value, 'keydown', editFieldTabPressed.bind(null, 'value'));
 		addDomEventListener(dom.value, 'keydown', numericValueKeyDown);
-	
+
 		addDomEventListener(dom.insert, 'click', onInsertClick);
 		addDomEventListener(dom.delete, 'click', onDeleteClick);
-	
+
 		setName(name_);
 		setValue(value_);
-	
-	
+
+
 		function refresh(){
 			var expandable = type == 'object' || type == 'array';
-	
+
 			children.forEach(function(child){
 				child.refresh();
 			});
-	
+
 			dom.collapseExpand.style.display = expandable ? '' : 'none';
-	
+
 			if(expanded && expandable){
 				expand();
 			}
@@ -1307,27 +1307,27 @@
 				collapse();
 			}
 		}
-	
-	
+
+
 		function collapse(recursive){
 			if(recursive){
 				children.forEach(function(child){
 					child.collapse(true);
 				});
 			}
-	
+
 			expanded = false;
-	
+
 			dom.children.style.display = 'none';
 			dom.collapseExpand.className = 'expand';
 			dom.container.classList.add('collapsed');
 			dom.container.classList.remove('expanded');
 		}
-	
-	
+
+
 		function expand(recursive){
 			var keys;
-	
+
 			if(type == 'object'){
 				keys = Object.keys(value);
 			}
@@ -1339,76 +1339,76 @@
 			else{
 				keys = [];
 			}
-	
+
 			// Remove children that no longer exist
 			for(var i = children.length - 1; i >= 0; i --){
 				var child = children[i];
-	
+
 				if(keys.indexOf(child.name) == -1){
 					children.splice(i, 1);
 					removeChild(child);
 				}
 			}
-	
+
 			if(type != 'object' && type != 'array'){
 				return collapse();
 			}
-	
+
 			keys.forEach(function(key){
 				addChild(key, value[key]);
 			});
-	
+
 			if(recursive){
 				children.forEach(function(child){
 					child.expand(true);
 				});
 			}
-	
+
 			expanded = true;
 			dom.children.style.display = '';
 			dom.collapseExpand.className = 'collapse';
 			dom.container.classList.add('expanded');
 			dom.container.classList.remove('collapsed');
 		}
-	
-	
+
+
 		function destroy(){
 			var child, event;
-	
+
 			while(event = domEventListeners.pop()){
 				event.element.removeEventListener(event.name, event.fn);
 			}
-	
+
 			while(child = children.pop()){
 				removeChild(child);
 			}
 		}
-	
-	
+
+
 		function setName(newName){
 			var nameType = typeof newName,
 				oldName = name;
-	
+
 			if(newName === name){
 				return;
 			}
-	
+
 			if(nameType != 'string' && nameType != 'number'){
 				throw new Error('Name must be either string or number, ' + newName);
 			}
-	
+
 			dom.name.innerText = newName;
 			name = newName;
 			self.emit('rename', self, oldName, newName);
 		}
-	
-	
+
+
 		function setValue(newValue){
 			var oldValue = value,
 				str;
-	
+
 			type = getType(newValue);
-	
+
 			switch(type){
 				case 'null':
 					str = 'null';
@@ -1416,54 +1416,54 @@
 				case 'object':
 					str = 'Object[' + Object.keys(newValue).length + ']';
 					break;
-	
+
 				case 'array':
 					str = 'Array[' + newValue.length + ']';
 					break;
-	
+
 				default:
 					str = newValue;
 					break;
 			}
-	
+
 			dom.value.innerText = str;
 			dom.value.className = 'value ' + type;
-	
+
 			if(newValue === value){
 				return;
 			}
-	
+
 			value = newValue;
-	
+
 			if(type == 'array' || type == 'object'){
 				// Cannot edit objects as string because the formatting is too messy
 				// Would have to either pass as JSON and force user to wrap properties in quotes
 				// Or first JSON stringify the input before passing, this could allow users to reference globals
-	
+
 				// Instead the user can modify individual properties, or just delete the object and start again
 				valueEditable = false;
-	
+
 				if(type == 'array'){
 					// Obviously cannot modify array keys
 					nameEditable = false;
 				}
 			}
-	
+
 			refresh();
 			self.emit('change', name, oldValue, newValue);
 		}
-	
-	
+
+
 		function addChild(key, val){
 			var child;
-	
+
 			for(var i = 0, len = children.length; i < len; i ++){
 				if(children[i].name == key){
 					child = children[i];
 					break;
 				}
 			}
-	
+
 			if(child){
 				child.value = val;
 			}
@@ -1474,67 +1474,67 @@
 				child.on('change', onChildChange);
 				children.push(child);
 			}
-	
+
 			dom.children.appendChild(child.dom);
-	
+
 			return child;
 		}
-	
-	
+
+
 		function removeChild(child){
 			if(child.dom.parentNode){
 				dom.children.removeChild(child.dom);
 			}
-	
+
 			child.destroy();
 			child.removeAllListeners();
 		}
-	
-	
+
+
 		function editField(field){
 			var editable = field == 'name' ? nameEditable : valueEditable,
 				element = dom[field];
-	
+
 			if(!editable){
 				return;
 			}
-	
+
 			if(field == 'value' && type == 'string'){
 				element.innerText = '"' + value + '"';
 			}
-	
+
 			if(field == 'name'){
 				edittingName = true;
 			}
-	
+
 			if(field == 'value'){
 				edittingValue = true;
 			}
-	
+
 			element.classList.add('edit');
 			element.setAttribute('contenteditable', true);
 			element.focus();
 			document.execCommand('selectAll', false, null);
 		}
-	
-	
+
+
 		function editFieldStop(field){
 			var element = dom[field];
-			
+
 			if(field == 'name'){
 				if(!edittingName){
 					return;
 				}
 				edittingName = false;
 			}
-	
+
 			if(field == 'value'){
 				if(!edittingValue){
 					return;
 				}
 				edittingValue = false;
 			}
-			
+
 			if(field == 'name'){
 				setName(element.innerText);
 			}
@@ -1546,12 +1546,12 @@
 					setValue(element.innerText);
 				}
 			}
-	
+
 			element.classList.remove('edit');
 			element.removeAttribute('contenteditable');
 		}
-	
-	
+
+
 		function editFieldKeyPressed(field, e){
 			switch(e.key){
 				case 'Escape':
@@ -1560,12 +1560,12 @@
 					break;
 			}
 		}
-	
-	
+
+
 		function editFieldTabPressed(field, e){
 			if(e.key == 'Tab'){
 				editFieldStop(field);
-	
+
 				if(field == 'name'){
 					e.preventDefault();
 					editField('value');
@@ -1575,62 +1575,62 @@
 				}
 			}
 		}
-	
-	
+
+
 		function numericValueKeyDown(e){
 			var increment = 0, currentValue;
-	
+
 			if(type != 'number'){
 				return;
 			}
-	
+
 			switch(e.key){
 				case 'ArrowDown':
 				case 'Down':
 					increment = -1;
 					break;
-	
+
 				case 'ArrowUp':
 				case 'Up':
 					increment = 1;
 					break;
 			}
-	
+
 			if(e.shiftKey){
 				increment *= 10;
 			}
-	
+
 			if(e.ctrlKey || e.metaKey){
 				increment /= 10;
 			}
-	
+
 			if(increment){
 				currentValue = parseFloat(dom.value.innerText);
-	
+
 				if(!isNaN(currentValue)){
 					dom.value.innerText = Number((currentValue + increment).toFixed(10));
 				}
 			}
 		}
-	
-	
+
+
 		function getType(value){
 			var type = typeof value;
-	
+
 			if(type == 'object'){
 				if(value === null){
 					return 'null';
 				}
-	
+
 				if(Array.isArray(value)){
 					return 'array';
 				}
 			}
-	
+
 			return type;
 		}
-	
-	
+
+
 		function onCollapseExpandClick(){
 			if(expanded){
 				collapse();
@@ -1639,12 +1639,12 @@
 				expand();
 			}
 		}
-	
-	
+
+
 		function onInsertClick(){
 			var newName = type == 'array' ? value.length : undefined,
 				child = addChild(newName, null);
-	
+
 			if(type == 'array'){
 				value.push(null);
 				child.editValue();
@@ -1653,16 +1653,16 @@
 				child.editName();
 			}
 		}
-	
-	
+
+
 		function onDeleteClick(){
 			self.emit('delete', self);
 		}
-	
-	
+
+
 		function onChildRename(child, oldName, newName){
 			var allow = newName && type != 'array' && !(newName in value);
-	
+
 			if(allow){
 				value[newName] = child.value;
 				delete value[oldName];
@@ -1675,34 +1675,34 @@
 				// Cannot rename array keys, or duplicate object key names
 				child.name = oldName;
 			}
-	
+
 			child.once('rename', onChildRename);
 		}
-	
-	
+
+
 		function onChildChange(keyPath, oldValue, newValue, recursed){
 			if(!recursed){
 				value[keyPath] = newValue;
 			}
-	
+
 			self.emit('change', name + '.' + keyPath, oldValue, newValue, true);
 		}
-	
-	
+
+
 		function onChildDelete(child){
 			var key = child.name;
-	
+
 			if(type == 'array'){
 				value.splice(key, 1);
 			}
 			else{
 				delete value[key];
 			}
-	
+
 			refresh();
 		}
-	
-	
+
+
 		function addDomEventListener(element, name, fn){
 			element.addEventListener(name, fn);
 			domEventListeners.push({element : element, name : name, fn : fn});

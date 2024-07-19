@@ -6,8 +6,8 @@ import AppDataSource from "../AppDataSource";
 
 @Entity({ name: "legal_person" })
 class LegalPersonEntity {
-  @PrimaryGeneratedColumn()
-  id: number = -1;
+	@PrimaryGeneratedColumn()
+	id: number = -1;
 
 
 	@Column({ nullable: false })
@@ -74,7 +74,7 @@ async function createIssuer(createIssuer: CreateLegalPerson) {
 
 async function getAllLegalPersons(): Promise<Result<LegalPersonEntity[], GetLegalPersonErr>> {
 	try {
-		const lps = await legalPersonRepository 
+		const lps = await legalPersonRepository
 			.createQueryBuilder("legal_person")
 			.select(["legal_person.id", "legal_person.friendlyName", "legal_person.url", "legal_person.did"])
 			.getMany();
@@ -88,7 +88,7 @@ async function getAllLegalPersons(): Promise<Result<LegalPersonEntity[], GetLega
 
 async function getAllLegalPersonsDIDs(): Promise<Result<string[], GetLegalPersonErr>> {
 	try {
-		const vcList = await legalPersonRepository 
+		const vcList = await legalPersonRepository
 			.createQueryBuilder("legal_person")
 			.getMany();
 
@@ -106,7 +106,7 @@ async function getAllLegalPersonsDIDs(): Promise<Result<string[], GetLegalPerson
 
 async function getLegalPersonsBySearchParams(friendlyNameSubstring: string): Promise<Result<LegalPersonEntity[], GetLegalPersonErr>> {
 	try {
-		const issuersList = await legalPersonRepository 
+		const issuersList = await legalPersonRepository
 			.createQueryBuilder("legal_person")
 			.select(["legal_person.id", "legal_person.friendlyName", "legal_person.url", "legal_person.did"])
 			.where("friendlyName LIKE '%:friendlyNameSubstring%", { friendlyNameSubstring })
@@ -125,10 +125,10 @@ async function getLegalPersonsBySearchParams(friendlyNameSubstring: string): Pro
 }
 
 /**
- * Will also update the issuer DB entity with the latest metadata
- * @param id 
- * @returns 
- */
+* Will also update the issuer DB entity with the latest metadata
+* @param id
+* @returns
+*/
 async function getLegalPersonById(id: number): Promise<Result<LegalPersonEntity, GetLegalPersonErr>> {
 
 	try {
@@ -146,10 +146,10 @@ async function getLegalPersonById(id: number): Promise<Result<LegalPersonEntity,
 }
 
 /**
- * Will also update the issuer DB entity with the latest metadata
- * @param id 
- * @returns 
- */
+* Will also update the issuer DB entity with the latest metadata
+* @param id
+* @returns
+*/
 async function getLegalPersonByDID(did: string): Promise<Result<LegalPersonEntity | null, GetLegalPersonErr>> {
 
 	try {
@@ -168,10 +168,10 @@ async function getLegalPersonByDID(did: string): Promise<Result<LegalPersonEntit
 
 
 /**
- * Will also update the issuer DB entity with the latest metadata
- * @param id 
- * @returns 
- */
+* Will also update the issuer DB entity with the latest metadata
+* @param id
+* @returns
+*/
 async function getLegalPersonByUrl(url: string): Promise<Result<LegalPersonEntity | null, GetLegalPersonErr>> {
 
 	try {

@@ -9,7 +9,7 @@ yarn install
 ## Change configuration
 
 Edit `config/config.dev.ts` file to change the configuration of the app.
-## Run in dev mode 
+## Run in dev mode
 
 ```
 yarn dev
@@ -70,7 +70,7 @@ rsync --rsh='ssh -p 65432' <snapshot_name>.tar.gz root@ip:/tmp
 cd /tmp
 rm -rf wallet-backend
 mkdir wallet-backend
-tar -xf <snapshot_name>.tar.gz -C wallet-backend 
+tar -xf <snapshot_name>.tar.gz -C wallet-backend
 cd wallet-backend
 chmod +x entrypoint.sh
 ./entrypoint.sh
@@ -80,5 +80,3 @@ Add `Listen 9002` below the `Listen 443` line on `/etc/apache2/ports.conf`
 and restart apache
 
 # 3 Logging
-
-
