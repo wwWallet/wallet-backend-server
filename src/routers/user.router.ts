@@ -36,7 +36,14 @@ userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
 
-async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: Buffer }> {
+async function initSession(user: UserEntity): Promise<{
+	did: string,
+	appToken: string,
+	username?: string,
+	displayName: string,
+	privateData: Buffer,
+	webauthnRpId: string,
+}> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
@@ -47,6 +54,7 @@ async function initSession(user: UserEntity): Promise<{ did: string, appToken: s
 		displayName: user.displayName || user.username,
 		privateData: user.privateData,
 		username: user.username,
+		webauthnRpId: webauthn.getRpId(),
 	};
 }
 
@@ -105,7 +113,7 @@ noAuthUserController.post('/register/db-keys', async (req: Request, res: Respons
 })
 
 noAuthUserController.post('/login/db-keys', async (req: Request, res: Response) => {
-	
+
 })
 
 noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
@@ -164,7 +172,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
 			{...req.body as RegistrationParams }
 		);
-	
+
 		if (walletInitializationResult.err) {
 			return res.status(400).send({ error: walletInitializationResult.val })
 		}
