@@ -32,7 +32,12 @@ app.set('json replacer', replacerBufferToTaggedBase64Url);
 app.use(express.static('public'));
 // __dirname is "/path/to/dist/src"
 // public is located at "/path/to/dist/src"
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({
+	credentials: true,
+	origin: true,
+	allowedHeaders: ['Authorization', 'Content-Type', 'X-Private-Data-If-Match'],
+	exposedHeaders: ['X-Private-Data-ETag'],
+}));
 
 
 // define routes and middleware here

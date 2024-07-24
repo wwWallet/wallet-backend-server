@@ -6,13 +6,23 @@ import base64url from "base64url";
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
 import { FcmTokenEntity } from "./FcmToken.entity";
-import { isResult } from "../util/util";
+import { checkedUpdate, EtagUpdate, isResult } from "../util/util";
 import { runTransaction } from "./common.entity";
 
 export enum WalletType {
 	DB,
 	CLIENT
 }
+
+
+/**
+ * Compute a value suitable to use as an ETag-style HTTP header for the private data field.
+ */
+export function privateDataEtag(privateData: Buffer): string {
+	const etag = base64url.toBase64(base64url.encode(crypto.createHash('sha256').update(privateData).digest()));
+	return `"${etag}"`;
+}
+
 
 @Entity({ name: "user" })
 class UserEntity {
@@ -148,7 +158,7 @@ enum UpdateUserErr {
 	NOT_EXISTS = "NOT_EXISTS",
 	DB_ERR = "DB_ERR",
 	LAST_WEBAUTHN_CREDENTIAL = "LAST_WEBAUTHN_CREDENTIAL",
-	CONFLICT = "CONFLICT",
+	PRIVATE_DATA_CONFLICT = "PRIVATE_DATA_CONFLICT",
 }
 
 enum UpdateFcmError {
@@ -425,9 +435,8 @@ async function updateWebauthnCredentialById(userDid: string, credentialUuid: str
 	});
 }
 
-async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<void, UpdateUserErr>> {
+async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, updatePrivateData: EtagUpdate<Buffer>): Promise<Result<void, UpdateUserErr>> {
 	try {
-
 		return Ok(await runTransaction(async (manager) => {
 			const userRes = await manager.findOne(UserEntity, { where: { did: user.did }});
 			if (!userRes) {
@@ -449,8 +458,19 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 				.where({ user, id: credentialUuid })
 				.execute();
 			if (res.affected > 0) {
-				await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData });
-				return Ok.EMPTY;
+				const newPrivateData = checkedUpdate(
+					updatePrivateData.expectTag,
+					privateDataEtag,
+					{
+						currentValue: userRes.privateData,
+						newValue: updatePrivateData.newValue,
+					});
+				if (newPrivateData.ok) {
+					await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData.val });
+					return Ok.EMPTY;
+				} else {
+					return Err(UpdateUserErr.PRIVATE_DATA_CONFLICT);
+				}
 			} else if (res.affected === 0) {
 				return Err(UpdateUserErr.NOT_EXISTS);
 			}
