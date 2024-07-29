@@ -35,7 +35,7 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-async function filterUserData(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string, webauthnCredentials: WebauthnCredentialEntity[] }> {
+async function initSession(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string, webauthnCredentials: WebauthnCredentialEntity[] }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
@@ -78,7 +78,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 
 	const result = (await createUser(newUser));
 	if (result.ok) {
-		res.status(200).send(await filterUserData(result.val));
+		res.status(200).send(await initSession(result.val));
 
 	} else {
 		console.log("Failed to create user")
@@ -99,7 +99,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	res.status(200).send(await filterUserData(user));
+	res.status(200).send(await initSession(user));
 })
 
 noAuthUserController.post('/register/db-keys', async (req: Request, res: Response) => {
@@ -191,7 +191,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false,);
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send(await filterUserData(userRes.val));
+			res.status(200).send(await initSession(userRes.val));
 		} else {
 			res.status(500).send({});
 		}
@@ -263,7 +263,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send(await filterUserData(user));
+			res.status(200).send(await initSession(user));
 		} else {
 			res.status(500).send({});
 		}
