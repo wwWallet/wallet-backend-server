@@ -35,21 +35,21 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-
-async function initSession(user: UserEntity): Promise<{ did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
+async function initSession(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
 	return {
+		id: user.id,
 		appToken,
 		did: user.did,
 		displayName: user.displayName || user.username,
 		privateData: user.privateData.toString(),
 		username: user.username,
+		webauthnUserHandle: user.webauthnUserHandle,
 	};
 }
-
 
 noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	const username = req.body.username;
@@ -60,7 +60,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 	}
 
 	const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
-		{...req.body as RegistrationParams }
+		{ ...req.body as RegistrationParams }
 	);
 
 	if (walletInitializationResult.err) {
@@ -162,7 +162,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			return;
 		}
 		const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
-			{...req.body as RegistrationParams }
+			{ ...req.body as RegistrationParams }
 		);
 
 		if (walletInitializationResult.err) {
@@ -187,7 +187,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			],
 		};
 
-		const userRes = await createUser(newUser, false, );
+		const userRes = await createUser(newUser, false,);
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
 			res.status(200).send(await initSession(userRes.val));
@@ -277,8 +277,8 @@ userController.post('/fcm_token/add', async (req: Request, res: Response) => {
 	const userDID = req.user.did;
 	updateUserByDID(userDID, (userEntity, manager) => {
 		if (req.body.fcm_token &&
-				req.body.fcm_token != '' &&
-				userEntity.fcmTokenList.filter((fcmTokenEntity) => fcmTokenEntity.value == req.body.fcm_token).length == 0) {
+			req.body.fcm_token != '' &&
+			userEntity.fcmTokenList.filter((fcmTokenEntity) => fcmTokenEntity.value == req.body.fcm_token).length == 0) {
 			const fcmTokenEntity = new FcmTokenEntity();
 			fcmTokenEntity.user = userEntity;
 			fcmTokenEntity.value = req.body.fcm_token;

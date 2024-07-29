@@ -31,6 +31,7 @@ const sendPushNotification = async (fcm_token, title, body) => {
 				body,
 			},
 			data: {
+				scope: '/notifications/'
 			},
 			apns: {
 				payload: {
