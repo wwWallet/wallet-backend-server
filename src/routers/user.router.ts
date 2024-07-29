@@ -35,22 +35,6 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-
-async function initSession(user: UserEntity): Promise<{ id: number; did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: user.did })
-		.setProtectedHeader({ alg: "HS256" })
-		.sign(secret);
-	return {
-		id: user.id,
-		appToken,
-		did: user.did,
-		displayName: user.displayName || user.username,
-		privateData: user.privateData.toString(),
-		username: user.username,
-	};
-}
-
 async function filterUserData(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string, webauthnCredentials: WebauthnCredentialEntity[] }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
@@ -94,7 +78,7 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 
 	const result = (await createUser(newUser));
 	if (result.ok) {
-		res.status(200).send(await initSession(result.val));
+		res.status(200).send(await filterUserData(result.val));
 
 	} else {
 		console.log("Failed to create user")
@@ -115,7 +99,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	res.status(200).send(await initSession(user));
+	res.status(200).send(await filterUserData(user));
 })
 
 noAuthUserController.post('/register/db-keys', async (req: Request, res: Response) => {
@@ -207,10 +191,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false,);
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send({
-				session: await initSession(userRes.val),
-				newUser: await filterUserData(userRes.val)
-			});
+			res.status(200).send(await filterUserData(userRes.val));
 		} else {
 			res.status(500).send({});
 		}
@@ -282,10 +263,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send({
-				session: await initSession(user),
-				newUser: await filterUserData(user)
-			});
+			res.status(200).send(await filterUserData(user));
 		} else {
 			res.status(500).send({});
 		}
