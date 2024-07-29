@@ -442,7 +442,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 
 		if (updateUserRes.ok) {
 			res.status(200)
-				.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+				.header({ 'X-Private-Data-ETag': privateDataEtag(updateUserRes.val.privateData) })
 				.send({ credentialId: credential.id });
 		} else if (updateUserRes.val === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
 			res.status(412)
@@ -495,7 +495,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	const deleteRes = await deleteWebauthnCredential(user, req.params.id, updatePrivateData);
 	if (deleteRes.ok) {
 		res.status(204)
-			.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+			.header({ 'X-Private-Data-ETag': privateDataEtag(updatePrivateData.newValue) })
 			.send();
 	} else {
 		if (deleteRes.val === UpdateUserErr.NOT_EXISTS) {
@@ -506,7 +506,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 
 		} else if (deleteRes.val === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
 			res.status(412)
-				.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+				.header({ 'X-Private-Data-ETag': privateDataEtag(updatePrivateData.newValue) })
 				.send();
 
 		} else {
