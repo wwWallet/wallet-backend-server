@@ -2,6 +2,10 @@ import config from '../config';
 import { WebauthnCredentialEntity } from './entities/user.entity';
 
 
+export function getRpId(): string {
+	return config.webauthn.rp.id;
+}
+
 export function makeCreateOptions({
 	challenge,
 	prfSalt,
@@ -60,7 +64,7 @@ export function makeGetOptions({
 }) {
 	return {
 		publicKey: {
-			rpId: config.webauthn.rp.id,
+			rpId: getRpId(),
 			challenge: challenge,
 			allowCredentials: (user?.webauthnCredentials || []).map(cred => cred.getCredentialDescriptor()),
 			userVerification: "required",

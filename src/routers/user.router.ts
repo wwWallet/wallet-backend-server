@@ -8,7 +8,7 @@ import { EntityManager } from "typeorm"
 
 import config from '../../config';
 import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
-import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
+import { jsonParseTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
@@ -35,7 +35,17 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-async function initSession(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string }> {
+
+async function initSession(user: UserEntity): Promise<{
+	id: number,
+	did: string,
+	appToken: string,
+	username?: string,
+	displayName: string,
+	privateData: Buffer,
+	webauthnRpId: string,
+	webauthnUserHandle: string,
+}> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
@@ -45,8 +55,9 @@ async function initSession(user: UserEntity): Promise<{ id: number, did: string,
 		appToken,
 		did: user.did,
 		displayName: user.displayName || user.username,
-		privateData: user.privateData.toString(),
+		privateData: user.privateData,
 		username: user.username,
+		webauthnRpId: webauthn.getRpId(),
 		webauthnUserHandle: user.webauthnUserHandle,
 	};
 }
@@ -125,10 +136,10 @@ noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: 
 		},
 	});
 
-	res.status(200).send(jsonStringifyTaggedBinary({
+	res.status(200).send({
 		challengeId: challenge.id,
 		createOptions,
-	}));
+	});
 });
 
 noAuthUserController.post('/register-webauthn-finish', async (req: Request, res: Response) => {
@@ -208,10 +219,10 @@ noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Res
 	const challenge = challengeRes.unwrap();
 	const getOptions = webauthn.makeGetOptions({ challenge: challenge.challenge });
 
-	res.status(200).send(jsonStringifyTaggedBinary({
+	res.status(200).send({
 		challengeId: challenge.id,
 		getOptions,
-	}));
+	});
 });
 
 noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Response) => {
@@ -301,7 +312,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 
 	const keys = jsonParseTaggedBinary(user.keys.toString());
 
-	res.status(200).send(jsonStringifyTaggedBinary({
+	res.status(200).send({
 		username: user.username,
 		displayName: user.displayName,
 		did: user.did,
@@ -316,7 +327,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			nickname: cred.nickname,
 			prfCapable: cred.prfCapable,
 		})),
-	}));
+	});
 })
 
 userController.post('/webauthn/register-begin', async (req: Request, res: Response) => {
@@ -349,11 +360,11 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 		},
 	});
 
-	res.status(200).send(jsonStringifyTaggedBinary({
+	res.status(200).send({
 		username: user.username,
 		challengeId: challenge.id,
 		createOptions,
-	}));
+	});
 });
 
 userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
@@ -404,15 +415,15 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 				}, manager)
 			);
 			if (req.body.privateData) {
-				userEntity.privateData = Buffer.from(req.body.privateData);
+				userEntity.privateData = req.body.privateData;
 			}
 			return userEntity;
 		});
 
 		if (updateUserRes.ok) {
-			res.status(200).send(jsonStringifyTaggedBinary({
+			res.status(200).send({
 				credentialId: credential.id
-			}));
+			});
 		} else {
 			res.status(500).send({});
 		}
@@ -453,7 +464,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	}
 	const user = userRes.unwrap();
 
-	const deleteRes = await deleteWebauthnCredential(user, req.params.id, Buffer.from(req.body.privateData));
+	const deleteRes = await deleteWebauthnCredential(user, req.params.id, req.body.privateData);
 	if (deleteRes.ok) {
 		res.status(204).send();
 	} else {
@@ -462,6 +473,26 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 
 		} else if (deleteRes.val === UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL) {
 			res.status(409).send();
+
+		} else {
+			res.status(500).send();
+		}
+	}
+})
+
+userController.post('/update-private-data', async (req: Request, res: Response) => {
+	console.log("update private data", req.body);
+
+	const updateUserRes = await updateUserByDID(req.user.did, userEntity => {
+		userEntity.privateData = req.body;
+		return userEntity;
+	});
+
+	if (updateUserRes.ok) {
+		res.status(204).send();
+	} else {
+		if (updateUserRes.val === UpdateUserErr.NOT_EXISTS) {
+			res.status(404).send();
 
 		} else {
 			res.status(500).send();
