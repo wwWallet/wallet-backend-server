@@ -494,9 +494,6 @@ userController.post('/update-private-data', async (req: Request, res: Response) 
 		if (updateUserRes.val === UpdateUserErr.NOT_EXISTS) {
 			res.status(404).send();
 
-		} else if (updateUserRes.val === UpdateUserErr.CONFLICT) {
-			res.status(409).send();
-
 		} else {
 			res.status(500).send();
 		}
