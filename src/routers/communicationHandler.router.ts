@@ -70,7 +70,7 @@ communicationHandlerRouter.post('/handle', async (req, res) => {
 			const {
 				url,
 			} = req.body;
-	
+
 			if (!(new URL(url).searchParams.get("code"))) {
 				throw new Error("No code was provided");
 			}
@@ -89,7 +89,7 @@ communicationHandlerRouter.post('/handle', async (req, res) => {
 			const {
 				user_pin
 			} = req.body;
-	
+
 			const response = await openidForCredentialIssuanceService.requestCredentialsWithPreAuthorizedGrant(req.user.did, user_pin);
 			console.log("Response = ", response)
 			if (response.error) {
@@ -139,17 +139,17 @@ communicationHandlerRouter.post('/handle', async (req, res) => {
 		const {
 			verifiable_credentials_map, // { "descriptor_id1": "urn:vid:123", "descriptor_id1": "urn:vid:645" }
 		} = req.body;
-	
+
 		console.log("Credentials map = ", verifiable_credentials_map)
 		const selection = new Map(Object.entries(verifiable_credentials_map)) as Map<string, string>;
 		console.log("Selection = ", verifiable_credentials_map)
 		try {
 			const result = await openidForPresentationService.sendResponse(req.user.did, selection);
-	
+
 			if (!result.ok) {
 				return res.send({ error: SendResponseError.SEND_RESPONSE_ERROR });
 			}
-	
+
 			const { redirect_to } = result.val;
 			console.log("Successfully handled by sendResponse");
 			return res.send({ redirect_to });
@@ -157,7 +157,7 @@ communicationHandlerRouter.post('/handle', async (req, res) => {
 		catch(error) {
 			const errText = `Error generating authorization response: ${error}`;
 			console.log(errText);
-		}	
+		}
 	}
 	return res.status(400).send({ error: "Could not handle" });
 });

@@ -74,4 +74,3 @@ appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).regi
 server.listen(config.port, () => {
 	console.log(`Wallet Backend Server listening with ${config.url}`)
 });
-

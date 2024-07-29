@@ -8,10 +8,10 @@ import { WalletKey } from "@wwwallet/ssi-sdk";
 import { WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {
-	
+
 	getAvailableSupportedCredentials(userDid: string, legalPersonIdentifier: string): Promise<Array<{id: string, displayName: string}>>
 	generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }>;
-	
+
 	handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
 	requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string): Promise<{error?: string}>;
 
@@ -73,9 +73,9 @@ export interface OutboundCommunication {
 	handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>>;
 
 	/**
-	 * 
+	 *
 	 * @param userDid
-	 * @param req 
+	 * @param req
 	 * @param selection (key: descriptor_id, value: verifiable credential identifier)
 	 */
 	sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>>;
