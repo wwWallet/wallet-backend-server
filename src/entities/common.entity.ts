@@ -2,6 +2,7 @@ import { Result } from "ts-results";
 import { EntityManager } from "typeorm"
 
 import AppDataSource from "../AppDataSource";
+import { isResult } from "../util/util";
 
 /**
 	* Run the provided callback in a database transaction. The `entityManager` can
@@ -17,7 +18,7 @@ import AppDataSource from "../AppDataSource";
 export async function runTransaction<T, E>(runInTransaction: (entityManager: EntityManager) => Promise<Result<T, E> | T>): Promise<T> {
 	return await AppDataSource.manager.transaction(async (entityManager) => {
 		const result = await runInTransaction(entityManager);
-		if ("val" in result && "ok" in result && "err" in result) {
+		if (isResult(result)) {
 			if (result.ok) {
 				return Promise.resolve(result.val);
 			} else {

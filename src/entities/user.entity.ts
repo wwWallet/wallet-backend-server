@@ -6,11 +6,23 @@ import base64url from "base64url";
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
 import { FcmTokenEntity } from "./FcmToken.entity";
+import { checkedUpdate, EtagUpdate, isResult } from "../util/util";
+import { runTransaction } from "./common.entity";
 
 export enum WalletType {
 	DB,
 	CLIENT
 }
+
+
+/**
+ * Compute a value suitable to use as an ETag-style HTTP header for the private data field.
+ */
+export function privateDataEtag(privateData: Buffer): string {
+	const etag = base64url.toBase64(base64url.encode(crypto.createHash('sha256').update(privateData).digest()));
+	return `"${etag}"`;
+}
+
 
 @Entity({ name: "user" })
 class UserEntity {
@@ -146,6 +158,7 @@ enum UpdateUserErr {
 	NOT_EXISTS = "NOT_EXISTS",
 	DB_ERR = "DB_ERR",
 	LAST_WEBAUTHN_CREDENTIAL = "LAST_WEBAUTHN_CREDENTIAL",
+	PRIVATE_DATA_CONFLICT = "PRIVATE_DATA_CONFLICT",
 }
 
 enum UpdateFcmError {
@@ -346,27 +359,41 @@ function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>
 	return entity;
 }
 
-async function updateUserByDID(did: string, update: (user: UserEntity, entityManager: EntityManager) => UserEntity): Promise<Result<UserEntity, UpdateUserErr>> {
-	return await userRepository.manager.transaction(async (manager) => {
-		const res = await manager.findOne(UserEntity, {
-			where: {
-				did: did
+async function updateUserByDID<E = never>(did: string, update: (user: UserEntity, entityManager: EntityManager) => UserEntity | Result<UserEntity, E>): Promise<Result<UserEntity, UpdateUserErr | E>> {
+	try {
+		return await userRepository.manager.transaction(async (manager) => {
+			const res = await manager.findOne(UserEntity, {
+				where: {
+					did: did
+				}
+			});
+			if (!res) {
+				return Promise.reject(Err(UpdateUserErr.NOT_EXISTS));
+			}
+
+			const updatedUser = update(res, manager);
+			if (isResult(updatedUser)) {
+				if (updatedUser.ok) {
+					await manager.save(updatedUser.val);
+					return updatedUser;
+				} else {
+					return updatedUser;
+				}
+			} else {
+				await manager.save(updatedUser);
+				return Ok(updatedUser);
 			}
 		});
-		if (!res) {
-			return Err(UpdateUserErr.NOT_EXISTS);
-		}
-
-		const updatedUser = update(res, manager);
-
-		try {
-			await manager.save(updatedUser);
-			return Ok(res);
-		} catch (e) {
+	} catch (e) {
+		if (isResult(e)) {
+			if (e.err) {
+				return e as Result<UserEntity, UpdateUserErr | E>;
+			}
+		} else {
 			console.log(e);
 			return Err(UpdateUserErr.DB_ERR);
 		}
-	});
+	}
 }
 
 async function updateWebauthnCredentialWithManager(
@@ -408,10 +435,9 @@ async function updateWebauthnCredentialById(userDid: string, credentialUuid: str
 	});
 }
 
-async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, newPrivateData: Buffer): Promise<Result<{}, UpdateUserErr>> {
+async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, updatePrivateData: EtagUpdate<Buffer>): Promise<Result<void, UpdateUserErr>> {
 	try {
-
-		return await userRepository.manager.transaction(async (manager) => {
+		return Ok(await runTransaction(async (manager) => {
 			const userRes = await manager.findOne(UserEntity, { where: { did: user.did }});
 			if (!userRes) {
 				return Err(UpdateUserErr.NOT_EXISTS);
@@ -432,16 +458,27 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 				.where({ user, id: credentialUuid })
 				.execute();
 			if (res.affected > 0) {
-				await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData });
-				return Ok({});
+				const newPrivateData = checkedUpdate(
+					updatePrivateData.expectTag,
+					privateDataEtag,
+					{
+						currentValue: userRes.privateData,
+						newValue: updatePrivateData.newValue,
+					});
+				if (newPrivateData.ok) {
+					await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData.val });
+					return Ok.EMPTY;
+				} else {
+					return Err(UpdateUserErr.PRIVATE_DATA_CONFLICT);
+				}
 			} else if (res.affected === 0) {
 				return Err(UpdateUserErr.NOT_EXISTS);
 			}
-		});
+		}));
 
 	} catch (e) {
-		console.log(e);
-		return Err(UpdateUserErr.DB_ERR);
+		console.log('Failed to delete WebAuthn credential:', e);
+		return Err(e);
 	}
 }
 

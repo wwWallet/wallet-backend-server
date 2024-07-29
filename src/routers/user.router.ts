@@ -7,8 +7,8 @@ import base64url from 'base64url';
 import { EntityManager } from "typeorm"
 
 import config from '../../config';
-import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
-import { jsonParseTaggedBinary } from '../util/util';
+import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
+import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
@@ -88,7 +88,9 @@ noAuthUserController.post('/register', async (req: Request, res: Response) => {
 
 	const result = (await createUser(newUser));
 	if (result.ok) {
-		res.status(200).send(await initSession(result.val));
+		res.status(200)
+			.header({ 'X-Private-Data-ETag': privateDataEtag(result.val.privateData) })
+			.send(await initSession(result.val));
 
 	} else {
 		console.log("Failed to create user")
@@ -109,7 +111,9 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 	}
 	console.log('user res = ', userRes)
 	const user = userRes.unwrap();
-	res.status(200).send(await initSession(user));
+	res.status(200)
+		.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+		.send(await initSession(user));
 })
 
 noAuthUserController.post('/register/db-keys', async (req: Request, res: Response) => {
@@ -201,7 +205,9 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false,);
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send(await initSession(userRes.val));
+			res.status(200)
+				.header({ 'X-Private-Data-ETag': privateDataEtag(userRes.val.privateData) })
+				.send(await initSession(userRes.val));
 		} else {
 			res.status(500).send({});
 		}
@@ -273,7 +279,9 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send(await initSession(user));
+			res.status(200)
+				.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+				.send(await initSession(user));
 		} else {
 			res.status(500).send({});
 		}
@@ -414,16 +422,32 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 				}, manager)
 			);
-			if (req.body.privateData) {
-				userEntity.privateData = req.body.privateData;
+
+			const newPrivateData = checkedUpdate(
+				req.headers['x-private-data-if-match'],
+				privateDataEtag,
+				{
+					currentValue: userEntity.privateData,
+					newValue: req.body.privateData,
+				},
+			);
+			if (newPrivateData.ok) {
+				userEntity.privateData = newPrivateData.val;
+			} else {
+				return Err(UpdateUserErr.PRIVATE_DATA_CONFLICT);
 			}
+
 			return userEntity;
 		});
 
 		if (updateUserRes.ok) {
-			res.status(200).send({
-				credentialId: credential.id
-			});
+			res.status(200)
+				.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+				.send({ credentialId: credential.id });
+		} else if (updateUserRes.val === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
+			res.status(412)
+				.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+				.send({});
 		} else {
 			res.status(500).send({});
 		}
@@ -464,9 +488,15 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 	}
 	const user = userRes.unwrap();
 
-	const deleteRes = await deleteWebauthnCredential(user, req.params.id, req.body.privateData);
+	const updatePrivateData: EtagUpdate<Buffer> = {
+		expectTag: req.headers['x-private-data-if-match'] as string,
+		newValue: req.body.privateData,
+	};
+	const deleteRes = await deleteWebauthnCredential(user, req.params.id, updatePrivateData);
 	if (deleteRes.ok) {
-		res.status(204).send();
+		res.status(204)
+			.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+			.send();
 	} else {
 		if (deleteRes.val === UpdateUserErr.NOT_EXISTS) {
 			res.status(404).send();
@@ -474,31 +504,70 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 		} else if (deleteRes.val === UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL) {
 			res.status(409).send();
 
+		} else if (deleteRes.val === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
+			res.status(412)
+				.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
+				.send();
+
 		} else {
 			res.status(500).send();
 		}
 	}
 })
 
-userController.post('/update-private-data', async (req: Request, res: Response) => {
-	console.log("update private data", req.body);
-
+userController.post('/private-data', async (req: Request, res: Response) => {
 	const updateUserRes = await updateUserByDID(req.user.did, userEntity => {
-		userEntity.privateData = req.body;
-		return userEntity;
+		const newPrivateData = checkedUpdate(
+			req.headers['x-private-data-if-match'],
+			privateDataEtag,
+			{
+				currentValue: userEntity.privateData,
+				newValue: req.body,
+			},
+		);
+		if (newPrivateData.ok) {
+			userEntity.privateData = newPrivateData.val;
+			return Ok(userEntity);
+		} else {
+			return Err([UpdateUserErr.PRIVATE_DATA_CONFLICT, userEntity]);
+		}
 	});
 
 	if (updateUserRes.ok) {
-		res.status(204).send();
+		res.status(204)
+			.header({ 'X-Private-Data-ETag': privateDataEtag(updateUserRes.val.privateData) })
+			.send();
 	} else {
 		if (updateUserRes.val === UpdateUserErr.NOT_EXISTS) {
+			res.status(404).send();
+
+		} else if (updateUserRes.val[0] === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
+			res.status(412)
+				.header({ 'X-Private-Data-ETag': privateDataEtag(updateUserRes.val[1].privateData) })
+				.send();
+
+		} else {
+			res.status(500).send();
+		}
+	}
+});
+
+userController.get('/private-data', async (req: Request, res: Response) => {
+	const userRes = await getUserByDID(req.user.did);
+	if (userRes.ok) {
+		const privateData = userRes.val.privateData;
+		res.status(200)
+			.header({ 'X-Private-Data-ETag': privateDataEtag(privateData) })
+			.send({ privateData });
+	} else {
+		if (userRes.val === GetUserErr.NOT_EXISTS) {
 			res.status(404).send();
 
 		} else {
 			res.status(500).send();
 		}
 	}
-})
+});
 
 userController.delete('/', async (req: Request, res: Response) => {
 	const userDID = req.user.did;

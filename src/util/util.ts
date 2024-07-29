@@ -1,7 +1,11 @@
-
-import * as randomstring from 'randomstring';
 import * as crypto from 'crypto';
 import base64url from "base64url";
+import { Err, Ok, Result } from 'ts-results';
+
+
+export function isResult<T>(a: T | Result<T, unknown>): a is Result<T, unknown> {
+	return "val" in a && "ok" in a && "err" in a;
+}
 
 /**
 *
@@ -46,6 +50,28 @@ export function reviverTaggedBase64UrlToBuffer(key: string, value: any): any {
 		return base64url.toBuffer(value["$b64u"]);
 	} else {
 		return value;
+	}
+}
+
+
+export type EtagUpdate<T> = {
+	expectTag: string,
+	newValue: T,
+}
+
+/**
+ * Return `newValue` if and only if `comparator` returns a value strictly equal
+ * (`===`) to `expectTag` given `currentValue`.
+ */
+export function checkedUpdate<T, U>(
+	expectTag: U,
+	tagFunc: (value: T) => U,
+	{ currentValue, newValue }: { currentValue: T, newValue: T },
+): Result<T, void> {
+	if (tagFunc(currentValue) === expectTag) {
+		return Ok(newValue);
+	} else {
+		return Err.EMPTY;
 	}
 }
 
