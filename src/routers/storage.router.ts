@@ -35,7 +35,7 @@ async function getAllVerifiableCredentialsController(req, res) {
 }
 
 async function getVerifiableCredentialByCredentialIdentifierController(req, res) {
-	const holderDID = req.user.did;	
+	const holderDID = req.user.did;
 	const { credential_identifier } = req.params;
 	const vcFetchResult = await getVerifiableCredentialByCredentialIdentifier(holderDID, credential_identifier);
 	if (vcFetchResult.err) {
@@ -76,9 +76,9 @@ async function getAllVerifiablePresentationsController(req, res) {
 }
 
 async function getPresentationByPresentationIdentifierController(req, res) {
-	const holderDID = req.user.did;	
+	const holderDID = req.user.did;
 	const { presentation_identifier } = req.params;
-	
+
 	const vpResult = await getPresentationByIdentifier(holderDID, presentation_identifier);
 	if (vpResult.err) {
 		return res.status(500).send({ error: vpResult.val })

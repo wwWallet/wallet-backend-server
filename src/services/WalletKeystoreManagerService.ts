@@ -49,7 +49,7 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 			}
 		}
 	}
-	
+
 	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
 		const userRes = await getUserByDID(userDid)
 		if (userRes.err) {
