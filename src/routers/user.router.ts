@@ -7,7 +7,7 @@ import base64url from 'base64url';
 import { EntityManager } from "typeorm"
 
 import config from '../../config';
-import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, WebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
+import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, newWebauthnCredentialEntity, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
 import { jsonParseTaggedBinary, jsonStringifyTaggedBinary } from '../util/util';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -35,23 +35,7 @@ const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
 
-
-async function initSession(user: UserEntity): Promise<{ id: number; did: string, appToken: string, username?: string, displayName: string, privateData: string }> {
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: user.did })
-		.setProtectedHeader({ alg: "HS256" })
-		.sign(secret);
-	return {
-		id: user.id,
-		appToken,
-		did: user.did,
-		displayName: user.displayName || user.username,
-		privateData: user.privateData.toString(),
-		username: user.username,
-	};
-}
-
-async function filterUserData(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string, webauthnCredentials: WebauthnCredentialEntity[] }> {
+async function initSession(user: UserEntity): Promise<{ id: number, did: string, appToken: string, username?: string, displayName: string, privateData: string, webauthnUserHandle: string }> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const appToken = await new SignJWT({ did: user.did })
 		.setProtectedHeader({ alg: "HS256" })
@@ -64,7 +48,6 @@ async function filterUserData(user: UserEntity): Promise<{ id: number, did: stri
 		privateData: user.privateData.toString(),
 		username: user.username,
 		webauthnUserHandle: user.webauthnUserHandle,
-		webauthnCredentials: user.webauthnCredentials,
 	};
 }
 
@@ -207,10 +190,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		const userRes = await createUser(newUser, false,);
 		if (userRes.ok) {
 			console.log("Created user", userRes.val);
-			res.status(200).send({
-				session: await initSession(userRes.val),
-				newUser: await filterUserData(userRes.val)
-			});
+			res.status(200).send(await initSession(userRes.val));
 		} else {
 			res.status(500).send({});
 		}
@@ -282,10 +262,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 		});
 
 		if (updateCredentialRes.ok) {
-			res.status(200).send({
-				session: await initSession(user),
-				newUser: await filterUserData(user)
-			});
+			res.status(200).send(await initSession(user));
 		} else {
 			res.status(500).send({});
 		}
