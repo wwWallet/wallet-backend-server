@@ -68,9 +68,22 @@ export function checkedUpdate<T, U>(
 	tagFunc: (value: T) => U,
 	{ currentValue, newValue }: { currentValue: T, newValue: T },
 ): Result<T, void> {
-	if (tagFunc(currentValue) === expectTag) {
+	if (currentValue === newValue) {
+		// Change has already been applied (if T supports === equality)
 		return Ok(newValue);
+
 	} else {
+		const currentTag = tagFunc(currentValue)
+		if (currentTag === expectTag) {
+			// Expected change
+			return Ok(newValue);
+
+		} else {
+			if (currentTag === tagFunc(newValue)) {
+				// Change has already been applied (if T does not support === equality)
+				return Ok(newValue);
+			}
+		}
 		return Err.EMPTY;
 	}
 }
