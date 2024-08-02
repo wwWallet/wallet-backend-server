@@ -56,7 +56,7 @@ class UserEntity {
 	@Column({ type: "blob", nullable: false })
 	privateData: Buffer;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	@Generated("uuid")
 	webauthnUserHandle: string;
 
@@ -82,23 +82,23 @@ class WebauthnCredentialEntity {
 	@ManyToOne(() => UserEntity, (user) => user.webauthnCredentials, { nullable: false })
 	user: UserEntity;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	credentialId: Buffer;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	userHandle: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
 	nickname: string;
 
-	@Column({ type: "datetime", nullable: false })
+	@Column({ type: "datetime", nullable: false, update: false })
 	createTime: Date;
 
 	@Column({ type: "datetime", nullable: false })
 	lastUseTime: Date;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	publicKeyCose: Buffer;
 
 	@Column({ nullable: false })
@@ -107,10 +107,10 @@ class WebauthnCredentialEntity {
 	@Column("simple-json", { nullable: false })
 	transports: string[];
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	attestationObject: Buffer;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	create_clientDataJSON: Buffer;
 
 	@Column({ nullable: false })
