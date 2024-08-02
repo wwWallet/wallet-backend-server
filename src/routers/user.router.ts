@@ -163,7 +163,16 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 
 	const credential = req.body.credential;
 	const verification = await SimpleWebauthn.verifyRegistrationResponse({
-		response: credential,
+		response: {
+			type: credential.type,
+			id: credential.id,
+			rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+			response: {
+				attestationObject: base64url.encode(credential.response.attestationObject),
+				clientDataJSON: base64url.encode(credential.response.clientDataJSON),
+			},
+			clientExtensionResults: credential.clientExtensionResults,
+		},
 		expectedChallenge: base64url.encode(challenge.challenge),
 		expectedOrigin: config.webauthn.origin,
 		expectedRPID: config.webauthn.rp.id,
@@ -189,14 +198,14 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			webauthnUserHandle,
 			webauthnCredentials: [
 				newWebauthnCredentialEntity({
-					credentialId: Buffer.from(verification.registrationInfo.credentialID),
+					credentialId: credential.rawId,
 					userHandle: Buffer.from(webauthnUserHandle),
 					nickname: req.body.nickname,
 					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
 					signatureCount: verification.registrationInfo.counter,
 					transports: credential.response.transports || [],
-					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
-					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
+					attestationObject: credential.response.attestationObject,
+					create_clientDataJSON: credential.response.clientDataJSON,
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 				}),
 			],
@@ -235,8 +244,8 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	console.log("webauthn login-finish", req.body);
 
 	const credential = req.body.credential;
-	const userHandle = base64url.toBuffer(credential.response.userHandle).toString();
-	const credentialId = base64url.toBuffer(credential.id);
+	const userHandle = credential.response.userHandle.toString();
+	const credentialId = credential.rawId;
 
 	const userRes = await getUserByWebauthnCredential(userHandle, credentialId);
 	if (userRes.err) {
@@ -259,7 +268,17 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	console.log("webauthn login-finish challenge", challenge);
 
 	const verification = await SimpleWebauthn.verifyAuthenticationResponse({
-		response: credential,
+		response: {
+			type: credential.type,
+			id: credential.id,
+			rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+			response: {
+				authenticatorData: base64url.encode(credential.response.authenticatorData),
+				clientDataJSON: base64url.encode(credential.response.clientDataJSON),
+				signature: base64url.encode(credential.response.signature),
+			},
+			clientExtensionResults: credential.clientExtensionResults,
+		},
 		expectedChallenge: base64url.encode(challenge.challenge),
 		expectedOrigin: config.webauthn.origin,
 		expectedRPID: config.webauthn.rp.id,
@@ -400,7 +419,16 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 
 	const credential = req.body.credential;
 	const verification = await SimpleWebauthn.verifyRegistrationResponse({
-		response: credential,
+		response: {
+			type: credential.type,
+			id: credential.id,
+			rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+			response: {
+				attestationObject: base64url.encode(credential.response.attestationObject),
+				clientDataJSON: base64url.encode(credential.response.clientDataJSON),
+			},
+			clientExtensionResults: credential.clientExtensionResults,
+		},
 		expectedChallenge: base64url.encode(challenge.challenge),
 		expectedOrigin: config.webauthn.origin,
 		expectedRPID: config.webauthn.rp.id,
