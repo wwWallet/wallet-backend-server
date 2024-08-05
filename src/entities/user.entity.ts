@@ -1,7 +1,8 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, Generated, EntityManager, DeepPartial, JoinColumn } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, EntityManager, DeepPartial, Generated } from "typeorm"
 import crypto from "node:crypto";
 import base64url from "base64url";
+import * as uuid from 'uuid';
 
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
@@ -24,11 +25,63 @@ export function privateDataEtag(privateData: Buffer): string {
 }
 
 
+// Duplicated in wallet-frontend
+export class UserId {
+	public readonly id: string;
+	private constructor(id: string) {
+		this.id = id;
+	}
+
+	public toString(): string {
+		return `UserId(this.id)`;
+	}
+
+	public toJSON(): string {
+		return this.id;
+	}
+
+	static generate(): UserId {
+		return new UserId(uuid.v4());
+	}
+
+	static fromId(id: string): UserId {
+		return new UserId(id);
+	}
+
+	static fromUserHandle(userHandle: Buffer): UserId {
+		return new UserId(userHandle.toString());
+	}
+
+	public asUserHandle(): Buffer {
+		return Buffer.from(this.id, "utf8");
+	}
+}
+
+
 @Entity({ name: "user" })
 class UserEntity {
-	@PrimaryGeneratedColumn()
-	id: number;
+	/**
+	 * This was obsoleted by PR (TBD).
+	 * We keep the table column for forward- and backwards compatibility between application and schema versions.
+	 * It still needs to be the primary ID in order for table relations to continue working.
+	 */
+	@Column({ primary: true, unique: true, nullable: false, update: false })
+	@Generated("increment")
+	private id: number;
 
+	/**
+	 * This was renamed in PR (TBD).
+	 * We keep the old database column name for forward- and backwards compatibility between application and schema versions.
+	 */
+	@Column({
+		unique: true,
+		nullable: false,
+		update: false,
+		name: "webauthnUserHandle",
+		transformer: { from: UserId.fromId, to: (userId: UserId) => userId.id },
+	})
+	@Generated("uuid")
+	uuid: UserId;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ unique: true, nullable: true, default: () => "NULL" })
@@ -56,10 +109,6 @@ class UserEntity {
 	@Column({ type: "blob", nullable: false })
 	privateData: Buffer;
 
-	@Column({ nullable: false, update: false })
-	@Generated("uuid")
-	webauthnUserHandle: string;
-
 
 	@Column({ type: "enum" ,enum: WalletType, default: WalletType.DB })
 	walletType: WalletType;
@@ -85,8 +134,12 @@ class WebauthnCredentialEntity {
 	@Column({ nullable: false, update: false })
 	credentialId: Buffer;
 
-	@Column({ nullable: false, update: false })
-	userHandle: Buffer;
+	/**
+	 * This was obsoleted by PR (TBD).
+	 * We keep the table column for forward- and backwards compatibility between application and schema versions.
+	 */
+	@Column({ name: "userHandle", nullable: false, select: false, update: false })
+	_userHandle: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
@@ -133,14 +186,13 @@ type CreateUser = {
 	passwordHash: string;
 	fcmToken: string;
 	privateData: Buffer;
-	webauthnUserHandle: string;
 } | {
+	uuid: UserId;
 	displayName: string,
 	did: string;
 	keys: Buffer;
 	fcmToken: string;
 	privateData: Buffer;
-	webauthnUserHandle: string;
 	webauthnCredentials: WebauthnCredentialEntity[];
 }
 
@@ -217,7 +269,7 @@ async function deleteUserByDID(did: string, options?: { entityManager: EntityMan
 			const userRes = await manager.findOne(UserEntity, { where: { did: did }});
 
 			await manager.delete(WebauthnCredentialEntity, {
-				user: { id: userRes.id }
+				user: { uuid: userRes.uuid }
 			});
 
 			await manager.delete(UserEntity, {
@@ -274,12 +326,12 @@ async function getUserByCredentials(username: string, password: string): Promise
 }
 
 
-async function getUserByWebauthnCredential(userHandle: string, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
+async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
 	try {
-		console.log("getUserByWebauthnCredential", userHandle, base64url.encode(credentialId));
+		console.log("getUserByWebauthnCredential", userId, base64url.encode(credentialId));
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
-			.where("user.webauthnUserHandle = :userHandle", { userHandle })
+			.where("user.uuid = :uuid", { uuid: userId.id })
 			.andWhere("credential.credentialId = :credentialId", { credentialId });
 		console.log(q.getSql());
 		const userRes = await q.getOne();

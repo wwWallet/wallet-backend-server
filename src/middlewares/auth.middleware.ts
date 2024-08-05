@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 
 import { jwtVerify, SignJWT } from 'jose';
 import config from "../../config";
-import { getUserByDID, UserEntity } from "../entities/user.entity";
+import { getUserByDID, UserEntity, UserId } from "../entities/user.entity";
 
 
 type TokenPayloadVersion = 0;
@@ -16,6 +16,7 @@ type AppTokenPayload = {
 
 export type AppTokenUser = {
 	username: string;
+	id: UserId;
 	did: string;
 }
 
@@ -73,6 +74,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 			req.user = {
 				username: userRes.val.username,
 				did,
+				id: userRes.val.uuid,
 			};
 			return next();
 		}
