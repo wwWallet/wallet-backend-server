@@ -193,23 +193,6 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 	}
 }
 
-async function storeKeypair(username: string, did: string, keys: Buffer): Promise<Result<{}, Error>> {
-	try {
-		const res = await AppDataSource
-			.createQueryBuilder()
-			.update(UserEntity)
-			.set({ keys: keys, did: did })
-			.where('username = :username', { username })
-			.execute();
-
-		return Ok({});
-	}
-	catch(e) {
-		console.log(e);
-		return Err(e);
-	}
-}
-
 async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>> {
 	try {
 		const res = await userRepository.findOne({
