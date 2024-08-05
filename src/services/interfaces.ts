@@ -9,7 +9,6 @@ import { WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {
 
-	getAvailableSupportedCredentials(userDid: string, legalPersonIdentifier: string): Promise<Array<{id: string, displayName: string}>>
 	generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }>;
 
 	handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
