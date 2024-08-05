@@ -315,25 +315,6 @@ async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 		return Err(GetUserErr.DB_ERR)
 	}
 }
-// async function addFcmTokenByDID(did: string, newFcmToken: string) {
-// 	try {
-// 		const res = await AppDataSource.getRepository(UserEntity)
-// 			.createQueryBuilder("user")
-// 			.where("user.did = :did", { did: did })
-// 			.getOne();
-// 		const fcmTokens: string[] = JSON.parse(res.fcmTokens.toString());
-// 		fcmTokens.push(newFcmToken);
-// 		const updateRes = await AppDataSource.getRepository(UserEntity)
-// 			.createQueryBuilder("user")
-// 			.update({ fcmTokens: JSON.stringify(fcmTokens) })
-// 			.where("did = :did", { did: did })
-// 			.execute();
-// 	}
-// 	catch(err) {
-// 		console.log(err);
-// 		return Err(UpdateFcmError.DB_ERR);
-// 	}
-// }
 
 function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>, manager?: EntityManager): WebauthnCredentialEntity {
 	const entity = (manager || webauthnCredentialRepository.manager).create(WebauthnCredentialEntity, data);

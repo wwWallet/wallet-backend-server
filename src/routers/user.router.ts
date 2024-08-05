@@ -617,25 +617,5 @@ userController.delete('/', async (req: Request, res: Response) => {
 		return res.status(400).send({ result: e })
 	}
 });
-// /**
-//  * expect 'alg' query parameter
-//  */
-// userController.get('/keys/public', AuthMiddleware, async (req: Request, res: Response) => {
-// 	const did = req.user?.did;
-// 	const algorithm = req.query["alg"] as string;
-// 	if (did == undefined) {
-// 		res.status(401).send({ err: 'UNAUTHORIZED' });
-// 		return;
-// 	}
-// 	const alg: SigningAlgorithm = algorithm as SigningAlgorithm;
-// 	const result = await getPublicKey(did, algorithm as SigningAlgorithm);
-// 	if (!result) {
-// 		res.status(500).send();
-// 		return;
-// 	}
-// 	const { publicKeyJwk } = result;
-
-// 	res.send({ publicKeyJwk });
-// });
 
 export default noAuthUserController;
