@@ -1,12 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 import config from "../../config";
-import { getUserByDID } from "../entities/user.entity";
+import { getUserByDID, UserEntity } from "../entities/user.entity";
 
 export type AppTokenUser = {
 	username: string;
 	did: string;
+}
+
+export async function createAppToken(user: UserEntity): Promise<string> {
+	const secret = new TextEncoder().encode(config.appSecret);
+	return await new SignJWT({ did: user.did })
+		.setProtectedHeader({ alg: "HS256" })
+		.sign(secret);
 }
 
 async function verifyApptoken(jwt: string): Promise<{valid: boolean, payload: any}> {
