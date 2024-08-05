@@ -9,19 +9,6 @@ export type AppTokenUser = {
 	did: string;
 }
 
-function getCookieDictionary(cookies: any) {
-	const cookieList = cookies.split('; ');
-	let cookieDict: any = {};
-	for (const cookie of cookieList) {
-		const key = cookie.split('=')[0] as string;
-
-		const val = cookie.split('=')[1];
-		cookieDict[key] = val;
-
-	}
-	return cookieDict;
-}
-
 async function verifyApptoken(jwt: string): Promise<{valid: boolean, payload: any}> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	try {
