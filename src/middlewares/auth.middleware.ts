@@ -52,20 +52,18 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 			return;
 		}
 
-		// success
-		req.user = {
-			username: "",
-			did: ""
-		} as AppTokenUser;
-		req.user.did = (payload as AppTokenUser).did;
-		const userRes = await getUserByDID(req.user.did);
+		const { did } = payload;
+		const userRes = await getUserByDID(did);
 		if (userRes.err) {
 			res.status(401).send(); // Unauthorized
 			return;
 		}
+
 		const user = userRes.unwrap();
-		req.user.username = user.username;
-		req.user.did = user.did;
+		req.user = {
+			username: user.username,
+			did,
+		};
 		return next();
 	})
 	.catch(e => {
