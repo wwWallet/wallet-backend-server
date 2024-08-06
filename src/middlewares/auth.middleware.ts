@@ -4,6 +4,10 @@ import { jwtVerify, SignJWT } from 'jose';
 import config from "../../config";
 import { getUserByDID, UserEntity } from "../entities/user.entity";
 
+type AppTokenPayload = {
+	did: string;
+}
+
 export type AppTokenUser = {
 	username: string;
 	did: string;
@@ -11,20 +15,21 @@ export type AppTokenUser = {
 
 export async function createAppToken(user: UserEntity): Promise<string> {
 	const secret = new TextEncoder().encode(config.appSecret);
-	return await new SignJWT({ did: user.did })
+	const payload: AppTokenPayload = { did: user.did };
+	return await new SignJWT(payload)
 		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
 }
 
-async function verifyApptoken(jwt: string): Promise<{valid: boolean, payload: any}> {
+async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	try {
 		const { payload, protectedHeader } = await jwtVerify(jwt, secret);
-		return { valid: true, payload: payload };
+		return payload as AppTokenPayload;
 	}
 	catch (err) {
 		console.log('Signature verification failed');
-		return { valid: false, payload: {}}
+		return false;
 	}
 }
 
@@ -45,8 +50,8 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		return;
 	}
 
-	verifyApptoken(token).then(async ({valid, payload}) => {
-		if (valid === false) {
+	verifyApptoken(token).then(async (payload) => {
+		if (!payload) {
 			console.log("Unauthorized access to ", token);
 			res.status(401).send(); // Unauthorized
 			return;
