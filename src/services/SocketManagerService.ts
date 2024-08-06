@@ -1,12 +1,12 @@
 import { injectable } from "inversify";
 import { ExpectingSocketMessageErr, SocketManagerServiceInterface } from "./interfaces";
-import { Application } from "express";
 import * as WebSocket from 'ws';
 import http from 'http';
 import { Err, Ok, Result } from "ts-results";
 import { ServerSocketMessage, ClientSocketMessage, SignatureAction } from "./shared.types";
 import { jwtVerify } from "jose";
 import config from "../../config";
+import { UserId } from "../entities/user.entity";
 
 const openSockets = new Map<string, WebSocket.WebSocket>();
 
@@ -34,7 +34,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 						return;
 					}
 					const { payload } = await jwtVerify(appToken, secret);
-					openSockets.set(payload.did as string, ws);
+					openSockets.set(payload.uuid as string, ws);
 					ws.send(JSON.stringify({ type: "FIN_INIT" }));
 					console.log("Handshake established");
 				}
@@ -48,14 +48,14 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 		});
 	}
 
-	async send(userDid: string, message: ServerSocketMessage): Promise<Result<void, void>> {
-		const ws = openSockets.get(userDid);
+	async send(userId: UserId, message: ServerSocketMessage): Promise<Result<void, void>> {
+		const ws = openSockets.get(userId.id);
 		ws.send(JSON.stringify(message));
 		return Ok.EMPTY;
 	}
 
-	async expect(userDid: string, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>> {
-		const ws = openSockets.get(userDid);
+	async expect(userId: UserId, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>> {
+		const ws = openSockets.get(userId.id);
 		return new Promise((resolve, reject) => {
 			ws.onmessage = event => {
 				try {

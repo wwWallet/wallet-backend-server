@@ -3,7 +3,7 @@ import { AdditionalKeystoreParameters, DidKeyUtilityService, RegistrationParams,
 import { Err, Ok, Result } from "ts-results";
 import 'reflect-metadata';
 import { TYPES } from "./types";
-import { WalletType, getUserByDID } from "../entities/user.entity";
+import { UserId, WalletType, getUser } from "../entities/user.entity";
 
 /**
  * This class is responsible for deciding which WalletKeystore will be used each time depending on the user
@@ -17,7 +17,7 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		@inject(TYPES.DidKeyUtilityService) private didKeyUtilityService: DidKeyUtilityService
 	) { }
 
-	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
+	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
 		const fcmToken = registrationParams.fcm_token ? registrationParams.fcm_token : "";
 
 		// depending on additionalParameters, decide to use the corresponding keystore service
@@ -25,7 +25,6 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 			return Ok({
 				fcmToken,
 				keys: Buffer.from(JSON.stringify(registrationParams.keys)),
-				did: registrationParams.keys.did,
 				displayName: registrationParams.displayName,
 				privateData: Buffer.from(registrationParams.privateData),
 				walletType: WalletType.CLIENT
@@ -34,11 +33,10 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		else {
 			try {
 				console.log("Regular database")
-				const { did, key } = await this.didKeyUtilityService.generateKeyPair();
+				const { key } = await this.didKeyUtilityService.generateKeyPair();
 				return Ok({
 					fcmToken,
 					keys: Buffer.from(JSON.stringify(key)),
-					did: did,
 					displayName: registrationParams.displayName,
 					privateData: Buffer.from(""),
 					walletType: WalletType.DB
@@ -50,40 +48,40 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		}
 	}
 
-	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
-		const userRes = await getUserByDID(userDid)
+	async createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
+		const userRes = await getUser(userId)
 		if (userRes.err) {
 			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
 		}
 		const user = userRes.unwrap();
 		if (user.walletType != WalletType.DB)
-			return await this.clientWalletKeystoreService.createIdToken(userDid, nonce, audience, additionalParameters);
+			return await this.clientWalletKeystoreService.createIdToken(userId, nonce, audience, additionalParameters);
 		else
-			return await this.databaseKeystoreService.createIdToken(userDid, nonce, audience, additionalParameters);
+			return await this.databaseKeystoreService.createIdToken(userId, nonce, audience, additionalParameters);
 	}
 
-	async signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string; }, WalletKeystoreErr>> {
-		const userRes = await getUserByDID(userDid)
+	async signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string; }, WalletKeystoreErr>> {
+		const userRes = await getUser(userId)
 		if (userRes.err) {
 			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
 		}
 		const user = userRes.unwrap();
 		if (user.walletType != WalletType.DB)
-			return await this.clientWalletKeystoreService.signJwtPresentation(userDid, nonce, audience, verifiableCredentials, additionalParameters);
+			return await this.clientWalletKeystoreService.signJwtPresentation(userId, nonce, audience, verifiableCredentials, additionalParameters);
 		else
-			return await this.databaseKeystoreService.signJwtPresentation(userDid, nonce, audience, verifiableCredentials, additionalParameters);
+			return await this.databaseKeystoreService.signJwtPresentation(userId, nonce, audience, verifiableCredentials, additionalParameters);
 	}
 
-	async generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string; }, WalletKeystoreErr>> {
-		const userRes = await getUserByDID(userDid)
+	async generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string; }, WalletKeystoreErr>> {
+		const userRes = await getUser(userId)
 		if (userRes.err) {
 			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
 		}
 		const user = userRes.unwrap();
 		if (user.walletType != WalletType.DB)
-			return await this.clientWalletKeystoreService.generateOpenid4vciProof(userDid, audience, nonce, additionalParameters);
+			return await this.clientWalletKeystoreService.generateOpenid4vciProof(userId, audience, nonce, additionalParameters);
 		else
-			return await this.databaseKeystoreService.generateOpenid4vciProof(userDid, audience, nonce, additionalParameters);
+			return await this.databaseKeystoreService.generateOpenid4vciProof(userId, audience, nonce, additionalParameters);
 	}
 
 }

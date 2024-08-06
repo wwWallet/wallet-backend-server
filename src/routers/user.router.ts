@@ -6,7 +6,7 @@ import base64url from 'base64url';
 import { EntityManager } from "typeorm"
 
 import config from '../../config';
-import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
+import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
 import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
 import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -37,7 +37,6 @@ noAuthUserController.use('/session', userController);
 
 async function initSession(user: UserEntity): Promise<{
 	uuid: UserId,
-	did: string,
 	appToken: string,
 	username?: string,
 	displayName: string,
@@ -47,7 +46,6 @@ async function initSession(user: UserEntity): Promise<{
 	return {
 		uuid: user.uuid,
 		appToken: await createAppToken(user),
-		did: user.did,
 		displayName: user.displayName || user.username,
 		privateData: user.privateData,
 		username: user.username,
@@ -304,8 +302,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 
 
 userController.post('/fcm_token/add', async (req: Request, res: Response) => {
-	const userDID = req.user.did;
-	updateUserByDID(userDID, (userEntity, manager) => {
+	updateUser(req.user.id, (userEntity, manager) => {
 		if (req.body.fcm_token &&
 			req.body.fcm_token != '' &&
 			userEntity.fcmTokenList.filter((fcmTokenEntity) => fcmTokenEntity.value == req.body.fcm_token).length == 0) {
@@ -322,7 +319,7 @@ userController.post('/fcm_token/add', async (req: Request, res: Response) => {
 })
 
 userController.get('/account-info', async (req: Request, res: Response) => {
-	const userRes = await getUserByDID(req.user.did);
+	const userRes = await getUser(req.user.id);
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
@@ -335,7 +332,6 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 		uuid: user.uuid,
 		username: user.username,
 		displayName: user.displayName,
-		did: user.did,
 		hasPassword: user.passwordHash !== null,
 		publicKey: keys.publicKey,
 		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
@@ -350,7 +346,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 })
 
 userController.post('/webauthn/register-begin', async (req: Request, res: Response) => {
-	const userRes = await getUserByDID(req.user.did);
+	const userRes = await getUser(req.user.id);
 
 	if (userRes.err) {
 		res.status(403).send({});
@@ -384,7 +380,7 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
 	console.log("webauthn register-finish", req.body);
 
-	const userRes = await getUserByDID(req.user.did);
+	const userRes = await getUser(req.user.id);
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
@@ -422,7 +418,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	});
 
 	if (verification.verified) {
-		const updateUserRes = await updateUserByDID(user.did, (userEntity, manager) => {
+		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
 				newWebauthnCredentialEntity({
@@ -475,7 +471,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
 	console.log("webauthn rename", req.params.id);
 
-	const updateRes = await updateWebauthnCredentialById(req.user.did, req.params.id, (credentialEntity, manager) => {
+	const updateRes = await updateWebauthnCredentialById(req.user.id, req.params.id, (credentialEntity, manager) => {
 		credentialEntity.nickname = req.body.nickname || null;
 		return credentialEntity;
 	});
@@ -496,7 +492,7 @@ userController.post('/webauthn/credential/:id/rename', async (req: Request, res:
 userController.post('/webauthn/credential/:id/delete', async (req: Request, res: Response) => {
 	console.log("webauthn delete", req.params.id);
 
-	const userRes = await getUserByDID(req.user.did);
+	const userRes = await getUser(req.user.id);
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
@@ -531,7 +527,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 })
 
 userController.post('/private-data', async (req: Request, res: Response) => {
-	const updateUserRes = await updateUserByDID(req.user.did, userEntity => {
+	const updateUserRes = await updateUser(req.user.id, userEntity => {
 		const newPrivateData = checkedUpdate(
 			req.headers['x-private-data-if-match'],
 			privateDataEtag,
@@ -568,7 +564,7 @@ userController.post('/private-data', async (req: Request, res: Response) => {
 });
 
 userController.get('/private-data', async (req: Request, res: Response) => {
-	const userRes = await getUserByDID(req.user.did);
+	const userRes = await getUser(req.user.id);
 	if (userRes.ok) {
 		const privateData = userRes.val.privateData;
 		res.status(200)
@@ -585,17 +581,16 @@ userController.get('/private-data', async (req: Request, res: Response) => {
 });
 
 userController.delete('/', async (req: Request, res: Response) => {
-	const userDID = req.user.did;
 	try {
 		await runTransaction(async (entityManager: EntityManager) => {
 			// Note: this executes all four branches before checking if any failed.
 			// ts-results does not seem to provide an async-optimized version of Result.all(),
 			// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
 			return Result.all(
-				await deleteAllFcmTokensForUser(userDID, { entityManager }),
-				await deleteAllCredentialsWithHolderDID(userDID, { entityManager }),
-				await deleteAllPresentationsWithHolderDID(userDID, { entityManager }),
-				await deleteUserByDID(userDID, { entityManager }),
+				await deleteAllFcmTokensForUser(req.user.id, { entityManager }),
+				await deleteAllCredentialsWithHolderDID(req.user.did, { entityManager }),
+				await deleteAllPresentationsWithHolderDID(req.user.did, { entityManager }),
+				await deleteUser(req.user.id, { entityManager }),
 			);
 		});
 

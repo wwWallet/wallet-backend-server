@@ -1,5 +1,5 @@
 import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, EntityManager, DeepPartial, Generated } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, EntityManager, DeepPartial, Generated, Equal } from "typeorm"
 import crypto from "node:crypto";
 import base64url from "base64url";
 import * as uuid from 'uuid';
@@ -78,9 +78,10 @@ class UserEntity {
 		nullable: false,
 		update: false,
 		name: "webauthnUserHandle",
+		type: "varchar",
+		length: 36,
 		transformer: { from: UserId.fromId, to: (userId: UserId) => userId.id },
 	})
-	@Generated("uuid")
 	uuid: UserId;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
@@ -182,14 +183,12 @@ class WebauthnCredentialEntity {
 type CreateUser = {
 	username: string;
 	displayName: string,
-	did: string;
 	passwordHash: string;
 	fcmToken: string;
 	privateData: Buffer;
 } | {
 	uuid: UserId;
 	displayName: string,
-	did: string;
 	keys: Buffer;
 	fcmToken: string;
 	privateData: Buffer;
@@ -228,8 +227,11 @@ const webauthnCredentialRepository: Repository<WebauthnCredentialEntity> = AppDa
 
 async function createUser(createUser: CreateUser, isAdmin: boolean = false): Promise<Result<UserEntity, CreateUserErr>> {
 	try {
+		const uuid = "uuid" in createUser ? createUser.uuid : UserId.generate();
 		const user = await userRepository.save(userRepository.create({
 			...createUser,
+			uuid,
+			did: uuid.id,
 			isAdmin,
 		}));
 		const fcmTokenEntity = new FcmTokenEntity();
@@ -245,13 +247,9 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 	}
 }
 
-async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>> {
+async function getUser(id: UserId): Promise<Result<UserEntity, GetUserErr>> {
 	try {
-		const res = await userRepository.findOne({
-			where: {
-				did: did
-			}
-		});
+		const res = await userRepository.findOne({ where: { uuid: Equal(id) } });
 		if (!res) {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
@@ -263,19 +261,12 @@ async function getUserByDID(did: string): Promise<Result<UserEntity, GetUserErr>
 	}
 }
 
-async function deleteUserByDID(did: string, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteUserErr>> {
+async function deleteUser(id: UserId, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteUserErr>> {
 	try {
 		return await (options?.entityManager || userRepository.manager).transaction(async (manager) => {
-			const userRes = await manager.findOne(UserEntity, { where: { did: did }});
-
-			await manager.delete(WebauthnCredentialEntity, {
-				user: { uuid: userRes.uuid }
-			});
-
-			await manager.delete(UserEntity, {
-				did: did
-			});
-
+			const user = await manager.findOne(UserEntity, { where: { uuid: Equal(id) }});
+			await manager.delete(WebauthnCredentialEntity, { user });
+			await manager.delete(UserEntity, { uuid: id });
 			return Ok({})
 		});
 	}
@@ -375,14 +366,10 @@ function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>
 	return entity;
 }
 
-async function updateUserByDID<E = never>(did: string, update: (user: UserEntity, entityManager: EntityManager) => UserEntity | Result<UserEntity, E>): Promise<Result<UserEntity, UpdateUserErr | E>> {
+async function updateUser<E = never>(id: UserId, update: (user: UserEntity, entityManager: EntityManager) => UserEntity | Result<UserEntity, E>): Promise<Result<UserEntity, UpdateUserErr | E>> {
 	try {
 		return await userRepository.manager.transaction(async (manager) => {
-			const res = await manager.findOne(UserEntity, {
-				where: {
-					did: did
-				}
-			});
+			const res = await manager.findOne(UserEntity, { where: { uuid: Equal(id) } });
 			if (!res) {
 				return Promise.reject(Err(UpdateUserErr.NOT_EXISTS));
 			}
@@ -436,12 +423,12 @@ async function updateWebauthnCredential(
 	});
 }
 
-async function updateWebauthnCredentialById(userDid: string, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
-	console.log("updateWebauthnCredentialById", userDid, credentialUuid);
+async function updateWebauthnCredentialById(userId: UserId, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	console.log("updateWebauthnCredentialById", userId, credentialUuid);
 	return await webauthnCredentialRepository.manager.transaction(async (manager) => {
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
-			.where("user.did = :userDid", { userDid })
+			.where("user.uuid = :uuid", { uuid: userId.id })
 			.andWhere("credential.id = :credentialUuid", { credentialUuid });
 		console.log("q", q.getQueryAndParameters());
 		const userRes = await q.getOne();
@@ -454,7 +441,7 @@ async function updateWebauthnCredentialById(userDid: string, credentialUuid: str
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, updatePrivateData: EtagUpdate<Buffer>): Promise<Result<void, UpdateUserErr>> {
 	try {
 		return Ok(await runTransaction(async (manager) => {
-			const userRes = await manager.findOne(UserEntity, { where: { did: user.did }});
+			const userRes = await manager.findOne(UserEntity, { where: { uuid: Equal(user.uuid) }});
 			if (!userRes) {
 				return Err(UpdateUserErr.NOT_EXISTS);
 			}
@@ -482,7 +469,7 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 						newValue: updatePrivateData.newValue,
 					});
 				if (newPrivateData.ok) {
-					await manager.update(UserEntity, { did: user.did }, { privateData: newPrivateData.val });
+					await manager.update(UserEntity, { uuid: user.uuid }, { privateData: newPrivateData.val });
 					return Ok.EMPTY;
 				} else {
 					return Err(UpdateUserErr.PRIVATE_DATA_CONFLICT);
@@ -505,15 +492,15 @@ export {
 	GetUserErr,
 	UpdateUserErr,
 	createUser,
-	getUserByDID,
+	getUser,
 	getUserByCredentials,
 	UpdateFcmError,
 	getUserByWebauthnCredential,
 	getAllUsers,
 	newWebauthnCredentialEntity,
-	updateUserByDID,
+	updateUser,
 	deleteWebauthnCredential,
 	updateWebauthnCredential,
 	updateWebauthnCredentialById,
-	deleteUserByDID
+	deleteUser,
 }

@@ -2,16 +2,16 @@ import { Request, Response, NextFunction } from "express";
 
 import { jwtVerify, SignJWT } from 'jose';
 import config from "../../config";
-import { getUserByDID, UserEntity, UserId } from "../entities/user.entity";
+import { getUser, UserEntity, UserId } from "../entities/user.entity";
 
 
-type TokenPayloadVersion = 0;
-const TOKEN_PAYLOAD_VERSION: TokenPayloadVersion = 0;
+type TokenPayloadVersion = 1;
+const TOKEN_PAYLOAD_VERSION: TokenPayloadVersion = 1;
 
 type AppTokenPayload = {
 	// Increment TokenPayloadVersion whenever AppTokenPayload content changes to invalidate existing tokens
 	v: TokenPayloadVersion;
-	did: string;
+	uuid: string;
 }
 
 export type AppTokenUser = {
@@ -24,7 +24,7 @@ export async function createAppToken(user: UserEntity): Promise<string> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	const payload: AppTokenPayload = {
 		v: TOKEN_PAYLOAD_VERSION,
-		did: user.did,
+		uuid: user.uuid.id,
 	};
 	return await new SignJWT(payload)
 		.setProtectedHeader({ alg: "HS256" })
@@ -68,13 +68,13 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 			return;
 		}
 
-		const { did } = payload;
-		const userRes = await getUserByDID(did);
+		const userId = UserId.fromId(payload.uuid);
+		const userRes = await getUser(userId);
 		if (userRes.ok) {
 			req.user = {
 				username: userRes.val.username,
-				did,
-				id: userRes.val.uuid,
+				id: userId,
+				did: userRes.val.did,
 			};
 			return next();
 		}
