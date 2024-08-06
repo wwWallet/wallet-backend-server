@@ -112,11 +112,6 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 	async handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>> {
-		try {
-			return await this.parseIdTokenRequest(userDid, requestURL);
-		}
-		catch(err) {
-		}
 
 		try {
 			const url = new URL(requestURL);
