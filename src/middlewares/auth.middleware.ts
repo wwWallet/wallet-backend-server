@@ -54,17 +54,16 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 
 		const { did } = payload;
 		const userRes = await getUserByDID(did);
-		if (userRes.err) {
-			res.status(401).send(); // Unauthorized
-			return;
+		if (userRes.ok) {
+			req.user = {
+				username: userRes.val.username,
+				did,
+			};
+			return next();
 		}
 
-		const user = userRes.unwrap();
-		req.user = {
-			username: user.username,
-			did,
-		};
-		return next();
+		res.status(401).send(); // Unauthorized
+		return;
 	})
 	.catch(e => {
 		console.log("Unauthorized access to ", token);
