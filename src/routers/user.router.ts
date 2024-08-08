@@ -326,14 +326,11 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 	}
 	const user = userRes.unwrap();
 
-	const keys = jsonParseTaggedBinary(user.keys.toString());
-
 	res.status(200).send({
 		uuid: user.uuid,
 		username: user.username,
 		displayName: user.displayName,
 		hasPassword: user.passwordHash !== null,
-		publicKey: keys.publicKey,
 		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
 			createTime: cred.createTime,
 			credentialId: cred.credentialId,

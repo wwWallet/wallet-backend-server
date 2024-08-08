@@ -21,10 +21,10 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		const fcmToken = registrationParams.fcm_token ? registrationParams.fcm_token : "";
 
 		// depending on additionalParameters, decide to use the corresponding keystore service
-		if (registrationParams.keys && registrationParams.privateData) {
+		if (registrationParams.privateData) {
 			return Ok({
 				fcmToken,
-				keys: Buffer.from(JSON.stringify(registrationParams.keys)),
+				keys: Buffer.from(""),
 				displayName: registrationParams.displayName,
 				privateData: Buffer.from(registrationParams.privateData),
 				walletType: WalletType.CLIENT
