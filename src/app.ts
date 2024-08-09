@@ -43,21 +43,6 @@ app.use(cors({
 // define routes and middleware here
 app.use('/status', statusRouter);
 app.use('/user', userController);
-// app.get('/jwks', async (req, res) => {
-// 	const users = await getAllUsers();
-// 	if (users.err) {
-// 		return res.status(500).send({});
-// 	}
-
-// 	const jwksPromises = users.unwrap().map(async (user) => {
-// 		const keys = JSON.parse(user.keys);
-// 		const w = await NaturalPersonWallet.initializeWallet(keys);
-// 		const did = w.key.did
-// 		return { ...w.getPublicKey(), kid: did };
-// 	})
-// 	const jwks = await Promise.all(jwksPromises);
-// 	return res.send(jwks);
-// })
 
 
 

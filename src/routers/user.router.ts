@@ -1,5 +1,4 @@
 import express, { Request, Response, Router } from 'express';
-import { SignJWT } from 'jose';
 import * as uuid from 'uuid';
 import crypto from 'node:crypto';
 import * as SimpleWebauthn from '@simplewebauthn/server';
@@ -9,7 +8,7 @@ import { EntityManager } from "typeorm"
 import config from '../../config';
 import { CreateUser, createUser, deleteUserByDID, deleteWebauthnCredential, getUserByCredentials, getUserByDID, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUserByDID, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity } from '../entities/user.entity';
 import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
-import { AuthMiddleware } from '../middlewares/auth.middleware';
+import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
 import * as scrypt from "../scrypt";
@@ -46,13 +45,9 @@ async function initSession(user: UserEntity): Promise<{
 	webauthnRpId: string,
 	webauthnUserHandle: string,
 }> {
-	const secret = new TextEncoder().encode(config.appSecret);
-	const appToken = await new SignJWT({ did: user.did })
-		.setProtectedHeader({ alg: "HS256" })
-		.sign(secret);
 	return {
 		id: user.id,
-		appToken,
+		appToken: await createAppToken(user),
 		did: user.did,
 		displayName: user.displayName || user.username,
 		privateData: user.privateData,
@@ -617,25 +612,5 @@ userController.delete('/', async (req: Request, res: Response) => {
 		return res.status(400).send({ result: e })
 	}
 });
-// /**
-//  * expect 'alg' query parameter
-//  */
-// userController.get('/keys/public', AuthMiddleware, async (req: Request, res: Response) => {
-// 	const did = req.user?.did;
-// 	const algorithm = req.query["alg"] as string;
-// 	if (did == undefined) {
-// 		res.status(401).send({ err: 'UNAUTHORIZED' });
-// 		return;
-// 	}
-// 	const alg: SigningAlgorithm = algorithm as SigningAlgorithm;
-// 	const result = await getPublicKey(did, algorithm as SigningAlgorithm);
-// 	if (!result) {
-// 		res.status(500).send();
-// 		return;
-// 	}
-// 	const { publicKeyJwk } = result;
-
-// 	res.send({ publicKeyJwk });
-// });
 
 export default noAuthUserController;

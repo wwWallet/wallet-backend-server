@@ -62,20 +62,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 		return { issuer_state: state.issuer_state, error: null };
 	}
 
-	async getAvailableSupportedCredentials(legalPersonDID: string): Promise<Array<{id: string, displayName: string}>> {
-		const lp = (await getLegalPersonByDID(legalPersonDID)).unwrapOr(new Error("Not found"));
-		if (lp instanceof Error) {
-			return [];
-		}
-		const issuerUrlString = lp.url;
-		const credentialIssuerMetadata = await axios.get(issuerUrlString + "/.well-known/openid-credential-issuer");
-
-		const options = credentialIssuerMetadata.data.credentials_supported.map((val) => {
-			return { id: val.id, displayName: val.display[0].name };
-		})
-		return options as Array<{id: string, displayName: string}>;
-	}
-
 	/**
 	 *
 	 * @param userDid

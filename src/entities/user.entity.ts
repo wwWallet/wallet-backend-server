@@ -56,7 +56,7 @@ class UserEntity {
 	@Column({ type: "blob", nullable: false })
 	privateData: Buffer;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	@Generated("uuid")
 	webauthnUserHandle: string;
 
@@ -82,23 +82,23 @@ class WebauthnCredentialEntity {
 	@ManyToOne(() => UserEntity, (user) => user.webauthnCredentials, { nullable: false })
 	user: UserEntity;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	credentialId: Buffer;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	userHandle: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
 	nickname: string;
 
-	@Column({ type: "datetime", nullable: false })
+	@Column({ type: "datetime", nullable: false, update: false })
 	createTime: Date;
 
 	@Column({ type: "datetime", nullable: false })
 	lastUseTime: Date;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	publicKeyCose: Buffer;
 
 	@Column({ nullable: false })
@@ -107,10 +107,10 @@ class WebauthnCredentialEntity {
 	@Column("simple-json", { nullable: false })
 	transports: string[];
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	attestationObject: Buffer;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, update: false })
 	create_clientDataJSON: Buffer;
 
 	@Column({ nullable: false })
@@ -190,23 +190,6 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 	catch(e) {
 		console.log(e);
 		return Err(CreateUserErr.ALREADY_EXISTS);
-	}
-}
-
-async function storeKeypair(username: string, did: string, keys: Buffer): Promise<Result<{}, Error>> {
-	try {
-		const res = await AppDataSource
-			.createQueryBuilder()
-			.update(UserEntity)
-			.set({ keys: keys, did: did })
-			.where('username = :username', { username })
-			.execute();
-
-		return Ok({});
-	}
-	catch(e) {
-		console.log(e);
-		return Err(e);
 	}
 }
 
@@ -332,25 +315,6 @@ async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 		return Err(GetUserErr.DB_ERR)
 	}
 }
-// async function addFcmTokenByDID(did: string, newFcmToken: string) {
-// 	try {
-// 		const res = await AppDataSource.getRepository(UserEntity)
-// 			.createQueryBuilder("user")
-// 			.where("user.did = :did", { did: did })
-// 			.getOne();
-// 		const fcmTokens: string[] = JSON.parse(res.fcmTokens.toString());
-// 		fcmTokens.push(newFcmToken);
-// 		const updateRes = await AppDataSource.getRepository(UserEntity)
-// 			.createQueryBuilder("user")
-// 			.update({ fcmTokens: JSON.stringify(fcmTokens) })
-// 			.where("did = :did", { did: did })
-// 			.execute();
-// 	}
-// 	catch(err) {
-// 		console.log(err);
-// 		return Err(UpdateFcmError.DB_ERR);
-// 	}
-// }
 
 function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>, manager?: EntityManager): WebauthnCredentialEntity {
 	const entity = (manager || webauthnCredentialRepository.manager).create(WebauthnCredentialEntity, data);

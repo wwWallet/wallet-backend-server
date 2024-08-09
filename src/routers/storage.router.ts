@@ -1,4 +1,4 @@
-import express, { Router } from "express";
+import express, { Request, Response, Router } from "express";
 import { getAllVerifiableCredentials, getVerifiableCredentialByCredentialIdentifier, deleteVerifiableCredential } from "../entities/VerifiableCredential.entity";
 import { getAllVerifiablePresentations, getPresentationByIdentifier } from "../entities/VerifiablePresentation.entity";
 
@@ -14,7 +14,7 @@ storageRouter.get('/vp', getAllVerifiablePresentationsController);
 storageRouter.get('/vp/:presentation_identifier', getPresentationByPresentationIdentifierController);
 
 
-async function getAllVerifiableCredentialsController(req, res) {
+async function getAllVerifiableCredentialsController(req: Request, res: Response) {
 	const holderDID = req.user.did;
 	console.log("Holder did", holderDID)
 	const vcListResult = await getAllVerifiableCredentials(holderDID);
@@ -34,7 +34,7 @@ async function getAllVerifiableCredentialsController(req, res) {
 
 }
 
-async function getVerifiableCredentialByCredentialIdentifierController(req, res) {
+async function getVerifiableCredentialByCredentialIdentifierController(req: Request, res: Response) {
 	const holderDID = req.user.did;
 	const { credential_identifier } = req.params;
 	const vcFetchResult = await getVerifiableCredentialByCredentialIdentifier(holderDID, credential_identifier);
@@ -46,7 +46,7 @@ async function getVerifiableCredentialByCredentialIdentifierController(req, res)
 	res.status(200).send(vc);
 }
 
-async function deleteVerifiableCredentialController(req, res) {
+async function deleteVerifiableCredentialController(req: Request, res: Response) {
 	const holderDID = req.user.did;
 	const { credential_identifier } = req.params;
 	const deleteResult = await deleteVerifiableCredential(holderDID, credential_identifier);
@@ -58,7 +58,7 @@ async function deleteVerifiableCredentialController(req, res) {
 
 
 
-async function getAllVerifiablePresentationsController(req, res) {
+async function getAllVerifiablePresentationsController(req: Request, res: Response) {
 	const holderDID = req.user.did;
 	const vpListResult = await getAllVerifiablePresentations(holderDID);
 	if (vpListResult.err) {
@@ -75,7 +75,7 @@ async function getAllVerifiablePresentationsController(req, res) {
 	res.status(200).send({ vp_list: vp_list })
 }
 
-async function getPresentationByPresentationIdentifierController(req, res) {
+async function getPresentationByPresentationIdentifierController(req: Request, res: Response) {
 	const holderDID = req.user.did;
 	const { presentation_identifier } = req.params;
 

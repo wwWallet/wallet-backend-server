@@ -1,78 +1,68 @@
 import { Request, Response, NextFunction } from "express";
 
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 import config from "../../config";
-import { getUserByDID } from "../entities/user.entity";
+import { getUserByDID, UserEntity } from "../entities/user.entity";
+
+type AppTokenPayload = {
+	did: string;
+}
 
 export type AppTokenUser = {
 	username: string;
 	did: string;
 }
 
-function getCookieDictionary(cookies: any) {
-	const cookieList = cookies.split('; ');
-	let cookieDict: any = {};
-	for (const cookie of cookieList) {
-		const key = cookie.split('=')[0] as string;
-
-		const val = cookie.split('=')[1];
-		cookieDict[key] = val;
-
-	}
-	return cookieDict;
+export async function createAppToken(user: UserEntity): Promise<string> {
+	const secret = new TextEncoder().encode(config.appSecret);
+	const payload: AppTokenPayload = { did: user.did };
+	return await new SignJWT(payload)
+		.setProtectedHeader({ alg: "HS256" })
+		.sign(secret);
 }
 
-async function verifyApptoken(jwt: string): Promise<{valid: boolean, payload: any}> {
+async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	try {
 		const { payload, protectedHeader } = await jwtVerify(jwt, secret);
-		return { valid: true, payload: payload };
+		return payload as AppTokenPayload;
 	}
 	catch (err) {
 		console.log('Signature verification failed');
-		return { valid: false, payload: {}}
+		return false;
 	}
 }
 
 export function AuthMiddleware(req: Request, res: Response, next: NextFunction) {
-	let token: string;
-	const authorizationHeader = req.headers.authorization;
+	const authorizationHeader = req.headers?.authorization;
 	console.log("Authorization header = ", authorizationHeader)
-	if (req.headers != undefined && authorizationHeader != undefined) {
-		if (authorizationHeader.split(' ')[0] !== 'Bearer') {
-			res.status(401).send();
-			return;
-		}
-		token = authorizationHeader.split(' ')[1];
-	}
-	else {
-		console.log("Unauthorized access to token: ", authorizationHeader?.split(' ')[1]);
-		res.status(401).send(); // Unauthorized
+	if (authorizationHeader?.substring(0, 7) !== 'Bearer ') {
+		console.log("Invalid authorization header:", authorizationHeader);
+		res.status(401).send();
 		return;
 	}
 
-	verifyApptoken(token).then(async ({valid, payload}) => {
-		if (valid === false) {
+	let token: string = authorizationHeader.substring(7);
+
+	verifyApptoken(token).then(async (payload) => {
+		if (!payload) {
 			console.log("Unauthorized access to ", token);
 			res.status(401).send(); // Unauthorized
 			return;
 		}
 
-		// success
-		req.user = {
-			username: "",
-			did: ""
-		} as AppTokenUser;
-		req.user.did = (payload as AppTokenUser).did;
-		const userRes = await getUserByDID(req.user.did);
-		if (userRes.err) {
-			res.status(401).send(); // Unauthorized
-			return;
+		const { did } = payload;
+		const userRes = await getUserByDID(did);
+		if (userRes.ok) {
+			req.user = {
+				username: userRes.val.username,
+				did,
+			};
+			return next();
 		}
-		const user = userRes.unwrap();
-		req.user.username = user.username;
-		req.user.did = user.did;
-		return next();
+
+		res.status(401).send(); // Unauthorized
+		return;
 	})
 	.catch(e => {
 		console.log("Unauthorized access to ", token);
