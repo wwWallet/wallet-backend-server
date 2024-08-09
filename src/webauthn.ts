@@ -1,5 +1,5 @@
 import config from '../config';
-import { WebauthnCredentialEntity } from './entities/user.entity';
+import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
 
 
 export function getRpId(): string {
@@ -14,7 +14,7 @@ export function makeCreateOptions({
 	challenge: Buffer,
 	prfSalt?: Buffer,
 	user: {
-		webauthnUserHandle: string,
+		uuid: UserId,
 		name: string,
 		displayName: string,
 		webauthnCredentials?: WebauthnCredentialEntity[],
@@ -24,7 +24,7 @@ export function makeCreateOptions({
 		publicKey: {
 			rp: config.webauthn.rp,
 			user: {
-				id: Buffer.from(user.webauthnUserHandle, "utf8"),
+				id: user.uuid.asUserHandle(),
 				name: user.name,
 				displayName: user.displayName,
 			},

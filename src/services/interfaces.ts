@@ -5,16 +5,16 @@ import { OutboundRequest } from "./types/OutboundRequest";
 import http from 'http';
 import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
 import { WalletKey } from "@wwwallet/ssi-sdk";
-import { WalletType } from "../entities/user.entity";
+import { UserId, WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {
 
-	generateAuthorizationRequestURL(userDid: string, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }>;
+	generateAuthorizationRequestURL(userId: UserId, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }>;
 
-	handleAuthorizationResponse(userDid: string, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
-	requestCredentialsWithPreAuthorizedGrant(userDid: string, user_pin: string): Promise<{error?: string}>;
+	handleAuthorizationResponse(userId: UserId, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
+	requestCredentialsWithPreAuthorizedGrant(userId: UserId, user_pin: string): Promise<{error?: string}>;
 
-	getIssuerState(userDid: string): Promise<{ issuer_state?: string, error?: Error }>
+	getIssuerState(userId: UserId): Promise<{ issuer_state?: string, error?: Error }>
 }
 
 export enum IssuanceErr {
@@ -43,18 +43,18 @@ export type RegistrationParams = {
 
 
 export interface WalletKeystoreManager {
-	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, did: string, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
+	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
 
-	createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
-	signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
-	generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
+	createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
+	signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
+	generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
 }
 
 export interface WalletKeystore {
 
-	createIdToken(userDid: string, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
-	signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
-	generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
+	createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string }, WalletKeystoreErr>>;
+	signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
+	generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
 }
 
 export enum WalletKeystoreErr {
@@ -67,17 +67,9 @@ export enum WalletKeystoreErr {
 
 
 export interface OutboundCommunication {
-	initiateVerificationFlow(username: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
-
-	handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>>;
-
-	/**
-	 *
-	 * @param userDid
-	 * @param req
-	 * @param selection (key: descriptor_id, value: verifiable credential identifier)
-	 */
-	sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>>;
+	initiateVerificationFlow(userId: UserId, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
+	handleRequest(userId: UserId, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>>;
+	sendResponse(userId: UserId, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>>;
 }
 
 
@@ -102,6 +94,6 @@ export enum ExpectingSocketMessageErr {
 export interface SocketManagerServiceInterface {
 	register(server: http.Server);
 
-	send(userDid: string, message: ServerSocketMessage): Promise<Result<void, void>>;
-	expect(userDid: string, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;
+	send(userId: UserId, message: ServerSocketMessage): Promise<Result<void, void>>;
+	expect(userId: UserId, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;
 }

@@ -13,7 +13,7 @@ import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
 import { createVerifiablePresentation } from "../entities/VerifiablePresentation.entity";
-import { getUserByDID } from "../entities/user.entity";
+import { getUser, UserId } from "../entities/user.entity";
 import { VerifierRegistryService } from "./VerifierRegistryService";
 import { randomUUID, createHash } from "node:crypto";
 import config from "../../config";
@@ -21,7 +21,6 @@ import { WalletKeystoreRequest, SignatureAction } from "./shared.types";
 import {
 	HasherAlgorithm,
 	HasherAndAlgorithm,
-	SaltGenerator,
 	SdJwt,
 } from '@sd-jwt/core';
 
@@ -81,7 +80,7 @@ type VerificationState = {
 @injectable()
 export class OpenidForPresentationService implements OutboundCommunication {
 
-	// key: did
+	// key: UserEntity.uuid
 	states = new Map<string, VerificationState>();
 
 
@@ -91,15 +90,15 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		@inject(TYPES.OpenidForCredentialIssuanceService) private OpenidCredentialReceivingService: OpenidCredentialReceiving
 	) { }
 
-	async initiateVerificationFlow(userDid: string, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
+	async initiateVerificationFlow(userId: UserId, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
 		const verifier = (await this.verifierRegistryService.getAllVerifiers()).filter(ver => ver.id == verifierId)[0];
-		console.log("User did = ", userDid)
-		const userFetchRes = await getUserByDID(userDid);
+		console.log("User id = ", userId)
+		const userFetchRes = await getUser(userId);
 		if (userFetchRes.err) {
 			return {};
 		}
 		const holder_state = randomUUID();
-		this.states.set(userDid, { holder_state });
+		this.states.set(userId.id, { holder_state });
 
 		const user = userFetchRes.unwrap();
 		const url = new URL(verifier.url);
@@ -111,7 +110,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return { redirect_to: url.toString() };
 	}
 
-	async handleRequest(userDid: string, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>> {
+	async handleRequest(userId: UserId, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>> {
 
 		try {
 			const url = new URL(requestURL);
@@ -120,8 +119,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 			const jsonParams = Object.fromEntries(paramEntries);
 			authorizationRequestSchema.parse(jsonParams); // will throw error if input is not conforming to the schema
-			this.states.set(userDid, { camera_was_used: camera_was_used })
-			const result = await this.parseAuthorizationRequest(userDid, requestURL);
+			this.states.set(userId.id, { camera_was_used: camera_was_used })
+			const result = await this.parseAuthorizationRequest(userId, requestURL);
 			if (result.err) {
 				return Err(result.val);
 			}
@@ -140,9 +139,9 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	}
 
 
-	async sendResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>> {
+	async sendResponse(userId: UserId, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>> {
 		try {
-			return await this.generateAuthorizationResponse(userDid, selection)
+			return await this.generateAuthorizationResponse(userId, selection)
 		}
 		catch(err) {
 			console.error("Failed to generate authorization response.\nError details: ", err);
@@ -152,8 +151,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 
 
-	private async parseIdTokenRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{ redirect_to: string }, WalletKeystoreRequest>> {
-		console.log("parseIdTokenRequest userDid:", userDid)
+	private async parseIdTokenRequest(userId: UserId, authorizationRequestURL: string): Promise<Result<{ redirect_to: string }, WalletKeystoreRequest>> {
+		console.log("parseIdTokenRequest userId:", userId)
 
 		let client_id: string,
 			response_uri: string,
@@ -181,25 +180,25 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		}
 
 
-		const currentState = this.states.get(userDid);
-		this.states.set(userDid, {
+		const currentState = this.states.get(userId.id);
+		this.states.set(userId.id, {
 			...currentState,
 			audience: client_id,
 			nonce,
 			response_uri,
 			state,
 		});
-		const idTokenResult = await this.walletKeystoreManagerService.createIdToken(userDid, nonce, client_id);
+		const idTokenResult = await this.walletKeystoreManagerService.createIdToken(userId, nonce, client_id);
 		if (idTokenResult.ok) {
 			const { id_token } = idTokenResult.val;
-			return Ok(await this.finishParseIdTokenRequest(userDid, state, response_uri, id_token));
+			return Ok(await this.finishParseIdTokenRequest(userId, state, response_uri, id_token));
 		} else if (idTokenResult.val === WalletKeystoreErr.KEYS_UNAVAILABLE) {
 			return Err({ action: SignatureAction.createIdToken, nonce, audience: client_id });
 		}
 	}
 
-	private async finishParseIdTokenRequest(userDid: string, state: string, redirect_uri: string, id_token: string): Promise<{ redirect_to: string }> {
-		const { issuer_state } = await this.OpenidCredentialReceivingService.getIssuerState(userDid);
+	private async finishParseIdTokenRequest(userId: UserId, state: string, redirect_uri: string, id_token: string): Promise<{ redirect_to: string }> {
+		const { issuer_state } = await this.OpenidCredentialReceivingService.getIssuerState(userId);
 
 		const params = {
 			id_token,
@@ -248,15 +247,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return { redirect_to: newLocation }
 	}
 
-	/**
-	* @throws
-	* @param userDid
-	* @param authorizationRequestURL
-	* @returns
-	*/
-	private async parseAuthorizationRequest(userDid: string, authorizationRequestURL: string): Promise<Result<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}, HandleOutboundRequestError>> {
-		console.log("parseAuthorizationRequest userDid = ", userDid)
-		const { did } = (await getUserByDID(userDid)).unwrap();
+	private async parseAuthorizationRequest(userId: UserId, authorizationRequestURL: string): Promise<Result<{conformantCredentialsMap: Map<string, { credentials: string[], requestedFields: string[] }>, verifierDomainName: string}, HandleOutboundRequestError>> {
+		console.log("parseAuthorizationRequest userId = ", userId)
 		let client_id: string,
 			response_uri: string,
 			nonce: string,
@@ -285,8 +277,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		catch(error) {
 			throw new Error(`Error fetching authorization request search params: ${error}`);
 		}
-		const currentState = this.states.get(userDid);
-		this.states.set(userDid, {
+		const currentState = this.states.get(userId.id);
+		this.states.set(userId.id, {
 			...currentState,
 			presentation_definition,
 			audience: client_id,
@@ -296,7 +288,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		});
 
 
-		console.log("State = ", this.states.get(userDid))
+		console.log("State = ", this.states.get(userId.id))
 
 
 		console.log("Definition = ", presentation_definition)
@@ -312,8 +304,10 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			throw new Error(`Error fetching input descriptors from presentation_definition: ${error}`);
 		}
 
+		const user = (await getUser(userId)).unwrap();
+
 		try {
-			const verifiableCredentialsRes = await getAllVerifiableCredentials(did);
+			const verifiableCredentialsRes = await getAllVerifiableCredentials(user.did);
 			if (verifiableCredentialsRes.err) {
 				throw "Failed to fetch credentials"
 			}
@@ -367,7 +361,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	/**
 	* selection: (key: descriptor_id, value: credentialIdentifier from VerifiableCredential DB entity)
 	*/
-	private async generateVerifiablePresentation(selection: Map<string, string>, presentation_definition: PresentationDefinition, userDid: string): Promise<Result<string, WalletKeystoreRequest>> {
+	private async generateVerifiablePresentation(selection: Map<string, string>, presentation_definition: PresentationDefinition, userId: UserId): Promise<Result<string, WalletKeystoreRequest>> {
 
 		const hasherAndAlgorithm: HasherAndAlgorithm = {
 			hasher: (input: string) => createHash('sha256').update(input).digest(),
@@ -398,7 +392,8 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			});
 			return result;
 		};
-		let vcListRes = await getAllVerifiableCredentials(userDid);
+		const user = (await getUser(userId)).unwrap();
+		let vcListRes = await getAllVerifiableCredentials(user.did);
 		if (vcListRes.err) {
 			throw "Failed to fetch credentials";
 		}
@@ -433,12 +428,12 @@ export class OpenidForPresentationService implements OutboundCommunication {
 
 		}
 
-		const fetchedState = this.states.get(userDid);
+		const fetchedState = this.states.get(userId.id);
 		console.log(fetchedState);
 		const { audience, nonce } = fetchedState;
 
 
-		const result = await this.walletKeystoreManagerService.signJwtPresentation(userDid, nonce, audience, selectedVCs);
+		const result = await this.walletKeystoreManagerService.signJwtPresentation(userId, nonce, audience, selectedVCs);
 		if (!result.ok) {
 			return Err({
 				action: SignatureAction.signJwtPresentation,
@@ -451,13 +446,14 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		return Ok(result.val.vpjwt);
 	}
 
-	private async generateAuthorizationResponse(userDid: string, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest>> {
-		console.log("generateAuthorizationResponse userDid = ", userDid)
+	private async generateAuthorizationResponse(userId: UserId, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest>> {
+		console.log("generateAuthorizationResponse userId = ", userId)
 		const allSelectedCredentialIdentifiers = Array.from(selection.values());
 
-		const { did } = (await getUserByDID(userDid)).unwrap();
+		const { did } = (await getUser(userId)).unwrap();
 		console.log("Verifiable credentials map = ", selection)
-		let vcListRes = await getAllVerifiableCredentials(did);
+		const user = (await getUser(userId)).unwrap();
+		let vcListRes = await getAllVerifiableCredentials(user.did);
 		if (vcListRes.err) {
 			throw "Failed to fetch credentials"
 		}
@@ -468,14 +464,14 @@ export class OpenidForPresentationService implements OutboundCommunication {
 		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
 
 		try {
-			const fetchedState = this.states.get(userDid);
-			const vp_token_result = await this.generateVerifiablePresentation(selection, fetchedState.presentation_definition, userDid);
+			const fetchedState = this.states.get(userId.id);
+			const vp_token_result = await this.generateVerifiablePresentation(selection, fetchedState.presentation_definition, userId);
 			if (vp_token_result.err) {
 				return Err(vp_token_result.val);
 			}
 
 			const vp_token: string = vp_token_result.val as string;
-			const {presentation_definition, response_uri, state} = this.states.get(userDid);
+			const {presentation_definition, response_uri, state} = this.states.get(userId.id);
 			// console.log("vp token = ", vp_token)
 			// console.log("Presentation definition from state is = ");
 			// console.dir(presentation_definition, { depth: null });
@@ -544,7 +540,7 @@ export class OpenidForPresentationService implements OutboundCommunication {
 				format: "jwt_vp"
 			});
 
-			const verificationState = this.states.get(userDid);
+			const verificationState = this.states.get(userId.id);
 			if (verificationState && verificationState.camera_was_used) {
 				return Ok({ })
 			}

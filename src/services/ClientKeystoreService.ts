@@ -3,11 +3,11 @@ import { inject, injectable } from "inversify";
 import "reflect-metadata";
 import { Err, Ok, Result } from "ts-results";
 
-import { AdditionalKeystoreParameters, RegistrationParams, SocketManagerServiceInterface, WalletKeystore, WalletKeystoreErr } from "./interfaces";
+import { AdditionalKeystoreParameters, SocketManagerServiceInterface, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
 import config from "../../config";
 import { SignatureAction, ServerSocketMessage } from "./shared.types";
-import { WalletKey } from "@wwwallet/ssi-sdk";
+import { UserId } from "../entities/user.entity";
 
 
 
@@ -23,7 +23,7 @@ export class ClientKeystoreService implements WalletKeystore {
 	) { }
 
 
-	async createIdToken(userDid: string, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
+	async createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
 		let message_id_sent = randomUUID();
 		const msg = {
 			message_id: message_id_sent,
@@ -33,9 +33,9 @@ export class ClientKeystoreService implements WalletKeystore {
 				audience: audience
 			}
 		}
-		await this.socketManagerService.send(userDid, msg as ServerSocketMessage)
+		await this.socketManagerService.send(userId, msg as ServerSocketMessage)
 
-		const result = await this.socketManagerService.expect(userDid, message_id_sent, SignatureAction.createIdToken);
+		const result = await this.socketManagerService.expect(userId, message_id_sent, SignatureAction.createIdToken);
 		if (result.err) {
 			return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
 		}
@@ -46,7 +46,7 @@ export class ClientKeystoreService implements WalletKeystore {
 		return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
 	}
 
-	async signJwtPresentation(userDid: string, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>> {
+	async signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>> {
 		let message_id_sent = randomUUID();
 		const msg = {
 			message_id: message_id_sent,
@@ -57,9 +57,9 @@ export class ClientKeystoreService implements WalletKeystore {
 				verifiableCredentials: verifiableCredentials
 			}
 		}
-		await this.socketManagerService.send(userDid, msg as ServerSocketMessage)
+		await this.socketManagerService.send(userId, msg as ServerSocketMessage)
 
-		const result = await this.socketManagerService.expect(userDid, message_id_sent, SignatureAction.signJwtPresentation);
+		const result = await this.socketManagerService.expect(userId, message_id_sent, SignatureAction.signJwtPresentation);
 		if (result.err) {
 			return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
 		}
@@ -70,7 +70,7 @@ export class ClientKeystoreService implements WalletKeystore {
 		return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
 	}
 
-	async generateOpenid4vciProof(userDid: string, audience: string, nonce: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>> {
+	async generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>> {
 		let message_id_sent = randomUUID();
 		const msg = {
 			message_id: message_id_sent,
@@ -81,8 +81,8 @@ export class ClientKeystoreService implements WalletKeystore {
 			}
 		}
 		console.log("MessageID = ", message_id_sent)
-		await this.socketManagerService.send(userDid, msg as ServerSocketMessage);
-		const result = await this.socketManagerService.expect(userDid, message_id_sent, SignatureAction.generateOpenid4vciProof);
+		await this.socketManagerService.send(userId, msg as ServerSocketMessage);
+		const result = await this.socketManagerService.expect(userId, message_id_sent, SignatureAction.generateOpenid4vciProof);
 		if (result.err) {
 			return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
 		}
