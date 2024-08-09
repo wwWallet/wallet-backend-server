@@ -4,7 +4,13 @@ import { jwtVerify, SignJWT } from 'jose';
 import config from "../../config";
 import { getUserByDID, UserEntity } from "../entities/user.entity";
 
+
+type TokenPayloadVersion = 0;
+const TOKEN_PAYLOAD_VERSION: TokenPayloadVersion = 0;
+
 type AppTokenPayload = {
+	// Increment TokenPayloadVersion whenever AppTokenPayload content changes to invalidate existing tokens
+	v: TokenPayloadVersion;
 	did: string;
 }
 
@@ -15,7 +21,10 @@ export type AppTokenUser = {
 
 export async function createAppToken(user: UserEntity): Promise<string> {
 	const secret = new TextEncoder().encode(config.appSecret);
-	const payload: AppTokenPayload = { did: user.did };
+	const payload: AppTokenPayload = {
+		v: TOKEN_PAYLOAD_VERSION,
+		did: user.did,
+	};
 	return await new SignJWT(payload)
 		.setProtectedHeader({ alg: "HS256" })
 		.sign(secret);
@@ -25,7 +34,14 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	try {
 		const { payload, protectedHeader } = await jwtVerify(jwt, secret);
-		return payload as AppTokenPayload;
+		if (payload?.v === TOKEN_PAYLOAD_VERSION) {
+			// The combination of a valid signature and the correct version
+			// guarantees that this type assertion is sound
+			return payload as AppTokenPayload;
+		} else {
+			console.log(`Incorrect token version: expected: ${TOKEN_PAYLOAD_VERSION}, got: ${payload?.v}`);
+			return null;
+		}
 	}
 	catch (err) {
 		console.log('Signature verification failed');
