@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Err, Ok, Result } from "ts-results";
 
 import { InputDescriptorType, Verify } from "@wwwallet/ssi-sdk";
-import { HandleOutboundRequestError, OpenidCredentialReceiving, OutboundCommunication, SendResponseError, WalletKeystore } from "./interfaces";
+import { HandleOutboundRequestError, OutboundCommunication, SendResponseError, WalletKeystore } from "./interfaces";
 import { TYPES } from "./types";
 import { OutboundRequest } from "./types/OutboundRequest";
 import { getAllVerifiableCredentials } from "../entities/VerifiableCredential.entity";
@@ -87,7 +87,6 @@ export class OpenidForPresentationService implements OutboundCommunication {
 	constructor(
 		@inject(TYPES.WalletKeystoreManagerService) private walletKeystoreManagerService: WalletKeystore,
 		@inject(TYPES.VerifierRegistryService) private verifierRegistryService: VerifierRegistryService,
-		@inject(TYPES.OpenidForCredentialIssuanceService) private OpenidCredentialReceivingService: OpenidCredentialReceiving
 	) { }
 
 	async initiateVerificationFlow(userId: UserId, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }> {
