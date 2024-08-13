@@ -13,8 +13,6 @@ export interface OpenidCredentialReceiving {
 
 	handleAuthorizationResponse(userId: UserId, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
 	requestCredentialsWithPreAuthorizedGrant(userId: UserId, user_pin: string): Promise<{error?: string}>;
-
-	getIssuerState(userId: UserId): Promise<{ issuer_state?: string, error?: Error }>
 }
 
 export enum IssuanceErr {

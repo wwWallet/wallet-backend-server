@@ -46,18 +46,6 @@ export class OpenidForCredentialIssuanceService implements OpenidCredentialRecei
 	) { }
 
 
-	async getIssuerState(userId: UserId): Promise<{ issuer_state?: string, error?: Error; }> {
-		const state = this.states.get(userId.id);
-		if (!state) {
-			return { issuer_state: null, error: new Error("No state found") };
-		}
-		if (!state.issuer_state) {
-			return { issuer_state: null, error: new Error("No issuer_state found in state") };
-		}
-
-		return { issuer_state: state.issuer_state, error: null };
-	}
-
 	async generateAuthorizationRequestURL(userId: UserId, credentialOfferURL?: string, legalPersonDID?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }> {
 		console.log("generateAuthorizationRequestURL userId = ", userId);
 		console.log("LP = ", legalPersonDID);
