@@ -362,7 +362,6 @@ export class OpenidForPresentationService implements OutboundCommunication {
 			.filter((vc) =>
 				allSelectedCredentialIdentifiers.includes(vc.credentialIdentifier)
 			);
-		const filteredVCJwtList = filteredVCEntities.map((vc) => vc.credential);
 
 		try {
 			const fetchedState = this.states.get(userId.id);
