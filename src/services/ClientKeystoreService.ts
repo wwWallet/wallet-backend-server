@@ -23,29 +23,6 @@ export class ClientKeystoreService implements WalletKeystore {
 	) { }
 
 
-	async createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
-		let message_id_sent = randomUUID();
-		const msg = {
-			message_id: message_id_sent,
-			request: {
-				action: SignatureAction.createIdToken,
-				nonce: nonce,
-				audience: audience
-			}
-		}
-		await this.socketManagerService.send(userId, msg as ServerSocketMessage)
-
-		const result = await this.socketManagerService.expect(userId, message_id_sent, SignatureAction.createIdToken);
-		if (result.err) {
-			return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
-		}
-		const { message: { message_id, response } } = result.unwrap();
-		if (response.action == SignatureAction.createIdToken) {
-			return Ok({ id_token: response.id_token });
-		}
-		return Err(WalletKeystoreErr.REMOTE_SIGNING_FAILED);
-	}
-
 	async signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>> {
 		let message_id_sent = randomUUID();
 		const msg = {
