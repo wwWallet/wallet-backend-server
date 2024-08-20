@@ -3,7 +3,7 @@ import express, { Router } from 'express';
 import { AuthMiddleware } from '../middlewares/auth.middleware';
 import _ from 'lodash';
 import { appContainer } from '../services/inversify.config';
-import { HandleOutboundRequestError, IssuanceErr, OpenidCredentialReceiving, OutboundCommunication, SendResponseError } from '../services/interfaces';
+import { HandleOutboundRequestError, OpenidCredentialReceiving, OutboundCommunication, SendResponseError } from '../services/interfaces';
 import { TYPES } from '../services/types';
 import * as z from 'zod';
 

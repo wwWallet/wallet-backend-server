@@ -33,31 +33,6 @@ export class DatabaseKeystoreService implements WalletKeystore {
 	}
 
 
-	async createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
-		const user = (await getUser(userId)).unwrap();
-		const keys = JSON.parse(user.keys.toString()) as WalletKey;
-
-		if (!keys.privateKey) {
-			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
-		}
-
-		const privateKey = await importJWK(keys.privateKey, keys.alg);
-		const jws = await new SignJWT({ nonce: nonce })
-			.setProtectedHeader({
-				alg: this.algorithm,
-				typ: "JWT",
-				kid: keys.verificationMethod,
-			})
-			.setSubject(user.did)
-			.setIssuer(user.did)
-			.setExpirationTime('1m')
-			.setAudience(audience)
-			.setIssuedAt()
-			.sign(privateKey);
-
-		return Ok({ id_token: jws });
-	}
-
 	async signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>> {
 		const user = (await getUser(userId)).unwrap();
 		const keys = JSON.parse(user.keys.toString()) as WalletKey;

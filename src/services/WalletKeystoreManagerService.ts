@@ -48,18 +48,6 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		}
 	}
 
-	async createIdToken(userId: UserId, nonce: string, audience: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ id_token: string; }, WalletKeystoreErr>> {
-		const userRes = await getUser(userId)
-		if (userRes.err) {
-			return Err(WalletKeystoreErr.KEYS_UNAVAILABLE);
-		}
-		const user = userRes.unwrap();
-		if (user.walletType != WalletType.DB)
-			return await this.clientWalletKeystoreService.createIdToken(userId, nonce, audience, additionalParameters);
-		else
-			return await this.databaseKeystoreService.createIdToken(userId, nonce, audience, additionalParameters);
-	}
-
 	async signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string; }, WalletKeystoreErr>> {
 		const userRes = await getUser(userId)
 		if (userRes.err) {
