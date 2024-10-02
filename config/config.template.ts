@@ -20,10 +20,6 @@ export = {
 		},
 	},
 	alg: "EdDSA",
-	servicesConfiguration: {
-		issuanceService: "OpenidForCredentialIssuanceService", // OpenidForCredentialIssuanceService or OpenidForCredentialIssuanceVCEDUService
-		didKeyService: "EBSI", // W3C or EBSI
-	},
 	notifications: {
 		enabled: "NOTIFICATIONS_ENABLED",
 		serviceAccount: "firebaseConfig.json"
