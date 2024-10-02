@@ -2,7 +2,6 @@ import { JWK } from "jose";
 import { Result } from "ts-results";
 import http from 'http';
 import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
-import { WalletKey } from "@wwwallet/ssi-sdk";
 import { UserId, WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {
@@ -32,7 +31,7 @@ export type AdditionalKeystoreParameters = {
 
 export type RegistrationParams = {
 	fcm_token?: string;
-	keys?: WalletKey;
+	keys?: any;
 	privateData?: Buffer;
 	displayName: string;
 }
@@ -61,7 +60,7 @@ export enum WalletKeystoreErr {
 
 export interface DidKeyUtilityService {
 	getPublicKeyJwk(did: string): Promise<JWK>;
-	generateKeyPair(): Promise<{ did: string, key: WalletKey }>
+	generateKeyPair(): Promise<{ did: string, key: any }>
 }
 
 
