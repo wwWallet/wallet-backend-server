@@ -1,4 +1,4 @@
-export = {
+export const config = {
 	url: "SERVICE_URL",
 	port: "SERVICE_PORT",
 	appSecret: "SERVICE_SECRET",

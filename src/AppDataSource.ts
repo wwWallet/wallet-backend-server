@@ -1,12 +1,12 @@
 import { DataSource } from "typeorm";
-import config from "../config";
+import { config } from "../config";
 
 
 // Initialize DB connection
 const AppDataSource: DataSource = new DataSource({
 	type: "mysql",
 	host: config.db.host,
-	port: config.db.port,
+	port: parseInt(config.db.port),
 	username: config.db.username,
 	password: config.db.password,
 	database: config.db.dbname,

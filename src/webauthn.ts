@@ -1,4 +1,4 @@
-import config from '../config';
+import { config } from '../config';
 import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
 
 

@@ -5,7 +5,7 @@ import http from 'http';
 import { Err, Ok, Result } from "ts-results";
 import { ServerSocketMessage, ClientSocketMessage, SignatureAction } from "./shared.types";
 import { jwtVerify } from "jose";
-import config from "../../config";
+import { config } from "../../config";
 import { UserId } from "../entities/user.entity";
 
 const openSockets = new Map<string, WebSocket.WebSocket>();

@@ -5,7 +5,7 @@ import { Err, Ok, Result } from "ts-results";
 
 import { AdditionalKeystoreParameters, SocketManagerServiceInterface, WalletKeystore, WalletKeystoreErr } from "./interfaces";
 import { TYPES } from "./types";
-import config from "../../config";
+import { config } from "../../config";
 import { SignatureAction, ServerSocketMessage } from "./shared.types";
 import { UserId } from "../entities/user.entity";
 
