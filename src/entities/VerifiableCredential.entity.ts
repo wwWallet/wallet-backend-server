@@ -3,6 +3,7 @@ import { Entity, EntityManager, PrimaryGeneratedColumn, Column, Repository} from
 import AppDataSource from "../AppDataSource";
 import { VerifiableCredentialFormat } from "../types/oid4vci";
 import { deletePresentationsByCredentialId } from './VerifiablePresentation.entity';
+import { nullable } from "zod";
 
 
 @Entity({ name: "verifiable_credential" })
@@ -10,45 +11,17 @@ export class VerifiableCredentialEntity {
 	@PrimaryGeneratedColumn()
 	id: number = -1;
 
-	// @Column({ unique: true })
-	// identifier: string = "";
-
-	// @Column({ type: 'blob', nullable: false })
-	// jwt: string = "";
-
 	@Column({ nullable: false })
 	holderDID: string = "";
 
-
 	@Column({ nullable: false })
-	credentialIdentifier: string = ""; // for JWTs it is the "jti" attribute
+	credentialIdentifier: string = "";
 
-	@Column({ nullable:false, type: 'blob' })
-	credential: Buffer = Buffer.from("");
+	@Column({ nullable: false, type: 'blob' })
+	credential: string;
 
-
-	@Column({ nullable: false })
-	issuerDID: string = ""
-
-	@Column({ nullable: false })
-	issuerURL: string = "";
-
-	@Column()
-	issuerFriendlyName: string = "";
-
-	@Column({ nullable: false })
-	format: string; // = CredentialTypes.JWT_VC; // 'ldp_vc' or 'jwt_vc' or "vc+sd-jwt"
-
-
-	@Column({ nullable: false })
-	logoURL: string = "";
-
-	@Column({ nullable: false })
-	backgroundColor: string = "";
-
-
-	@Column({ type: "datetime", nullable: false })
-	issuanceDate: Date = new Date();
+	@Column({ type: "varchar", nullable: false })
+	format: string;
 }
 
 
@@ -66,22 +39,9 @@ enum DeleteVerifiableCredentialErr {
 	CREDENTIAL_NOT_FOUND = "CREDENTIAL_NOT_FOUND"
 }
 
-type VerifiableCredential = {
-	id?: number;
-	holderDID: string;
-	credentialIdentifier: string;
-	credential: string;
-	issuerDID: string;
-	issuerURL: string;
-	format: VerifiableCredentialFormat;
-	logoURL: string;
-	backgroundColor: string;
-	issuanceDate: Date;
-	issuerFriendlyName: string;
-}
 
 
-async function createVerifiableCredential(createVc: VerifiableCredential) {
+async function createVerifiableCredential(createVc: Partial<VerifiableCredentialEntity>) {
 	try {
 		console.log("Storing VC...")
 		let vc = {
@@ -91,7 +51,7 @@ async function createVerifiableCredential(createVc: VerifiableCredential) {
 			.createQueryBuilder()
 			.insert()
 			.into(VerifiableCredentialEntity).values([
-				{...vc, credential: Buffer.from(vc.credential) }
+				{...vc }
 			])
 			.execute();
 		return Ok({});
@@ -128,7 +88,7 @@ async function deleteVerifiableCredential(holderDID:string, credentialId: string
 	}
 }
 
-async function getAllVerifiableCredentials(holderDID: string): Promise<Result<VerifiableCredential[], GetVerifiableCredentialsErr>> {
+async function getAllVerifiableCredentials(holderDID: string): Promise<Result<VerifiableCredentialEntity[], GetVerifiableCredentialsErr>> {
 	try {
 		const vcList = await verifiableCredentialRepository
 			.createQueryBuilder("vc")
@@ -141,7 +101,7 @@ async function getAllVerifiableCredentials(holderDID: string): Promise<Result<Ve
 				...vc,
 				credential: vc.credential.toString(),
 			}
-			return transformed as VerifiableCredential;
+			return transformed as VerifiableCredentialEntity;
 		})
 		return Ok(decodedVcList);
 	}
@@ -152,7 +112,7 @@ async function getAllVerifiableCredentials(holderDID: string): Promise<Result<Ve
 }
 
 
-async function getVerifiableCredentialByCredentialIdentifier(holderDID: string, credentialId: string): Promise<Result<VerifiableCredential, GetVerifiableCredentialsErr>> {
+async function getVerifiableCredentialByCredentialIdentifier(holderDID: string, credentialId: string): Promise<Result<VerifiableCredentialEntity, GetVerifiableCredentialsErr>> {
 	try {
 		const vc = await verifiableCredentialRepository
 			.createQueryBuilder("vc")
@@ -164,7 +124,7 @@ async function getVerifiableCredentialByCredentialIdentifier(holderDID: string, 
 			...vc,
 			credential: vc.credential.toString(),
 		}
-		return Ok(transformed as VerifiableCredential);
+		return Ok(transformed as VerifiableCredentialEntity);
 	}
 	catch(e) {
 		console.log(e);
@@ -192,7 +152,6 @@ async function deleteAllCredentialsWithHolderDID(holderDID: string, options?: { 
 
 export {
 	GetVerifiableCredentialsErr,
-	VerifiableCredential,
 	CreateVerifiableCredentialErr,
 	DeleteVerifiableCredentialErr,
 	getAllVerifiableCredentials,

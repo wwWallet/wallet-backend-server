@@ -2,15 +2,14 @@ import { Err, Ok, Result } from "ts-results";
 import { Entity, EntityManager, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
 import AppDataSource from "../AppDataSource";
 
-// export enum PresentationTypes {
-// 	JWT_VP = 'jwt_vp',
-// 	LDP_VP = 'ldp_vp'
-// }
+
 @Entity({ name: "verifiable_presentation" })
 export class VerifiablePresentationEntity {
 	@PrimaryGeneratedColumn()
 	id: number = -1;
 
+	@Column({ nullable: false })
+	holderDID: string = "";
 
 	@Column({ nullable: false })
 	presentationIdentifier: string = "";
@@ -18,24 +17,14 @@ export class VerifiablePresentationEntity {
 	@Column({ type: 'blob', nullable: false })
 	presentation: string = "";
 
-	@Column({ nullable: false })
-	holderDID: string = "";
-
-	@Column({ nullable: false, default: "" })
-	audience: string = "";
-
-	@Column({ nullable: false, default: "jwt_vp" })
-	format: string = "jwt_vp";
-
-	@Column({ type: "blob", nullable: false })
-	includedVerifiableCredentialIdentifiers: string = "[]";
-
-
 	@Column({ type: 'blob', nullable: false })
 	presentationSubmission: string = "{}";
 
-	// @Column({ enum: PresentationTypes, type: 'enum', nullable: false })
-	// format: PresentationTypes | null = null; // = PresentationTypes.JWT_VP; // 'ldp_vp' or 'jwt_vp'
+	@Column({ type: 'blob', nullable: false })
+	includedVerifiableCredentialIdentifiers: string = "[]";
+
+	@Column({ type: "varchar", nullable: false, default: "" })
+	audience: string = "";
 
 	@Column({ type: "datetime", nullable: false })
 	issuanceDate: Date = new Date();
@@ -49,11 +38,10 @@ type VerifiablePresentation = {
 	presentationIdentifier: string;
 	presentation: string;
 	holderDID: string;
-	includedVerifiableCredentialIdentifiers: string[];
-	issuanceDate: Date;
-	audience: string;
 	presentationSubmission: any;
-	format: string;
+	includedVerifiableCredentialIdentifiers: string[];
+	audience: string;
+	issuanceDate: Date;
 }
 
 enum GetAllVerifiablePresentationsErr {
@@ -76,8 +64,8 @@ async function createVerifiablePresentation(createVp: VerifiablePresentation) {
 			.insert()
 			.into(VerifiablePresentationEntity).values([{
 				...createVp,
+				presentationSubmission: JSON.stringify(createVp.presentationSubmission),
 				includedVerifiableCredentialIdentifiers: JSON.stringify(createVp.includedVerifiableCredentialIdentifiers),
-				presentationSubmission: JSON.stringify(createVp.presentationSubmission)
 			}])
 			.execute();
 		return Ok({});
@@ -141,7 +129,7 @@ async function getAllVerifiablePresentations(holderDID: string): Promise<Result<
 				...vp,
 				presentation: JSON.parse(vp.presentation.toString()),
 				includedVerifiableCredentialIdentifiers: JSON.parse(vp.includedVerifiableCredentialIdentifiers.toString()),
-				presentationSubmission: JSON.parse(vp.presentationSubmission.toString())
+				presentationSubmission: JSON.parse(vp.presentationSubmission.toString()),
 			}
 			return transformed;
 		})
@@ -167,7 +155,7 @@ async function getPresentationByIdentifier(holderDID: string, presentationIdenti
 			...vp,
 			presentation: JSON.parse(vp.presentation.toString()),
 			includedVerifiableCredentialIdentifiers: JSON.parse(vp.includedVerifiableCredentialIdentifiers.toString()),
-			presentationSubmission: JSON.parse(vp.presentationSubmission.toString())
+			presentationSubmission: JSON.parse(vp.presentationSubmission.toString()),
 		}
 		return Ok(transformed);
 	}
