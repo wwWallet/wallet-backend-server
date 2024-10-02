@@ -14,10 +14,6 @@ import { UserId } from "../entities/user.entity";
 @injectable()
 export class ClientKeystoreService implements WalletKeystore {
 
-	private readonly algorithm = config.alg;
-
-
-
 	constructor(
 		@inject(TYPES.SocketManagerService) private socketManagerService: SocketManagerServiceInterface,
 	) { }
