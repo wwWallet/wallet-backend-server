@@ -3,6 +3,7 @@ FROM node:18-bullseye-slim AS builder
 WORKDIR /app
 
 COPY . .
+COPY ./config/config.template.ts ./config/index.ts
 RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
 	apt-get update -y && apt-get install g++ python3 make -y && yarn cache clean && yarn install && yarn build
 
