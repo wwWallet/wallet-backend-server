@@ -9,7 +9,7 @@ credentialIssuerRouter.get('/all', async (req, res) => {
 	const result = await getAllCredentialIssuers();
 
 	if (result.err) {
-		return res.status(400).send({ error: "Error fetchig credential issuers"});
+		return res.status(400).send({ error: "Error fetching credential issuers"});
 	}
 
 	res.send(result.val);
