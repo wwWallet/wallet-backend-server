@@ -3,8 +3,8 @@ FROM node:18-bullseye-slim AS builder
 WORKDIR /app
 
 COPY . .
-RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
-	apt-get update -y && apt-get install g++ python3 make -y && yarn cache clean && yarn install && yarn build
+COPY ./config/config.template.ts ./config/index.ts
+RUN apt-get update -y && apt-get install g++ python3 make -y && yarn cache clean && yarn install && yarn build
 
 # Production stage
 FROM node:18-bullseye-slim AS production
@@ -16,10 +16,9 @@ COPY --from=builder /app/public ./public
 
 
 
-RUN --mount=type=secret,id=npmrc,required=true,target=./.npmrc,uid=1000 \
-	apt-get update -y && apt-get install g++ python3 make -y && yarn install --production
+RUN apt-get update -y && apt-get install g++ python3 make -y && yarn install --production
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 EXPOSE 8002
 

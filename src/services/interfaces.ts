@@ -1,10 +1,7 @@
 import { JWK } from "jose";
 import { Result } from "ts-results";
-import { LegalPersonEntity } from "../entities/LegalPerson.entity";
-import { OutboundRequest } from "./types/OutboundRequest";
 import http from 'http';
 import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
-import { WalletKey } from "@wwwallet/ssi-sdk";
 import { UserId, WalletType } from "../entities/user.entity";
 
 export interface OpenidCredentialReceiving {
@@ -34,7 +31,7 @@ export type AdditionalKeystoreParameters = {
 
 export type RegistrationParams = {
 	fcm_token?: string;
-	keys?: WalletKey;
+	keys?: any;
 	privateData?: Buffer;
 	displayName: string;
 }
@@ -61,21 +58,9 @@ export enum WalletKeystoreErr {
 }
 
 
-
-export interface OutboundCommunication {
-	initiateVerificationFlow(userId: UserId, verifierId: number, scopeName: string): Promise<{ redirect_to?: string }>;
-	handleRequest(userId: UserId, requestURL: string, camera_was_used: boolean): Promise<Result<OutboundRequest, WalletKeystoreRequest | HandleOutboundRequestError>>;
-	sendResponse(userId: UserId, selection: Map<string, string>): Promise<Result<{ redirect_to?: string }, WalletKeystoreRequest | SendResponseError>>;
-}
-
-
-export interface LegalPersonsRegistry {
-	getByIdentifier(did: string): Promise<LegalPersonEntity>;
-}
-
 export interface DidKeyUtilityService {
 	getPublicKeyJwk(did: string): Promise<JWK>;
-	generateKeyPair(): Promise<{ did: string, key: WalletKey }>
+	generateKeyPair(): Promise<{ did: string, key: any }>
 }
 
 

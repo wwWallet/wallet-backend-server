@@ -5,7 +5,7 @@ import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
 import { EntityManager } from "typeorm"
 
-import config from '../../config';
+import { config } from '../../config';
 import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
 import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
 import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';

@@ -2,7 +2,7 @@
 var admin;
 var serviceAccount;
 var path = require('path');
-const config = require('../../config').default;
+const { config } = require('../../config');
 
 if (config.notifications.enabled) {
 	try {

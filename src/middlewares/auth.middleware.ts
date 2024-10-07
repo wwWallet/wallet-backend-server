@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 
 import { jwtVerify, SignJWT } from 'jose';
-import config from "../../config";
+import { config } from "../../config";
 import { getUser, UserEntity, UserId } from "../entities/user.entity";
 
 

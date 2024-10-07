@@ -8,3 +8,4 @@ ssl_keys
 *.tar.gz
 config.production*.*
 .npmrc
+**/config/index.ts
