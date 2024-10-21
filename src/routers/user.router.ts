@@ -597,4 +597,43 @@ userController.delete('/', async (req: Request, res: Response) => {
 	}
 });
 
+userController.get('/settings', async (req: Request, res: Response) => {
+	try {
+		const userRes = await getUser(req.user.id);
+		if (userRes.ok) {
+			const user = userRes.unwrap();
+			return res.send({
+				openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
+			})
+		}
+		return res.status(400).send({ error: userRes.err });
+	}
+	catch (err) {
+		return res.status(500).send({ error: err });
+	}
+});
+
+userController.post('/settings', async (req: Request, res: Response) => {
+	try {
+		const {
+			openidRefreshTokenMaxAgeInSeconds
+		} = req.body;
+		const userRes = await getUser(req.user.id);
+
+		if (userRes.ok) {
+			const user = userRes.unwrap();
+			await updateUser(user.uuid, (userEntity, manager) => {
+				userEntity.openidRefreshTokenMaxAgeInSeconds = openidRefreshTokenMaxAgeInSeconds;
+				manager.save(userEntity);
+				return userEntity;
+			})
+			return res.send({ openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds })
+		}
+		return res.status(400).send({ error: userRes.err });
+	}
+	catch (err) {
+		return res.status(500).send({ error: err });
+	}
+});
+
 export default noAuthUserController;
