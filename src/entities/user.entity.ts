@@ -122,6 +122,9 @@ class UserEntity {
 
 	@OneToMany(() => FcmTokenEntity, (fcmToken) => fcmToken.user, { eager: true })
 	fcmTokenList: FcmTokenEntity[];
+
+	@Column({ nullable: false, default: 60 })
+	openidRefreshTokenMaxAgeInSeconds: number;
 }
 
 @Entity({ name: "webauthn_credential" })

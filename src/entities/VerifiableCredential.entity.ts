@@ -22,6 +22,12 @@ export class VerifiableCredentialEntity {
 
 	@Column({ type: "varchar", nullable: false })
 	format: string;
+
+	@Column({ type: "varchar", nullable: false, default: "" })
+	credentialConfigurationId: string = "";
+
+	@Column({ type: "varchar", nullable: false, default: "" })
+	credentialIssuerIdentifier: string = "";
 }
 
 
