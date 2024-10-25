@@ -331,6 +331,9 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 		username: user.username,
 		displayName: user.displayName,
 		hasPassword: user.passwordHash !== null,
+		settings: {
+			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
+		},
 		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
 			createTime: cred.createTime,
 			credentialId: cred.credentialId,
@@ -594,6 +597,30 @@ userController.delete('/', async (req: Request, res: Response) => {
 		return res.send({ result: "DELETED" });
 	} catch (e) {
 		return res.status(400).send({ result: e })
+	}
+});
+
+
+userController.post('/settings', async (req: Request, res: Response) => {
+	try {
+		const {
+			openidRefreshTokenMaxAgeInSeconds
+		} = req.body;
+		const userRes = await getUser(req.user.id);
+
+		if (userRes.ok) {
+			const user = userRes.unwrap();
+			await updateUser(user.uuid, (userEntity, manager) => {
+				userEntity.openidRefreshTokenMaxAgeInSeconds = openidRefreshTokenMaxAgeInSeconds;
+				manager.save(userEntity);
+				return userEntity;
+			})
+			return res.send({ openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds })
+		}
+		return res.status(400).send({ error: userRes.err });
+	}
+	catch (err) {
+		return res.status(500).send({ error: err });
 	}
 });
 
