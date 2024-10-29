@@ -123,7 +123,7 @@ class UserEntity {
 	@OneToMany(() => FcmTokenEntity, (fcmToken) => fcmToken.user, { eager: true })
 	fcmTokenList: FcmTokenEntity[];
 
-	@Column({ nullable: false, default: 3600 })
+	@Column({ nullable: false, default: 0 })
 	openidRefreshTokenMaxAgeInSeconds: number;
 }
 
