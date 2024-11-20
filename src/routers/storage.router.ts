@@ -57,10 +57,10 @@ async function updateCredential(req: Request, res: Response) {
 		if (!req.body.credential) {
 			return res.status(400).send({ error: "Missing or invalid 'credential' body param" });
 		}
-		await updateVerifiableCredential(req.body.credential);	
+		await updateVerifiableCredential(req.body.credential);
 		return res.status(200).send({});
 	}
-	catch(err) {
+	catch (err) {
 		console.error(err);
 		return res.status(400).send({ error: JSON.stringify(err) });
 	}
