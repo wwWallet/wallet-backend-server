@@ -107,7 +107,7 @@ class UserEntity {
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 
-	@Column({ type: "blob", nullable: false })
+	@Column({ type: "mediumblob", nullable: false })
 	privateData: Buffer;
 
 
