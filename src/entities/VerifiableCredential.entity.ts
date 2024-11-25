@@ -28,6 +28,12 @@ export class VerifiableCredentialEntity {
 
 	@Column({ type: "varchar", nullable: false, default: "" })
 	credentialIssuerIdentifier: string = "";
+
+	@Column({ type: "smallint", nullable: false, default: 0 })
+	instanceId: number = 0;
+
+	@Column({ type: "smallint", nullable: false, default: 0 })
+	sigCount: number = 0;
 }
 
 
@@ -59,6 +65,24 @@ async function createVerifiableCredential(createVc: Partial<VerifiableCredential
 			.into(VerifiableCredentialEntity).values([
 				{...vc }
 			])
+			.execute();
+		return Ok({});
+	}
+	catch(e) {
+		console.log(e);
+		return Err(CreateVerifiableCredentialErr.DB_ERR);
+	}
+}
+
+
+async function updateVerifiableCredential(credential: Partial<VerifiableCredentialEntity>) {
+	try {
+		console.log("Updating VC...")
+		await AppDataSource
+			.createQueryBuilder()
+			.update(VerifiableCredentialEntity)
+			.set({ ...credential })
+			.where("credentialIdentifier = :cred_id and instanceId = :instance_id", { cred_id: credential.credentialIdentifier, instance_id: credential.instanceId })
 			.execute();
 		return Ok({});
 	}
@@ -162,6 +186,7 @@ export {
 	DeleteVerifiableCredentialErr,
 	getAllVerifiableCredentials,
 	createVerifiableCredential,
+	updateVerifiableCredential,
 	deleteVerifiableCredential,
 	getVerifiableCredentialByCredentialIdentifier,
 	deleteAllCredentialsWithHolderDID

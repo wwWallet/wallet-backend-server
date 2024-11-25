@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from "express";
-import { getAllVerifiableCredentials, getVerifiableCredentialByCredentialIdentifier, deleteVerifiableCredential, createVerifiableCredential } from "../entities/VerifiableCredential.entity";
+import { getAllVerifiableCredentials, getVerifiableCredentialByCredentialIdentifier, deleteVerifiableCredential, createVerifiableCredential, updateVerifiableCredential, VerifiableCredentialEntity } from "../entities/VerifiableCredential.entity";
 import { createVerifiablePresentation, deletePresentationsByCredentialId, getAllVerifiablePresentations, getPresentationByIdentifier } from "../entities/VerifiablePresentation.entity";
 import { sendPushNotification } from "../lib/firebase";
 import { getUser } from "../entities/user.entity";
@@ -7,7 +7,9 @@ import { getUser } from "../entities/user.entity";
 
 const storageRouter: Router = express.Router();
 
-storageRouter.post('/vc', storeCredential);
+storageRouter.post('/vc', storeCredentials);
+storageRouter.post('/vc/update', updateCredential);
+
 storageRouter.get('/vc', getAllVerifiableCredentialsController);
 storageRouter.get('/vc/:credential_identifier', getVerifiableCredentialByCredentialIdentifierController);
 storageRouter.delete('/vc/:credential_identifier', deleteVerifiableCredentialController);
@@ -16,20 +18,23 @@ storageRouter.get('/vp', getAllVerifiablePresentationsController);
 storageRouter.get('/vp/:presentation_identifier', getPresentationByPresentationIdentifierController);
 
 
-async function storeCredential(req: Request, res: Response) {
-	createVerifiableCredential({
-		holderDID: req.user.did,
-		issuanceDate: new Date(),
-		...req.body,
-	}).then(async () => {
-		// inform all installed instances of the wallet that a credential has been received
+async function storeCredentials(req: Request, res: Response) {
+	const u = await getUser(req.user.id);
+	if (u.err) {
+		return res.status(400).send({ error: "Unauthenticated user" });
+	}
+	const user = u.unwrap();
 
-		const u = await getUser(req.user.id);
-		if (u.err) {
-			return res.send({});
-		}
-
-		const user = u.unwrap();
+	if (!req.body.credentials || !(req.body.credentials instanceof Array)) {
+		return res.status(400).send({ error: "Missing or invalid 'credentials' body param" });
+	}
+	Promise.all(req.body.credentials.map(async (storableCredential) => {
+		createVerifiableCredential({
+			holderDID: req.user.did,
+			issuanceDate: new Date(),
+			...storableCredential,
+		});
+	})).then(() => {
 		if (user.fcmTokenList) {
 			for (const fcmToken of user.fcmTokenList) {
 				sendPushNotification(fcmToken.value, "New Credential", "A new verifiable credential is in your wallet").catch(err => {
@@ -38,8 +43,27 @@ async function storeCredential(req: Request, res: Response) {
 				});
 			}
 		}
-	})
+	});
 	res.send({});
+}
+
+async function updateCredential(req: Request, res: Response) {
+	try {
+		const u = await getUser(req.user.id);
+		if (u.err) {
+			return res.status(400).send({ error: "Unauthenticated user" });
+		}
+		const user = u.unwrap();
+		if (!req.body.credential) {
+			return res.status(400).send({ error: "Missing or invalid 'credential' body param" });
+		}
+		await updateVerifiableCredential(req.body.credential);
+		return res.status(200).send({});
+	}
+	catch (err) {
+		console.error(err);
+		return res.status(400).send({ error: JSON.stringify(err) });
+	}
 }
 
 async function getAllVerifiableCredentialsController(req: Request, res: Response) {
