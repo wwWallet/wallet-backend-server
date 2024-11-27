@@ -8,6 +8,7 @@ trim_trailing_whitespace = true
 [{*.{Dockerfile,css,js,jsx,ts,tsx},Dockerfile}]
 indent_style = tab
 
-[*.{yml,yaml}] # YAML does not allow tab indentation
+# YAML does not allow tab indentation
+[*.{yml,yaml}]
 indent_style = space
 indent_size = 2
