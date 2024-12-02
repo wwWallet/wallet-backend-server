@@ -22,8 +22,8 @@ const app: Express = express();
 // __dirname is "/path/to/dist/src"
 
 app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json({ reviver: reviverTaggedBase64UrlToBuffer }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '17mb' }));
+app.use(bodyParser.json({ reviver: reviverTaggedBase64UrlToBuffer, limit: '17mb' }));
 app.set('json replacer', replacerBufferToTaggedBase64Url);
 
 app.use(express.static('public'));
