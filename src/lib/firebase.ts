@@ -31,7 +31,7 @@ const sendPushNotification = async (fcm_token, title, body) => {
 				body,
 			},
 			data: {
-				scope: '/notifications/'
+				scope: '/firebase-cloud-messaging-push-scope'
 			},
 			apns: {
 				payload: {
