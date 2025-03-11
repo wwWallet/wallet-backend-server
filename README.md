@@ -79,4 +79,6 @@ chmod +x entrypoint.sh
 Add `Listen 9002` below the `Listen 443` line on `/etc/apache2/ports.conf`
 and restart apache
 
-# 3 Logging
+
+## 💡Contributing
+Want to contribute? Check out our [Contribution Guidelines](https://github.com/wwWallet/.github/blob/main/CONTRIBUTING.md) for more details!
