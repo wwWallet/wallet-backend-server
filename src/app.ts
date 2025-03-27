@@ -19,7 +19,6 @@ import { verifierRouter } from './routers/verifier.router';
 
 
 const app: Express = express();
-// __dirname is "/path/to/dist/src"
 
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true, limit: '17mb' }));
