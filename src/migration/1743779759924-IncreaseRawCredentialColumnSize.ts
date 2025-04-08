@@ -5,16 +5,16 @@ export class IncreaseRawCredentialColumnSize1743779759924 implements MigrationIn
 
 	public async up(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`
-      ALTER TABLE verifiable_credential
-      MODIFY COLUMN credential MEDIUMBLOB;
-    `);
+			ALTER TABLE verifiable_credential
+			MODIFY COLUMN credential MEDIUMBLOB;
+		`);
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {
 		await queryRunner.query(`
-      ALTER TABLE verifiable_credential
-      MODIFY COLUMN credential BLOB;
-    `);
+			ALTER TABLE verifiable_credential
+			MODIFY COLUMN credential BLOB;
+		`);
 	}
 
 }
