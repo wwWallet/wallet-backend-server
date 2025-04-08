@@ -17,7 +17,7 @@ export class VerifiableCredentialEntity {
 	@Column({ nullable: false })
 	credentialIdentifier: string = "";
 
-	@Column({ nullable: false, type: 'mediumblob' })
+	@Column({ nullable: false, type: 'blob' })
 	credential: string;
 
 	@Column({ type: "varchar", nullable: false })

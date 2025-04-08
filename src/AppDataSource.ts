@@ -11,8 +11,7 @@ const AppDataSource: DataSource = new DataSource({
 	password: config.db.password,
 	database: config.db.dbname,
 	entities: [__dirname + "/entities/*.entity.{js,ts}"],
-	synchronize: false,
-	migrations: ["src/migration/**/*.{ts}"],
+	synchronize: true
 });
 
 (async function initDataSource() {
