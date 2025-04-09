@@ -26,11 +26,9 @@ if (config.notifications.enabled) {
 const sendPushNotification = async (fcm_token, title, body) => {
 	try {
 		let message = {
-			notification: {
+			data: {
 				title,
 				body,
-			},
-			data: {
 				scope: '/firebase-cloud-messaging-push-scope'
 			},
 			apns: {
