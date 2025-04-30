@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import base64url from "base64url";
 import { Err, Ok, Result } from 'ts-results';
-
+import { importPKCS8 } from "jose";
 
 export function isResult<T>(a: T | Result<T, unknown>): a is Result<T, unknown> {
 	return a instanceof Object && "val" in a && "ok" in a && "err" in a;
@@ -126,3 +126,19 @@ export function generateCodeVerifier() {
 
 
 export const verifiablePresentationSchemaURL = "https://api-pilot.ebsi.eu/trusted-schemas-registry/v2/schemas/zFj7VdCiHdG4GB6fezdAUKhDEuxFR2bri2ihKLkiZYpE9";
+
+export function removeCertificateMarkers(certString: string) {
+  return certString
+    .replace(/-----BEGIN CERTIFICATE-----/g, '')
+    .replace(/-----END CERTIFICATE-----/g, '')
+    .trim();
+}
+
+export async function importPrivateKeyPem(privateKeyPEM: string, algorithm: string) {
+  try {
+    const privateKey = await importPKCS8(privateKeyPEM, algorithm);
+    return privateKey;
+  } catch (err) {
+    console.error('Error importing private key:', err);
+  }
+}
