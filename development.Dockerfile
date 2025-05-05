@@ -2,6 +2,8 @@ FROM node:16-bullseye-slim as dependencies
 
 WORKDIR /dependencies
 
+RUN apt-get update && apt-get install -y git
+
 # Install dependencies first so rebuild of these layers is only needed when dependencies change
 COPY package.json yarn.lock ./
 RUN yarn cache clean && yarn install
