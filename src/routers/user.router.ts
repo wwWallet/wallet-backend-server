@@ -401,21 +401,27 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	console.log("webauthn register-finish challenge", challenge);
 
 	const credential = req.body.credential;
-	const verification = await SimpleWebauthn.verifyRegistrationResponse({
-		response: {
-			type: credential.type,
-			id: credential.id,
-			rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+	let verification;
+	try {
+		verification = await SimpleWebauthn.verifyRegistrationResponse({
 			response: {
-				attestationObject: base64url.encode(credential.response.attestationObject),
-				clientDataJSON: base64url.encode(credential.response.clientDataJSON),
+				type: credential.type,
+				id: credential.id,
+				rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+				response: {
+					attestationObject: base64url.encode(credential.response.attestationObject),
+					clientDataJSON: base64url.encode(credential.response.clientDataJSON),
+				},
+				clientExtensionResults: credential.clientExtensionResults,
 			},
-			clientExtensionResults: credential.clientExtensionResults,
-		},
-		expectedChallenge: base64url.encode(challenge.challenge),
-		expectedOrigin: config.webauthn.origin,
-		expectedRPID: config.webauthn.rp.id,
-	});
+			expectedChallenge: base64url.encode(challenge.challenge),
+			expectedOrigin: config.webauthn.origin,
+			expectedRPID: config.webauthn.rp.id,
+		});
+	} catch(e) {
+		console.log(e);
+		return res.status(400).send({error: "Registration response could not be verified"})
+	}
 
 	if (verification.verified) {
 		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
