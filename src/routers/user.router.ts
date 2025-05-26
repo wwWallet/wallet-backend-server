@@ -257,28 +257,34 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 
 	console.log("webauthn login-finish challenge", challenge);
 
-	const verification = await SimpleWebauthn.verifyAuthenticationResponse({
-		response: {
-			type: credential.type,
-			id: credential.id,
-			rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+	let verification;
+	try {
+		verification = await SimpleWebauthn.verifyAuthenticationResponse({
 			response: {
-				authenticatorData: base64url.encode(credential.response.authenticatorData),
-				clientDataJSON: base64url.encode(credential.response.clientDataJSON),
-				signature: base64url.encode(credential.response.signature),
+				type: credential.type,
+				id: credential.id,
+				rawId: credential.id, // SimpleWebauthn requires this base64url encoded
+				response: {
+					authenticatorData: base64url.encode(credential.response.authenticatorData),
+					clientDataJSON: base64url.encode(credential.response.clientDataJSON),
+					signature: base64url.encode(credential.response.signature),
+				},
+				clientExtensionResults: credential.clientExtensionResults,
 			},
-			clientExtensionResults: credential.clientExtensionResults,
-		},
-		expectedChallenge: base64url.encode(challenge.challenge),
-		expectedOrigin: config.webauthn.origin,
-		expectedRPID: config.webauthn.rp.id,
-		requireUserVerification: true,
-		authenticator: {
-			credentialID: credentialRecord.credentialId,
-			credentialPublicKey: credentialRecord.publicKeyCose,
-			counter: credentialRecord.signatureCount,
-		},
-	});
+			expectedChallenge: base64url.encode(challenge.challenge),
+			expectedOrigin: config.webauthn.origin,
+			expectedRPID: config.webauthn.rp.id,
+			requireUserVerification: true,
+			authenticator: {
+				credentialID: credentialRecord.credentialId,
+				credentialPublicKey: credentialRecord.publicKeyCose,
+				counter: credentialRecord.signatureCount,
+			},
+		});
+	} catch (e) {
+		console.log(e);
+		return res.status(400).send({});
+	}
 
 	if (verification.verified) {
 		const updateCredentialRes = await updateWebauthnCredential(credentialRecord, (entity) => {
