@@ -1,7 +1,6 @@
 import { Err, Ok, Result } from "ts-results";
 import { Entity, EntityManager, PrimaryGeneratedColumn, Column, Repository} from "typeorm"
 import AppDataSource from "../AppDataSource";
-import { VerifiableCredentialFormat } from "../types/oid4vci";
 import { deletePresentationsByCredentialId } from './VerifiablePresentation.entity';
 import { nullable } from "zod";
 
