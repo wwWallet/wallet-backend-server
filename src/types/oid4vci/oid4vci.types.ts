@@ -2,7 +2,7 @@ import { JWK } from 'jose';
 
 export type AuthorizationDetail = {
 	type: string,
-	format: VerifiableCredentialFormat,
+	format: string,
 	types: string[],
 	locations?: string[]
 }
@@ -37,7 +37,7 @@ export type CredentialOffer = {
 
 
 export type CredentialOfferCredential = {
-	format: VerifiableCredentialFormat,
+	format: string,
 	types: string[] // VerifiableCredential, UniversityDegreeCredential
 }
 
@@ -69,7 +69,7 @@ export type CredentialSupported = CredentialSupportedJwtVcJson; // | CredentialS
 
 export type CredentialSupportedBase = {
 	id?: string,
-	format: VerifiableCredentialFormat,
+	format: string,
 	cryptographic_binding_methods_supported?: string[],
 	cryptographic_suites_supported?: string[],
 	display?: Display[]
@@ -131,13 +131,6 @@ export type ProofPayload = {
 	nonce: string;
 }
 
-
-export enum VerifiableCredentialFormat {
-	JWT_VC_JSON = "jwt_vc_json",
-	JWT_VC = "jwt_vc",
-	LDP_VC = "ldp_vc",
-	VC_SD_JWT = "vc+sd-jwt"
-}
 
 export enum ProofType {
 	JWT = "jwt"
