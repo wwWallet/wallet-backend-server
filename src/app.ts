@@ -14,7 +14,6 @@ import { SocketManagerServiceInterface } from './services/interfaces';
 import { TYPES } from './services/types';
 import { credentialIssuerRouter } from './routers/credential_issuer.router';
 import { proxyRouter } from './routers/proxy.router';
-import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
 import { walletProviderRouter } from './routers/wallet_provider.router';
 
@@ -49,7 +48,6 @@ app.use(AuthMiddleware);
 app.use('/storage', storageRouter);
 app.use('/issuer', credentialIssuerRouter);
 app.use('/proxy', proxyRouter);
-app.use('/helper', helperRouter);
 app.use('/verifier', verifierRouter);
 app.use('/wallet-provider', walletProviderRouter);
 
