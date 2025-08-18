@@ -17,6 +17,7 @@
   "author": "",
   "description": "",
   "dependencies": {
+    "@auth0/mdl": "^2.2.0",
     "@sd-jwt/core": "^0.2.1",
     "@simplewebauthn/server": "^7.4.0",
     "@transmute/did-key-ed25519": "^0.3.0-unstable.10",

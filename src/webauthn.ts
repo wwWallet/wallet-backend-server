@@ -1,3 +1,5 @@
+import { cborDecode, cborEncode } from '@auth0/mdl/lib/cbor';
+
 import { config } from '../config';
 import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
 
@@ -70,4 +72,18 @@ export function makeGetOptions({
 			userVerification: "required",
 		},
 	};
+}
+
+/**
+ * Convert the given attestation object into one with the `"none"` attestation
+ * statement format.
+ */
+export function stripAttestationStatement(attObj: Buffer | Uint8Array): Buffer {
+	const originalAttestationObject = cborDecode(attObj);
+	const enc = cborEncode({
+		fmt: "none",
+		authData: originalAttestationObject.get('authData'),
+		attStmt: {},
+	});
+	return enc;
 }
