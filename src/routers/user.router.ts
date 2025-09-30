@@ -592,23 +592,6 @@ userController.get('/private-data', async (req: Request, res: Response) => {
 	}
 });
 
-userController.get('/private-data/etag', async (req: Request, res: Response) => {
-	const userRes = await getUser(req.user.id);
-	if (userRes.ok) {
-		const privateData = userRes.val.privateData;
-		res.status(200)
-			.header({ 'X-Private-Data-ETag': privateDataEtag(privateData) })
-			.send({ });
-	} else {
-		if (userRes.val === GetUserErr.NOT_EXISTS) {
-			res.status(404).send();
-
-		} else {
-			res.status(500).send();
-		}
-	}
-});
-
 userController.delete('/', async (req: Request, res: Response) => {
 	try {
 		await runTransaction(async (entityManager: EntityManager) => {
