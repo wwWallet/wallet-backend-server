@@ -579,26 +579,13 @@ userController.get('/private-data', async (req: Request, res: Response) => {
 	const userRes = await getUser(req.user.id);
 	if (userRes.ok) {
 		const privateData = userRes.val.privateData;
-		res.status(200)
-			.header({ 'X-Private-Data-ETag': privateDataEtag(privateData) })
-			.send({ privateData });
-	} else {
-		if (userRes.val === GetUserErr.NOT_EXISTS) {
-			res.status(404).send();
-
+		const etag = privateDataEtag(privateData);
+		const header = { 'X-Private-Data-ETag': etag };
+		if (req.headers['if-none-match'] === etag || req.headers['x-private-data-if-none-match'] === etag) {
+			res.status(304).header(header).send();
 		} else {
-			res.status(500).send();
+			res.status(200).header(header).send({ privateData });
 		}
-	}
-});
-
-userController.get('/private-data/etag', async (req: Request, res: Response) => {
-	const userRes = await getUser(req.user.id);
-	if (userRes.ok) {
-		const privateData = userRes.val.privateData;
-		res.status(200)
-			.header({ 'X-Private-Data-ETag': privateDataEtag(privateData) })
-			.send({ });
 	} else {
 		if (userRes.val === GetUserErr.NOT_EXISTS) {
 			res.status(404).send();

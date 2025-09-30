@@ -33,7 +33,7 @@ app.use(express.static('public'));
 app.use(cors({
 	credentials: true,
 	origin: true,
-	allowedHeaders: ['Authorization', 'Content-Type', 'X-Private-Data-If-Match'],
+	allowedHeaders: ['Authorization', 'Content-Type', 'If-None-Match', 'X-Private-Data-If-Match', 'X-Private-Data-If-None-Match'],
 	exposedHeaders: ['X-Private-Data-ETag'],
 }));
 
