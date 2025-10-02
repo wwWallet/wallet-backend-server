@@ -19,7 +19,7 @@
   "dependencies": {
     "@auth0/mdl": "^2.2.0",
     "@sd-jwt/core": "^0.2.1",
-    "@simplewebauthn/server": "^7.4.0",
+    "@simplewebauthn/server": "^9.0.3",
     "@transmute/did-key-ed25519": "^0.3.0-unstable.10",
     "ajv": "^8.12.0",
     "apn": "^2.2.0",
@@ -49,7 +49,7 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
-    "@simplewebauthn/typescript-types": "^7.4.0",
+    "@simplewebauthn/types": "^9.0.1",
     "@types/body-parser": "^1.19.2",
     "@types/cookie-parser": "^1.4.3",
     "@types/cors": "^2.8.12",

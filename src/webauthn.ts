@@ -84,6 +84,6 @@ export function stripAttestationStatement(attObj: Buffer | Uint8Array): Buffer {
 		fmt: "none",
 		authData: originalAttestationObject.get('authData'),
 		attStmt: {},
-	});
+	}, { variableMapSize: true });
 	return enc;
 }
