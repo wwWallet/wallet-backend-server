@@ -159,7 +159,14 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 			id: credential.id,
 			rawId: credential.id, // SimpleWebauthn requires this base64url encoded
 			response: {
-				attestationObject: base64url.encode(credential.response.attestationObject),
+				attestationObject: base64url.encode(
+					// Remove the attestation statement, so that for example expired
+					// attestation certs don't cause the registration to fail.
+					// We only want the attestation for informational purposes, such as
+					// being able to monitor vulnerability reports and warn affected
+					// users; we don't actually care whether the attestation is valid.
+					webauthn.stripAttestationStatement(credential.response.attestationObject)
+				),
 				clientDataJSON: base64url.encode(credential.response.clientDataJSON),
 			},
 			clientExtensionResults: credential.clientExtensionResults,
@@ -415,7 +422,14 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 				id: credential.id,
 				rawId: credential.id, // SimpleWebauthn requires this base64url encoded
 				response: {
-					attestationObject: base64url.encode(credential.response.attestationObject),
+					attestationObject: base64url.encode(
+						// Remove the attestation statement, so that for example expired
+						// attestation certs don't cause the registration to fail.
+						// We only want the attestation for informational purposes, such as
+						// being able to monitor vulnerability reports and warn affected
+						// users; we don't actually care whether the attestation is valid.
+						webauthn.stripAttestationStatement(credential.response.attestationObject)
+					),
 					clientDataJSON: base64url.encode(credential.response.clientDataJSON),
 				},
 				clientExtensionResults: credential.clientExtensionResults,
