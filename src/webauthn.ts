@@ -1,4 +1,4 @@
-import { cborDecode, cborEncode } from '@auth0/mdl/lib/cbor';
+import * as cbor from 'cbor-x';
 
 import { config } from '../config';
 import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
@@ -79,11 +79,12 @@ export function makeGetOptions({
  * statement format.
  */
 export function stripAttestationStatement(attObj: Buffer | Uint8Array): Buffer {
-	const originalAttestationObject = cborDecode(attObj);
-	const enc = cborEncode({
+	const originalAttestationObject = cbor.decode(attObj);
+	const encoder = new cbor.Encoder({ useRecords: false, variableMapSize: true });
+	const enc = encoder.encode({
 		fmt: "none",
-		authData: originalAttestationObject.get('authData'),
+		authData: originalAttestationObject.authData,
 		attStmt: {},
-	}, { variableMapSize: true });
+	});
 	return enc;
 }

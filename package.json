@@ -17,7 +17,6 @@
   "author": "",
   "description": "",
   "dependencies": {
-    "@auth0/mdl": "^2.2.0",
     "@sd-jwt/core": "^0.2.1",
     "@simplewebauthn/server": "^9.0.3",
     "@transmute/did-key-ed25519": "^0.3.0-unstable.10",
@@ -26,6 +25,7 @@
     "axios": "^0.27.2",
     "base64url": "^3.0.1",
     "body-parser": "^1.20.0",
+    "cbor-x": "^1.6.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "express": "^4.18.1",
