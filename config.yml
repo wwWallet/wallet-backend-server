@@ -14,12 +14,12 @@ backend:
     username: root
     password: root
     dbname: wallet
-  walletClientUrl: &wallet_url
+  walletClientUrl: *wallet_url
   webauthn:
     attestation: direct
-    origin: &wallet_url
+    origin: *wallet_url
     rp:
-      id: &wallet_host
+      id: *wallet_host
       name: wwWallet demo
   alg: EdDSA
   notifications:
