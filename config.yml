@@ -1,0 +1,28 @@
+urls: &urls
+  backend_url: &backend_url "http://wallet-backend-server:8002"
+  wallet_url: &wallet_url "http://localhost:3000"
+  wallet_host: &wallet_host "localhost"
+
+backend:
+  url: *backend_url
+  port: 8002
+  appSecret: dsfkwfkwfwdfdsfSaSe2e34r4frwr42rAFdsf2lfmfsmklfwmer
+  ssl: SSL_FLAG
+  db:
+    host: wallet-db
+    port: 3307
+    username: root
+    password: root
+    dbname: wallet
+  walletClientUrl: *wallet_url
+  webauthn:
+    attestation: direct
+    origin: *wallet_url
+    rp:
+      id: *wallet_host
+      name: wwWallet demo
+  alg: EdDSA
+  notifications:
+    enabled: true
+    serviceAccount: firebaseConfig.json
+
