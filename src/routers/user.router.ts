@@ -16,7 +16,6 @@ import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
 import { runTransaction } from '../entities/common.entity';
-import { deleteAllFcmTokensForUser, FcmTokenEntity } from '../entities/FcmToken.entity';
 import { deleteAllPresentationsWithHolderDID } from '../entities/VerifiablePresentation.entity';
 import { deleteAllCredentialsWithHolderDID } from '../entities/VerifiableCredential.entity';
 import { Err, Ok, Result } from 'ts-results';
@@ -314,23 +313,6 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 })
 
 
-userController.post('/fcm_token/add', async (req: Request, res: Response) => {
-	updateUser(req.user.id, (userEntity, manager) => {
-		if (req.body.fcm_token &&
-			req.body.fcm_token != '' &&
-			userEntity.fcmTokenList.filter((fcmTokenEntity) => fcmTokenEntity.value == req.body.fcm_token).length == 0) {
-			const fcmTokenEntity = new FcmTokenEntity();
-			fcmTokenEntity.user = userEntity;
-			fcmTokenEntity.value = req.body.fcm_token;
-			manager.save(fcmTokenEntity).then((result) => {
-				userEntity.fcmTokenList.push(result);
-			});
-		}
-		return userEntity;
-	});
-	res.status(200).send({});
-})
-
 userController.get('/account-info', async (req: Request, res: Response) => {
 	const userRes = await getUser(req.user.id);
 	if (userRes.err) {
@@ -617,7 +599,6 @@ userController.delete('/', async (req: Request, res: Response) => {
 			// ts-results does not seem to provide an async-optimized version of Result.all(),
 			// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
 			return Result.all(
-				await deleteAllFcmTokensForUser(req.user.id, { entityManager }),
 				await deleteAllCredentialsWithHolderDID(req.user.did, { entityManager }),
 				await deleteAllPresentationsWithHolderDID(req.user.did, { entityManager }),
 				await deleteUser(req.user.id, { entityManager }),

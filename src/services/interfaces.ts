@@ -30,7 +30,6 @@ export type AdditionalKeystoreParameters = {
 }
 
 export type RegistrationParams = {
-	fcm_token?: string;
 	keys?: any;
 	privateData?: Buffer;
 	displayName: string;
@@ -38,7 +37,7 @@ export type RegistrationParams = {
 
 
 export interface WalletKeystoreManager {
-	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
+	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
 
 	signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
 	generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;

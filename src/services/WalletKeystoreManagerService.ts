@@ -15,10 +15,8 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 		@inject(TYPES.ClientKeystoreService) private clientWalletKeystoreService: WalletKeystore,
 	) { }
 
-	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ fcmToken: string, keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
-		const fcmToken = registrationParams.fcm_token ? registrationParams.fcm_token : "";
+	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
 		return Ok({
-			fcmToken,
 			keys: Buffer.from(""),
 			displayName: registrationParams.displayName,
 			privateData: Buffer.from(registrationParams.privateData),
