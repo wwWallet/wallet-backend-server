@@ -19,9 +19,5 @@ export const config = {
 			name: "wwWallet demo",
 		},
 	},
-	alg: "EdDSA",
-	notifications: {
-		enabled: "NOTIFICATIONS_ENABLED",
-		serviceAccount: "firebaseConfig.json"
-	}
+	alg: "EdDSA"
 }

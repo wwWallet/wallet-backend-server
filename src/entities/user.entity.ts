@@ -6,7 +6,6 @@ import * as uuid from 'uuid';
 
 import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
-import { FcmTokenEntity } from "./FcmToken.entity";
 import { checkedUpdate, EtagUpdate, isResult } from "../util/util";
 import { runTransaction } from "./common.entity";
 
@@ -119,10 +118,6 @@ class UserEntity {
 		{ cascade: true, onDelete: "CASCADE", orphanedRowAction: "delete", eager: true, nullable: false })
 	webauthnCredentials: WebauthnCredentialEntity[];
 
-
-	@OneToMany(() => FcmTokenEntity, (fcmToken) => fcmToken.user, { eager: true })
-	fcmTokenList: FcmTokenEntity[];
-
 	@Column({ nullable: false, default: 0 })
 	openidRefreshTokenMaxAgeInSeconds: number;
 }
@@ -187,13 +182,11 @@ type CreateUser = {
 	username: string;
 	displayName: string,
 	passwordHash: string;
-	fcmToken: string;
 	privateData: Buffer;
 } | {
 	uuid: UserId;
 	displayName: string,
 	keys: Buffer;
-	fcmToken: string;
 	privateData: Buffer;
 	webauthnCredentials: WebauthnCredentialEntity[];
 }
@@ -215,10 +208,6 @@ enum UpdateUserErr {
 	PRIVATE_DATA_CONFLICT = "PRIVATE_DATA_CONFLICT",
 }
 
-enum UpdateFcmError {
-	DB_ERR = "Failed to update FCM token list"
-}
-
 enum DeleteUserErr {
 	FAILED_TO_DELETE = "FAILED_TO_DELETE"
 }
@@ -237,11 +226,6 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 			did: uuid.id,
 			isAdmin,
 		}));
-		const fcmTokenEntity = new FcmTokenEntity();
-		fcmTokenEntity.value = createUser.fcmToken;
-		fcmTokenEntity.user = user;
-		AppDataSource.getRepository(FcmTokenEntity).save(fcmTokenEntity);
-
 		return Ok(user);
 	}
 	catch(e) {
@@ -497,7 +481,6 @@ export {
 	createUser,
 	getUser,
 	getUserByCredentials,
-	UpdateFcmError,
 	getUserByWebauthnCredential,
 	getAllUsers,
 	newWebauthnCredentialEntity,

@@ -30,8 +30,6 @@
     "cors": "^2.8.5",
     "express": "^4.18.1",
     "express-ws": "^5.0.2",
-    "fcm-notification": "^2.0.0",
-    "firebase-admin": "^11.5.0",
     "inversify": "^6.0.1",
     "jose": "^4.9.3",
     "jsonpath-plus": "^7.2.0",

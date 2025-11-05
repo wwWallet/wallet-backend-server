@@ -1,7 +1,6 @@
 import express, { Request, Response, Router } from "express";
 import { getAllVerifiableCredentials, getVerifiableCredentialByCredentialIdentifier, deleteVerifiableCredential, createVerifiableCredential, updateVerifiableCredential, VerifiableCredentialEntity } from "../entities/VerifiableCredential.entity";
 import { createVerifiablePresentation, deletePresentationsByCredentialId, getAllVerifiablePresentations, getPresentationByIdentifier } from "../entities/VerifiablePresentation.entity";
-import { sendPushNotification } from "../lib/firebase";
 import { getUser } from "../entities/user.entity";
 
 
@@ -34,16 +33,7 @@ async function storeCredentials(req: Request, res: Response) {
 			issuanceDate: new Date(),
 			...storableCredential,
 		});
-	})).then(() => {
-		if (user.fcmTokenList) {
-			for (const fcmToken of user.fcmTokenList) {
-				sendPushNotification(fcmToken.value, "New Credential", "A new verifiable credential is in your wallet").catch(err => {
-					console.log("Failed to send notification")
-					console.log(err)
-				});
-			}
-		}
-	});
+	}))
 	res.send({});
 }
 
