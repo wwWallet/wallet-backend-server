@@ -9,6 +9,10 @@ const agent = new https.Agent({
 	// rejectUnauthorized: false, // Accept self-signed certificates for testing purposes
 });
 
+helperRouter.all('/auth-check', (req, res) => {
+	console.log("Auth from Relay: OK");
+	return res.status(200).send();
+})
 
 helperRouter.post('/get-cert', async (req, res) => {
 	axios.get(req.body.url, { httpsAgent: agent }).then((response) => {
