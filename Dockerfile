@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY . .
 COPY ./config/config.template.ts ./config/index.ts
-RUN apt-get update -y && apt-get install g++ python3 make -y && yarn cache clean && yarn install && yarn build && rm -rf node_modules/ && yarn install --production
+RUN yarn cache clean && yarn install && yarn build && rm -rf node_modules/ && yarn install --production
 
 # Production stage
 FROM node:18-bullseye-slim AS production
