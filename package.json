@@ -11,7 +11,8 @@
     "start": "node -r source-map-support/register dist/src/app.js",
     "start-docker": "node -r source-map-support/register /dist/src/app.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/AppDataSource.ts",
-    "typeorm-raw": "typeorm-ts-node-commonjs"
+    "typeorm-raw": "typeorm-ts-node-commonjs",
+    "migration:run:prod" : "typeorm migration:run -d dist/src/AppDataSource.js"
   },
   "keywords": [],
   "author": "",
