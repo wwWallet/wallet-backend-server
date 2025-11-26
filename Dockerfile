@@ -16,6 +16,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/public ./public
 
 ENV NODE_ENV=production
+ENV NODE_PATH=/node_modules
+ENV PATH="/node_modules/.bin:${PATH}"
 
 EXPOSE 8002
 
