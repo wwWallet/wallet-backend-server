@@ -6,7 +6,6 @@ import cors from 'cors';
 import userController from './routers/user.router';
 import { AuthMiddleware } from './middlewares/auth.middleware';
 import { statusRouter } from './routers/status.router';
-import { storageRouter } from './routers/storage.router';
 import { replacerBufferToTaggedBase64Url, reviverTaggedBase64UrlToBuffer } from './util/util';
 import http from 'http';
 import { appContainer } from './services/inversify.config';
@@ -46,7 +45,6 @@ app.use('/user', userController);
 app.use(AuthMiddleware);
 
 // all the following endpoints are guarded by the AuthMiddleware
-app.use('/storage', storageRouter);
 app.use('/issuer', credentialIssuerRouter);
 app.use('/proxy', proxyRouter);
 app.use('/helper', helperRouter);
