@@ -16,8 +16,6 @@ import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
 import { TYPES } from '../services/types';
 import { runTransaction } from '../entities/common.entity';
-import { deleteAllPresentationsWithHolderDID } from '../entities/VerifiablePresentation.entity';
-import { deleteAllCredentialsWithHolderDID } from '../entities/VerifiableCredential.entity';
 import { Err, Ok, Result } from 'ts-results';
 
 
@@ -599,8 +597,6 @@ userController.delete('/', async (req: Request, res: Response) => {
 			// ts-results does not seem to provide an async-optimized version of Result.all(),
 			// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
 			return Result.all(
-				await deleteAllCredentialsWithHolderDID(req.user.did, { entityManager }),
-				await deleteAllPresentationsWithHolderDID(req.user.did, { entityManager }),
 				await deleteUser(req.user.id, { entityManager }),
 			);
 		});
