@@ -6,9 +6,9 @@ import { importPrivateKeyPem, removeCertificateMarkers } from "../util/util";
 
 const walletProviderRouter = Router();
 
-const walletProviderPrivateKeyPath = path.join('/', 'app', 'keys', 'wallet-provider.key');
-const walletProviderCertificatePath = path.join('/', 'app', 'keys', 'wallet-provider.pem');
-const caCertificatePath = path.join('/', 'app', 'keys', 'ca.pem');
+const walletProviderPrivateKeyPath = path.join(__dirname, '../../../keys/wallet-provider.key');
+const walletProviderCertificatePath = path.join(__dirname, '../../../keys/wallet-provider.pem');
+const caCertificatePath = path.join(__dirname, '../../../keys/ca.pem');
 
 
 walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
