@@ -67,7 +67,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 		}).setIssuedAt()
 			.setProtectedHeader({
 				alg: 'ES256',
-				typ: 'keyattestation+jwt',
+				typ: 'key-attestation+jwt',
 				x5c: [
 					removeCertificateMarkers(walletProviderCertificate)
 				],
