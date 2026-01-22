@@ -12,7 +12,7 @@
     "start-docker": "node -r source-map-support/register /dist/src/app.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/AppDataSource.ts",
     "typeorm-raw": "typeorm-ts-node-commonjs",
-    "migration:run:prod" : "typeorm migration:run -d dist/src/AppDataSource.js"
+    "migration:run:prod": "typeorm migration:run -d dist/src/AppDataSource.js"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +26,7 @@
     "cbor-x": "^1.6.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^4.18.1",
     "inversify": "^6.0.1",
     "jose": "^4.9.3",
