@@ -16,7 +16,7 @@ export const config = {
 	walletClientUrl: process.env.WALLET_CLIENT_URL || "WALLET_CLIENT_URL",
 	webauthn: {
 		attestation: "direct",
-		origin: process.env.WEBAUTHN_ORIGIN.split(',') || "WEBAUTHN_ORIGIN",
+		origin: (process.env.WEBAUTHN_ORIGIN ? process.env.WEBAUTHN_ORIGIN.split(',') : undefined) || "WEBAUTHN_ORIGIN",
 		rp: {
 			id: process.env.WEBAUTHN_RP_ID || "WEBAUTHN_RP_ID",
 			name: process.env.WEBAUTHN_RP_NAME || "wwWallet demo",
