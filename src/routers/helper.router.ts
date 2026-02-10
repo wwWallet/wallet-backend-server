@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Router } from "express";
 import https from 'https';
+import { getAllTrustedRootCertificates } from "../entities/TrustedRootCertificate.entity";
 
 
 const helperRouter = Router()
@@ -41,6 +42,14 @@ helperRouter.post('/get-cert', async (req, res) => {
 		return res.status(400).send({ error: "INVALID_CERT" });
 	});
 })
+
+helperRouter.get('/iaca-list', async (req, res) => {
+	const certs = await getAllTrustedRootCertificates();
+	if (certs.ok) {
+		return res.send({ iaca_list: certs.val });
+	}
+	return res.status(500).send({ error: certs.val });
+});
 
 export {
 	helperRouter

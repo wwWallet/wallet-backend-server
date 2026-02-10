@@ -3,13 +3,26 @@ import { readFile } from 'fs/promises';
 import path from "path";
 import { importX509, SignJWT } from "jose";
 import { importPrivateKeyPem, removeCertificateMarkers } from "../util/util";
+import { config } from "../../config";
 
 const walletProviderRouter = Router();
 
-const walletProviderPrivateKeyPath = path.join('/', 'app', 'keys', 'wallet-provider.key');
-const walletProviderCertificatePath = path.join('/', 'app', 'keys', 'wallet-provider.pem');
-const caCertificatePath = path.join('/', 'app', 'keys', 'ca.pem');
+// @ts-ignore
+const keysDir: string = config.keysDir ?? "/app/keys";
+const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
+const walletProviderCertificatePath = path.join(keysDir, 'wallet-provider.pem');
+const caCertificatePath = path.join(keysDir, 'ca.pem');
 
+Promise.all([
+	readFile(walletProviderPrivateKeyPath, 'utf-8'),
+	readFile(walletProviderCertificatePath, 'utf-8'),
+	readFile(caCertificatePath, 'utf-8')
+]).then(() =>
+	console.log("Test importing keys passed")
+).catch((err) => {
+	console.error("Error imported wallet provider keys");
+	console.error(err);
+});
 
 walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 
@@ -67,7 +80,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 		}).setIssuedAt()
 			.setProtectedHeader({
 				alg: 'ES256',
-				typ: 'keyattestation+jwt',
+				typ: 'key-attestation+jwt',
 				x5c: [
 					removeCertificateMarkers(walletProviderCertificate)
 				],

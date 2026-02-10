@@ -9,3 +9,4 @@ ssl_keys
 config.production*.*
 .npmrc
 **/config/index.ts
+.env
