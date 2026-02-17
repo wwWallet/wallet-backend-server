@@ -10,7 +10,7 @@ export type AuthorizationDetail = {
 export type AuthorizationDetails = AuthorizationDetail[];
 
 export type OpenidConfiguration = {
-	authorization_endpoint: string;
+	authorization_endpoint?: string;
 	token_endpoint: string;
 }
 
