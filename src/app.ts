@@ -16,6 +16,7 @@ import { proxyRouter } from './routers/proxy.router';
 import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
 import { walletProviderRouter } from './routers/wallet_provider.router';
+import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 
 
 const app: Express = express();
@@ -48,6 +49,7 @@ app.use(AuthMiddleware);
 app.use('/issuer', credentialIssuerRouter);
 app.use('/proxy', proxyRouter);
 app.use('/helper', helperRouter);
+app.use('/relay', ohttpRelayRouter);
 app.use('/verifier', verifierRouter);
 app.use('/wallet-provider', walletProviderRouter);
 
