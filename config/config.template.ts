@@ -23,10 +23,6 @@ export const config = {
 		},
 	},
 	alg: process.env.ALG || "EdDSA",
-	notifications: {
-		enabled: process.env.NOTIFICATIONS_ENABLED === 'true' || true,
-		serviceAccount: process.env.FIREBASE_CONFIG || "firebaseConfig.json"
-	},
 	keysDir: process.env.KEYS_DIR || undefined,
 	ohttpGatewayUrl: process.env.OHTTP_GATEWAY_URL || "http://localhost:4567"
 }
