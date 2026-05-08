@@ -58,7 +58,6 @@ if (process.env.NODE_ENV === "production") {
 	const enabledUnsafeEnvironmentVariables = getEnabledUnsafeEnvironmentVariables();
 	if (enabledUnsafeEnvironmentVariables.length > 0) {
 		const names = enabledUnsafeEnvironmentVariables
-			.map(([key]) => key)
 			.join(', ');
 
 		console.error(
