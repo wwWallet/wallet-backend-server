@@ -1,10 +1,12 @@
 import axios from 'axios';
 import express, { Router } from 'express';
 import https from 'https';
+import { config } from '../../config';
+
 const proxyRouter: Router = express.Router();
 
 const agent = new https.Agent({
-	// rejectUnauthorized: false, // Accept self-signed certificates for testing purposes
+	rejectUnauthorized: !config.debugAcceptUnauthorizedHttps
 });
 
 proxyRouter.post('/', async (req, res) => {

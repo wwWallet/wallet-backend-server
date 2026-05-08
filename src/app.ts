@@ -17,6 +17,7 @@ import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
 import { walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
+import { getEnabledUnsafeEnvironmentVariables } from './configValidation';
 
 
 const app: Express = express();
@@ -52,6 +53,21 @@ app.use('/helper', helperRouter);
 app.use('/relay', ohttpRelayRouter);
 app.use('/verifier', verifierRouter);
 app.use('/wallet-provider', walletProviderRouter);
+
+if (process.env.NODE_ENV === "production") {
+	const enabledUnsafeEnvironmentVariables = getEnabledUnsafeEnvironmentVariables();
+	if (enabledUnsafeEnvironmentVariables.length > 0) {
+		const names = enabledUnsafeEnvironmentVariables
+			.map(([key]) => key)
+			.join(', ');
+
+		console.error(
+			`FATAL: Unsafe env flags enabled in production: ${names}`
+		);
+
+		process.exit(1);
+	}
+}
 
 const server = http.createServer(app);
 appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
