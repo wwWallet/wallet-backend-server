@@ -2,12 +2,12 @@ import axios from "axios";
 import { Router } from "express";
 import https from 'https';
 import { getAllTrustedRootCertificates } from "../entities/TrustedRootCertificate.entity";
-
+import { config } from "../../config";
 
 const helperRouter = Router()
 
 const agent = new https.Agent({
-	// rejectUnauthorized: false, // Accept self-signed certificates for testing purposes
+	rejectUnauthorized: !config.debugAcceptUnauthorizedHttps
 });
 
 helperRouter.all('/auth-check', (req, res) => {

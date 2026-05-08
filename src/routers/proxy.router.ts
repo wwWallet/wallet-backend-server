@@ -1,6 +1,13 @@
 import axios from 'axios';
-import express, { Request, Response, Router } from 'express';
+import express, { Router } from 'express';
+import https from 'https';
+import { config } from '../../config';
+
 const proxyRouter: Router = express.Router();
+
+const agent = new https.Agent({
+	rejectUnauthorized: !config.debugAcceptUnauthorizedHttps
+});
 
 proxyRouter.post('/', async (req, res) => {
 	const { headers, method, url, data } = req.body;
@@ -10,6 +17,7 @@ proxyRouter.post('/', async (req, res) => {
 		const response = await axios({
 			url: url,
 			headers: headers,
+			httpsAgent: agent,
 			method: method,
 			data: data,
 			...(isBinaryRequest && { responseType: 'arraybuffer' }),
