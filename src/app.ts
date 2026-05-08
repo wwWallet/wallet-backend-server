@@ -17,7 +17,7 @@ import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
 import { walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
-import { getEnabledUnsafeEnvironmentVariables } from './configValidation';
+import { getUnsafeEnvironmentVariables } from './configValidation';
 
 
 const app: Express = express();
@@ -55,13 +55,13 @@ app.use('/verifier', verifierRouter);
 app.use('/wallet-provider', walletProviderRouter);
 
 if (process.env.NODE_ENV === "production") {
-	const enabledUnsafeEnvironmentVariables = getEnabledUnsafeEnvironmentVariables();
-	if (enabledUnsafeEnvironmentVariables.length > 0) {
-		const names = enabledUnsafeEnvironmentVariables
+	const unsafeEnvironmentVariables = getUnsafeEnvironmentVariables();
+	if (unsafeEnvironmentVariables.length > 0) {
+		const names = unsafeEnvironmentVariables
 			.join(', ');
 
 		console.error(
-			`FATAL: Unsafe env flags enabled in production: ${names}`
+			`FATAL: Unsafe env flags found in production: ${names}`
 		);
 
 		process.exit(1);
