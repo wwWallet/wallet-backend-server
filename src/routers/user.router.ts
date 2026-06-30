@@ -186,6 +186,7 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 		if (walletInitializationResult.err) {
 			return res.status(400).send({ error: walletInitializationResult.val })
 		}
+		var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject,true);
 
 		const newUser: CreateUser = {
 			...walletInitializationResult.unwrap(),
@@ -201,6 +202,8 @@ noAuthUserController.post('/register-webauthn-finish', async (req: Request, res:
 					attestationObject: credential.response.attestationObject,
 					create_clientDataJSON: credential.response.clientDataJSON,
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+					backupEligibility: flags.backupEligibility,
+					backupState: flags.backupState
 				}),
 			],
 		};
@@ -291,9 +294,12 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	}
 
 	if (verification.verified) {
+		var flags = webauthn.parseAuthenticatorFlags(credential.response.authenticatorData,false);
 		const updateCredentialRes = await updateWebauthnCredential(credentialRecord, (entity) => {
 			entity.signatureCount = verification.authenticationInfo.newCounter;
 			entity.lastUseTime = new Date();
+			entity.backupEligibility = flags.backupEligibility;
+			entity.backupState = flags.backupState;
 			return entity;
 		});
 
@@ -334,6 +340,8 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			lastUseTime: cred.lastUseTime,
 			nickname: cred.nickname,
 			prfCapable: cred.prfCapable,
+			backupEligibility: cred.backupEligibility,
+			backupState: cred.backupState,
 		})),
 	});
 })
@@ -424,6 +432,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	}
 
 	if (verification.verified) {
+		var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject,true);
 		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
@@ -437,6 +446,8 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
 					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+					backupEligibility: flags.backupEligibility,
+					backupState: flags.backupState
 				}, manager)
 			);
 

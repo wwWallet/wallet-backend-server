@@ -88,3 +88,60 @@ export function stripAttestationStatement(attObj: Buffer | Uint8Array): Buffer {
 	});
 	return enc;
 }
+
+type AuthenticatorFlags = {
+	userPresent: boolean;              // UP
+  	userVerified: boolean;             // UV
+  	backupEligibility: boolean;        // BE
+  	backupState: boolean;              // BS
+  	attestedCredentialData: boolean;   // AT
+  	extensionData: boolean;            // ED
+  	rawFlagsByte: number;
+};
+
+function toUint8Array(value: Buffer | Uint8Array | ArrayBuffer): Uint8Array {
+  	if (value instanceof Uint8Array) {
+    	return value;
+  	}
+
+  	return new Uint8Array(value);
+}
+
+function parseAuthenticatorFlagsFromAuthenticatorData(
+  	authenticatorData: Buffer | Uint8Array | ArrayBuffer
+): AuthenticatorFlags {
+  	const data = toUint8Array(authenticatorData);
+
+  	if (data.length < 37) {
+    	throw new Error("Invalid authenticatorData: too short");
+  	}
+
+  	const flags = data[32];
+
+  	return {
+    	userPresent: Boolean(flags & 0x01),             // bit 0 - UP
+    	userVerified: Boolean(flags & 0x04),            // bit 2 - UV
+    	backupEligibility: Boolean(flags & 0x08),          // bit 3 - BE
+    	backupState: Boolean(flags & 0x10),             // bit 4 - BS
+    	attestedCredentialData: Boolean(flags & 0x40),  // bit 6 - AT
+    	extensionData: Boolean(flags & 0x80),           // bit 7 - ED
+    	rawFlagsByte: flags,
+  	};
+}
+
+export function parseAuthenticatorFlags(
+  input: Buffer | Uint8Array,
+  isAttestation: boolean
+): AuthenticatorFlags {
+  if (isAttestation) {
+    const decoded = cbor.decode(input);
+
+    if (!decoded.authData) {
+      throw new Error("Invalid attestationObject: missing authData");
+    }
+
+    return parseAuthenticatorFlagsFromAuthenticatorData(decoded.authData);
+  }
+
+  return parseAuthenticatorFlagsFromAuthenticatorData(input);
+}

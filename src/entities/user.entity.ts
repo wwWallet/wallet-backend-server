@@ -168,6 +168,12 @@ class WebauthnCredentialEntity {
 	@Column({ nullable: false })
 	prfCapable: boolean;
 
+	@Column({ nullable: false })
+	backupEligibility: boolean;
+
+	@Column({ nullable: false })
+	backupState: boolean;
+
 	getCredentialDescriptor() {
 		return {
 			type: "public-key",
