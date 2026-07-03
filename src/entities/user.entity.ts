@@ -331,7 +331,7 @@ async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer)
 	}
 	catch(e) {
 		console.log(e);
-		return Err(GetUserErr.NOT_EXISTS);
+		return Err(GetUserErr.DB_ERR);
 	}
 }
 

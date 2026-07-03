@@ -246,7 +246,11 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 
 	const userRes = await getUserByWebauthnCredential(userId, credentialId);
 	if (userRes.err) {
-		res.status(403).send({});
+		if (userRes.val === GetUserErr.NOT_EXISTS) {
+			res.status(403).send({});
+		} else {
+			res.status(500).send({});
+		}
 		return;
 	}
 	const [user, credentialRecord] = userRes.unwrap();
