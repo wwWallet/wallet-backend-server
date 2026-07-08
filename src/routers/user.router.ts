@@ -6,7 +6,7 @@ import base64url from 'base64url';
 import { EntityManager } from "typeorm"
 
 import { config } from '../../config';
-import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
+import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, hasWebauthnCredentialId, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
 import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
 import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
@@ -247,7 +247,14 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	const userRes = await getUserByWebauthnCredential(userId, credentialId);
 	if (userRes.err) {
 		if (userRes.val === GetUserErr.NOT_EXISTS) {
-			res.status(403).send({});
+			const credentialExistsRes = await hasWebauthnCredentialId(credentialId);
+			if (credentialExistsRes.err) {
+				res.status(500).send({});
+			} else if (credentialExistsRes.val) {
+				res.status(403).send({});
+			} else {
+				res.status(403).send({ error: "UNKNOWN_WEBAUTHN_CREDENTIAL" });
+			}
 		} else {
 			res.status(500).send({});
 		}
