@@ -25,7 +25,7 @@ export const config = {
 	alg: process.env.ALG || "EdDSA",
 	keysDir: process.env.KEYS_DIR || undefined,
 	ohttpGatewayUrl: process.env.OHTTP_GATEWAY_URL || "http://localhost:4567",
-	registerDisabled: process.env.REGISTER_DISABLED?.toLowerCase() === "true",
+	registerDisabled: process.env.REGISTRATION_DISABLED?.toLowerCase() === "true",
 	debugAcceptUnauthorizedHttps: (process.env.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS &&
 		process.env.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS.toLowerCase() === "true") ?? false
 }
