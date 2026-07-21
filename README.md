@@ -15,6 +15,8 @@ Edit `config/config.dev.ts` file to change the configuration of the app.
 yarn dev
 ```
 
+Set `REGISTRATION_DISABLED=true` to omit the public user-registration endpoints from the server. By default, registration remains enabled. This disables `/user/register`, `/user/register-webauthn-begin`, and `/user/register-webauthn-finish`; authenticated passkey-management endpoints remain available.
+
 ## Pre-commit
 
 We use [pre-commit](https://pre-commit.com/) to enforce our `.editorconfig` before code is committed.
