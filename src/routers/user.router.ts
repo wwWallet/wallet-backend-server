@@ -87,6 +87,8 @@ if (!config.registerDisabled) {
 	});
 
 	noAuthUserController.post('/register-webauthn-begin', async (req: Request, res: Response) => {
+		const displayName = typeof req.body.displayName === "string" ? req.body.displayName : "";
+		const name = typeof req.body.name === "string" ? req.body.name : displayName;
 		const userId = UserId.generate();
 		const challengeRes = await createChallenge("create", userId);
 		if (challengeRes.err) {
@@ -99,8 +101,8 @@ if (!config.registerDisabled) {
 			challenge: challenge.challenge,
 			user: {
 				uuid: userId,
-				name: "",
-				displayName: "",
+				name: name,
+				displayName: displayName,
 			},
 		});
 
@@ -164,6 +166,7 @@ if (!config.registerDisabled) {
 			}
 			var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
 
+			const credentialName =typeof req.body.name === "string" && req.body.nname? req.body.name: (typeof req.body.displayName === "string" && req.body.displayName? req.body.displayName: null);
 			const newUser: CreateUser = {
 				...walletInitializationResult.unwrap(),
 				uuid: challenge.userId,
@@ -171,7 +174,7 @@ if (!config.registerDisabled) {
 					newWebauthnCredentialEntity({
 						credentialId: credential.rawId,
 						_userHandle: challenge.userId.asUserHandle(),
-						name: req.body.name,
+						name: credentialName,
 						publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
 						signatureCount: verification.registrationInfo.counter,
 						transports: credential.response.transports || [],
