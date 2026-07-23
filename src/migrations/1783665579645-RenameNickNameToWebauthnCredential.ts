@@ -1,12 +1,11 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class RenameNickNameToWebauthnCredential implements MigrationInterface {
-
+export class RenameNickNameToWebauthnCredential1783665579645 implements MigrationInterface {
 	public async up(queryRunner: QueryRunner): Promise<void> {
-		await queryRunner.query(`ALTER TABLE \'webauthn_credential\' RENAME COLUMN \'nickname\' TO \'name\';`);
+		await queryRunner.query(`ALTER TABLE webauthn_credential RENAME COLUMN nickname TO name;`);
 	}
 
 	public async down(queryRunner: QueryRunner): Promise<void> {
-		await queryRunner.query(`ALTER TABLE \'webauthn_credential\' RENAME COLUMN \'name\' TO \'nickname\';`);
+		await queryRunner.query(`ALTER TABLE webauthn_credential RENAME COLUMN name TO nickname;`);
 	}
 }
