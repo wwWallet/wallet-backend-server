@@ -171,7 +171,7 @@ if (!config.registerDisabled) {
 					newWebauthnCredentialEntity({
 						credentialId: credential.rawId,
 						_userHandle: challenge.userId.asUserHandle(),
-						nickname: req.body.nickname,
+						name: req.body.name,
 						publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
 						signatureCount: verification.registrationInfo.counter,
 						transports: credential.response.transports || [],
@@ -334,7 +334,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			credentialId: cred.credentialId,
 			id: cred.id,
 			lastUseTime: cred.lastUseTime,
-			nickname: cred.nickname,
+			name: cred.name,
 			prfCapable: cred.prfCapable,
 			backupEligibility: cred.backupEligibility,
 			backupState: cred.backupState,
@@ -435,7 +435,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 				newWebauthnCredentialEntity({
 					credentialId: Buffer.from(verification.registrationInfo.credentialID),
 					_userHandle: user.uuid.asUserHandle(),
-					nickname: req.body.nickname,
+					name: req.body.name,
 					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
 					signatureCount: verification.registrationInfo.counter,
 					transports: credential.response.transports || [],
@@ -485,7 +485,7 @@ userController.post('/webauthn/credential/:id/rename', async (req: Request, res:
 	console.log("webauthn rename", req.params.id);
 
 	const updateRes = await updateWebauthnCredentialById(req.user.id, req.params.id, (credentialEntity, manager) => {
-		credentialEntity.nickname = req.body.nickname || null;
+		credentialEntity.name = req.body.name || null;
 		return credentialEntity;
 	});
 

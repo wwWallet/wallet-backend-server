@@ -142,7 +142,7 @@ class WebauthnCredentialEntity {
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
-	nickname: string;
+	name: string;
 
 	@Column({ type: "datetime", nullable: false, update: false })
 	createTime: Date;
