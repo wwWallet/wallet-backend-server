@@ -18,6 +18,7 @@ import { verifierRouter } from './routers/verifier.router';
 import { walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
+import { executeFidoSync } from './services/mds/sync';
 
 
 const app: Express = express();
@@ -70,6 +71,12 @@ if (process.env.NODE_ENV === "production") {
 
 const server = http.createServer(app);
 appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
+
+executeFidoSync().then(() => {
+	console.log("FIDO MDS Initialized successfully.");
+}).catch((err) => {
+	console.error("Failed to initialize FIDO MDS:", err);
+});
 
 server.listen(config.port, () => {
 	console.log(`Wallet Backend Server listening with ${config.url}`)
