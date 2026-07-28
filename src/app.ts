@@ -19,6 +19,7 @@ import { walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
 import { executeFidoSync } from './services/mds/sync';
+import { loadNonFidoMDS } from './services/mds/cache';
 
 
 const app: Express = express();
@@ -76,6 +77,12 @@ executeFidoSync().then(() => {
 	console.log("FIDO MDS Initialized successfully.");
 }).catch((err) => {
 	console.error("Failed to initialize FIDO MDS:", err);
+});
+
+loadNonFidoMDS().then(()=> {
+	console.log("Loaded non FIDO data successfully.");
+}).catch((err) => {
+	console.error("Failed to load non FIDO data:", err);
 });
 
 server.listen(config.port, () => {
