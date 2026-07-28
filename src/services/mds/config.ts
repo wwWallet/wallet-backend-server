@@ -1,17 +1,18 @@
-import * as path from 'path';
+import path from 'path';
+
+const mdsDir = path.join(process.cwd(), 'src', 'services', 'mds');
 
 export default {
-	paths: {
-		blob: path.join(__dirname, 'blob.jwt'),
-		rootCert: path.join(__dirname, 'root-r3.crt'),
-		cacheJson: path.join(__dirname, 'cache.json'),
-		errorLog: path.join(__dirname, 'mds-alerts.log')
-	},
-	urls: {
-		fidoMds: 'https://mds.fidoalliance.org/',
-		//fidoMds: 'http://localhost:8080/'
-	},
-	thresholds: {
-		staleMs: 2 * 24 * 60 * 60 * 1000
-	}
+  paths: {
+    rootCert: path.join(mdsDir, 'root-r3.crt'),
+    blob: path.join(mdsDir, 'blob.jwt'),
+    cacheJson: path.join(mdsDir, 'cache.json'),
+    errorLog: path.join(mdsDir, 'mds-alerts.log')
+  },
+  urls: {
+    fidoMds: 'https://mds.fidoalliance.org/',
+  },
+  thresholds: {
+    staleMs: 2 * 24 * 60 * 60 * 1000 
+  }
 };

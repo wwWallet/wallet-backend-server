@@ -18,6 +18,7 @@
   "author": "",
   "description": "",
   "dependencies": {
+    "@peculiar/x509": "^2.0.0",
     "@simplewebauthn/server": "^9.0.3",
     "@types/ws": "^8.18.1",
     "axios": "^0.31.0",

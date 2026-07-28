@@ -17,8 +17,6 @@ import { RegistrationParams, WalletKeystoreManager } from '../services/interface
 import { TYPES } from '../services/types';
 import { runTransaction } from '../entities/common.entity';
 import { Err, Ok, Result } from 'ts-results';
-
-// ---> NEW: Import FIDO MDS Cache <---
 import { memoryCache } from '../services/mds/cache';
 
 const walletKeystoreManagerService = appContainer.get<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService);
@@ -157,9 +155,10 @@ if (!config.registerDisabled) {
         return;
       }
 
-      // ---> EXTRACT AUTHENTICATOR FRIENDLY NAME <---
       const aaguid = verification.registrationInfo?.aaguid;
       let authenticatorName = "Unknown Authenticator";
+      
+      console.log(`[DEBUG] Raw AAGUID received: ${aaguid}`);
       
       if (aaguid && memoryCache.data) {
         const mdsStatement = memoryCache.data[aaguid];
@@ -168,7 +167,6 @@ if (!config.registerDisabled) {
         }
       }
       console.log(`New user registered using authenticator: ${authenticatorName}`);
-      // ---> END EXTRACT <---
 
       const walletInitializationResult = await walletKeystoreManagerService.initializeWallet(
         { ...req.body as RegistrationParams }
@@ -328,7 +326,6 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
   }
 })
 
-
 userController.get('/account-info', async (req: Request, res: Response) => {
   const userRes = await getUser(req.user.id);
   if (userRes.err) {
@@ -345,17 +342,27 @@ userController.get('/account-info', async (req: Request, res: Response) => {
     settings: {
       openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
     },
-    webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
-      createTime: cred.createTime,
-      credentialId: cred.credentialId,
-      id: cred.id,
-      lastUseTime: cred.lastUseTime,
-      nickname: cred.nickname,
-      prfCapable: cred.prfCapable,
-      backupEligibility: cred.backupEligibility,
-      backupState: cred.backupState,
-      aaguid: cred.aaguid,
-    })),
+    webauthnCredentials: (user.webauthnCredentials || []).map(cred => {
+      let authenticatorName = "Unknown Authenticator";
+      if (cred.aaguid && memoryCache.data) {
+        const mdsStatement = memoryCache.data[cred.aaguid];
+        if (mdsStatement && mdsStatement.description) {
+            authenticatorName = mdsStatement.description;
+        }
+      }
+      return {
+        createTime: cred.createTime,
+        credentialId: cred.credentialId,
+        id: cred.id,
+        lastUseTime: cred.lastUseTime,
+        nickname: cred.nickname,
+        prfCapable: cred.prfCapable,
+        backupEligibility: cred.backupEligibility,
+        backupState: cred.backupState,
+        aaguid: cred.aaguid,
+        authenticatorName,
+      };
+    }),
   });
 })
 
@@ -446,9 +453,10 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 
   if (verification.verified) {
 
-    // ---> EXTRACT AUTHENTICATOR FRIENDLY NAME <---
     const aaguid = verification.registrationInfo?.aaguid;
     let authenticatorName = "Unknown Authenticator";
+
+    console.log(`[DEBUG] Raw AAGUID received: ${aaguid}`);
 
     if (aaguid && memoryCache.data) {
       const mdsStatement = memoryCache.data[aaguid];
@@ -457,7 +465,6 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
       }
     }
     console.log(`Existing user added authenticator: ${authenticatorName}`);
-    // ---> END EXTRACT <---
 
     var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
     const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
