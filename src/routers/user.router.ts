@@ -149,6 +149,11 @@ if (!config.registerDisabled) {
 				rawId: credential.id, // SimpleWebauthn requires this base64url encoded
 				response: {
 					attestationObject: base64url.encode(
+						// Remove the attestation statement, so that for example expired
+						// attestation certs don't cause the registration to fail.
+						// We only want the attestation for informational purposes, such as
+						// being able to monitor vulnerability reports and warn affected
+						// users; we don't actually care whether the attestation is valid.
 						webauthn.stripAttestationStatement(credential.response.attestationObject)
 					),
 					clientDataJSON: base64url.encode(credential.response.clientDataJSON),
@@ -285,7 +290,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 			response: {
 				type: credential.type,
 				id: credential.id,
-				rawId: credential.id,
+				rawId: credential.id, // SimpleWebauthn requires this base64url encoded
 				response: {
 					authenticatorData: base64url.encode(credential.response.authenticatorData),
 					clientDataJSON: base64url.encode(credential.response.clientDataJSON),
@@ -426,9 +431,14 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 			response: {
 				type: credential.type,
 				id: credential.id,
-				rawId: credential.id,
+				rawId: credential.id, // SimpleWebauthn requires this base64url encoded
 				response: {
 					attestationObject: base64url.encode(
+						// Remove the attestation statement, so that for example expired
+						// attestation certs don't cause the registration to fail.
+						// We only want the attestation for informational purposes, such as
+						// being able to monitor vulnerability reports and warn affected
+						// users; we don't actually care whether the attestation is valid.
 						webauthn.stripAttestationStatement(credential.response.attestationObject)
 					),
 					clientDataJSON: base64url.encode(credential.response.clientDataJSON),
@@ -620,13 +630,16 @@ userController.get('/private-data', async (req: Request, res: Response) => {
 	}
 });
 
-userController.delete('/', async (req: Request, res: Response) => {
-	try {
-		await runTransaction(async (entityManager: EntityManager) => {
-			return Result.all(
-				await deleteUser(req.user.id, { entityManager }),
-			);
-		});
+	userController.delete('/', async (req: Request, res: Response) => {
+		try {
+			await runTransaction(async (entityManager: EntityManager) => {
+				// Note: this executes all four branches before checking if any failed.
+				// ts-results does not seem to provide an async-optimized version of Result.all(),
+				// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
+				return Result.all(
+					await deleteUser(req.user.id, { entityManager }),
+				);
+			});
 
 		return res.send({ result: "DELETED" });
 	} catch (e) {
