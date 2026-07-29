@@ -4,7 +4,7 @@ const mdsDir = path.join(process.cwd(), 'src', 'services', 'mds');
 
 export default {
 	paths: {
-		rootCert: path.join(mdsDir, 'root-r3.crt'),
+		rootCert: path.join(mdsDir, 'root-r3.pem'),
 		blob: path.join(mdsDir, 'blob.jwt'),
 		cacheJson: path.join(mdsDir, 'cache.json'),
 		errorLog: path.join(mdsDir, 'mds-alerts.log'),
