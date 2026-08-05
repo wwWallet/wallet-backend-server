@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "yarn build && node --test dist/src/wallet-provider/*.test.js",
     "build": "rm -rf dist && npx tsc",
     "dev": "nodemon --config nodemon.json --exec \"npx tsc && yarn start\"",
     "dev-docker": "npx nodemon --config nodemon.json --exec \"npx tsc --outdir /dist && yarn start-docker\"",

@@ -15,7 +15,7 @@ import { credentialIssuerRouter } from './routers/credential_issuer.router';
 import { proxyRouter } from './routers/proxy.router';
 import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
-import { walletProviderRouter } from './routers/wallet_provider.router';
+import { walletProviderPublicRouter, walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
 
@@ -41,6 +41,7 @@ app.use(cors({
 
 // define routes and middleware here
 app.use('/status', statusRouter);
+app.use('/wallet-provider', walletProviderPublicRouter);
 app.use('/user', userController);
 
 

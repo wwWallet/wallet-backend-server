@@ -52,9 +52,8 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 
 export function AuthMiddleware(req: Request, res: Response, next: NextFunction) {
 	const authorizationHeader = req.headers?.authorization;
-	console.log("Authorization header = ", authorizationHeader)
 	if (authorizationHeader?.substring(0, 7) !== 'Bearer ') {
-		console.log("Invalid authorization header:", authorizationHeader);
+		console.log("Missing or invalid authorization scheme");
 		res.status(401).send();
 		return;
 	}
@@ -63,7 +62,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 
 	verifyApptoken(token).then(async (payload) => {
 		if (!payload) {
-			console.log("Unauthorized access to ", token);
+			console.log("Unauthorized access");
 			res.status(401).send(); // Unauthorized
 			return;
 		}
@@ -83,7 +82,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		return;
 	})
 	.catch(e => {
-		console.log("Unauthorized access to ", token);
+		console.log("Unauthorized access");
 		res.status(401).send(); // Unauthorized
 		return;
 	});
