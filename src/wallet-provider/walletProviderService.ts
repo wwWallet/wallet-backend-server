@@ -265,7 +265,7 @@ export class WalletProviderService {
 
 		const statusListIndex = statusList.nextIndex;
 		statusList.nextIndex += 1;
-		await manager.save(statusList);
+		await manager.save(WalletProviderStatusListEntity, statusList);
 		return { statusListId: statusList.id, statusListIndex };
 	}
 
