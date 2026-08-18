@@ -172,8 +172,8 @@ if (!config.registerDisabled) {
 						credentialId: credential.rawId,
 						_userHandle: challenge.userId.asUserHandle(),
 						nickname: req.body.nickname,
-						publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
-						signatureCount: verification.registrationInfo.counter,
+						publicKeyCose: Buffer.from(verification.registrationInfo.credential.publicKey),
+						signatureCount: verification.registrationInfo.credential.counter,
 						transports: credential.response.transports || [],
 						attestationObject: credential.response.attestationObject,
 						create_clientDataJSON: credential.response.clientDataJSON,
@@ -278,10 +278,11 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 			expectedOrigin: config.webauthn.origin,
 			expectedRPID: config.webauthn.rp.id,
 			requireUserVerification: true,
-			authenticator: {
-				credentialID: credentialRecord.credentialId,
-				credentialPublicKey: credentialRecord.publicKeyCose,
+			credential: {
+				id: base64url.encode(credentialRecord.credentialId),
+				publicKey: new Uint8Array(credentialRecord.publicKeyCose),
 				counter: credentialRecord.signatureCount,
+				transports: (credentialRecord.transports || []) as AuthenticatorTransport[],
 			},
 		});
 	} catch (e) {
@@ -432,20 +433,20 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
-				newWebauthnCredentialEntity({
-					credentialId: Buffer.from(verification.registrationInfo.credentialID),
-					_userHandle: user.uuid.asUserHandle(),
-					nickname: req.body.nickname,
-					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
-					signatureCount: verification.registrationInfo.counter,
-					transports: credential.response.transports || [],
-					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
-					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
-					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
-					backupEligibility: flags.backupEligibility,
-					backupState: flags.backupState
-				}, manager)
-			);
+		    newWebauthnCredentialEntity({
+		        credentialId: credential.rawId, 
+		        _userHandle: user.uuid.asUserHandle(),
+		        nickname: req.body.nickname,
+		        publicKeyCose: Buffer.from(verification.registrationInfo.credential.publicKey),
+		        signatureCount: verification.registrationInfo.credential.counter,
+		        transports: credential.response.transports || [],
+		        attestationObject: credential.response.attestationObject,
+		        create_clientDataJSON: credential.response.clientDataJSON,
+		        prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+		        backupEligibility: flags.backupEligibility,
+		        backupState: flags.backupState
+		    }, manager)
+		);
 
 			const newPrivateData = checkedUpdate(
 				req.headers['x-private-data-if-match'],
