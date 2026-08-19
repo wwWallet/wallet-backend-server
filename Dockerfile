@@ -1,5 +1,5 @@
 # Builder stage
-FROM node:24-bookworm-slim AS builder
+FROM node:24-bullseye-slim AS builder
 WORKDIR /app
 
 COPY . .
@@ -7,7 +7,7 @@ COPY ./config/config.template.ts ./config/index.ts
 RUN yarn cache clean && yarn install && yarn build && rm -rf node_modules/ && yarn install --production
 
 # Production stage
-FROM node:24-bookworm-slim AS production
+FROM node:24-bullseye-slim AS production
 WORKDIR /app
 
 COPY --from=builder /app/package.json .

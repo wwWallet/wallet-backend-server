@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim as dependencies
+FROM node:24-bullseye-slim as dependencies
 
 WORKDIR /dependencies
 
@@ -7,7 +7,7 @@ COPY package.json yarn.lock ./
 RUN yarn cache clean && yarn install
 
 
-FROM node:24-bookworm-slim as development
+FROM node:24-bullseye-slim as development
 
 ENV NODE_PATH=/node_modules
 ENV PATH="/node_modules/.bin:${PATH}"
