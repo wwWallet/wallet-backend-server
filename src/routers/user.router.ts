@@ -19,10 +19,9 @@ import { runTransaction } from '../entities/common.entity';
 import { Err, Ok, Result } from 'ts-results';
 
 
-
 const walletKeystoreManagerService = appContainer.get<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService);
 
-/**
+/**	
  * "/user"
  */
 const noAuthUserController: Router = express.Router();
@@ -30,7 +29,6 @@ const noAuthUserController: Router = express.Router();
 const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
-
 
 async function initSession(user: UserEntity): Promise<{
 	uuid: UserId,
@@ -434,14 +432,14 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
 				newWebauthnCredentialEntity({
-					credentialId: credential.rawId,
+					credentialId: Buffer.from(credential.rawId),
 					_userHandle: user.uuid.asUserHandle(),
 					nickname: req.body.nickname,
 					publicKeyCose: Buffer.from(verification.registrationInfo.credential.publicKey),
 					signatureCount: verification.registrationInfo.credential.counter,
 					transports: credential.response.transports || [],
-					attestationObject: credential.response.attestationObject,
-					create_clientDataJSON: credential.response.clientDataJSON,
+					attestationObject: Buffer.from(credential.response.attestationObject),
+					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 					backupEligibility: flags.backupEligibility,
 					backupState: flags.backupState
