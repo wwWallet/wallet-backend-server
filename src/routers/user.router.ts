@@ -433,20 +433,20 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
-		    newWebauthnCredentialEntity({
-		        credentialId: credential.rawId, 
-		        _userHandle: user.uuid.asUserHandle(),
-		        nickname: req.body.nickname,
-		        publicKeyCose: Buffer.from(verification.registrationInfo.credential.publicKey),
-		        signatureCount: verification.registrationInfo.credential.counter,
-		        transports: credential.response.transports || [],
-		        attestationObject: credential.response.attestationObject,
-		        create_clientDataJSON: credential.response.clientDataJSON,
-		        prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
-		        backupEligibility: flags.backupEligibility,
-		        backupState: flags.backupState
-		    }, manager)
-		);
+				newWebauthnCredentialEntity({
+					credentialId: credential.rawId,
+					_userHandle: user.uuid.asUserHandle(),
+					nickname: req.body.nickname,
+					publicKeyCose: Buffer.from(verification.registrationInfo.credential.publicKey),
+					signatureCount: verification.registrationInfo.credential.counter,
+					transports: credential.response.transports || [],
+					attestationObject: credential.response.attestationObject,
+					create_clientDataJSON: credential.response.clientDataJSON,
+					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
+					backupEligibility: flags.backupEligibility,
+					backupState: flags.backupState
+				}, manager)
+			);
 
 			const newPrivateData = checkedUpdate(
 				req.headers['x-private-data-if-match'],
