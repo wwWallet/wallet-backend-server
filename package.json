@@ -18,7 +18,7 @@
   "author": "",
   "description": "",
   "dependencies": {
-    "@simplewebauthn/server": "^9.0.3",
+    "@simplewebauthn/server": "^13.3.2",
     "@types/ws": "^8.18.1",
     "axios": "^0.31.0",
     "base64url": "^3.0.1",
@@ -45,13 +45,12 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
-    "@simplewebauthn/types": "^9.0.1",
     "@types/body-parser": "^1.19.2",
     "@types/cookie-parser": "^1.4.3",
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",
     "@types/lodash": "^4.14.191",
-    "@types/node": "^18.7.17",
+    "@types/node": "24.13.3",
     "@types/node-fetch": "^2.6.4",
     "@types/randomstring": "^1.1.8",
     "@types/uuid": "^9.0.2",
