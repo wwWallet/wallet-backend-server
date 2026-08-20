@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
 import { EntityManager } from "typeorm"
+import { parseAuthenticatorData } from '@simplewebauthn/server/helpers';
 
 import { config } from '../../config';
 import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
@@ -177,7 +178,8 @@ if (!config.registerDisabled) {
 						create_clientDataJSON: credential.response.clientDataJSON,
 						prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 						backupEligibility: flags.backupEligibility,
-						backupState: flags.backupState
+						backupState: flags.backupState,
+						aaguid: verification.registrationInfo.aaguid,
 					}),
 				],
 			};
@@ -337,6 +339,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			prfCapable: cred.prfCapable,
 			backupEligibility: cred.backupEligibility,
 			backupState: cred.backupState,
+			aaguid: cred.aaguid,
 		})),
 	});
 })
@@ -442,7 +445,8 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 					backupEligibility: flags.backupEligibility,
-					backupState: flags.backupState
+					backupState: flags.backupState,
+					aaguid: verification.registrationInfo.aaguid,
 				}, manager)
 			);
 
