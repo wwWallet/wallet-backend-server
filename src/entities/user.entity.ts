@@ -168,10 +168,10 @@ class WebauthnCredentialEntity {
 	@Column({ nullable: false })
 	prfCapable: boolean;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, default: false })
 	backupEligibility: boolean;
 
-	@Column({ nullable: false })
+	@Column({ nullable: false, default: false })
 	backupState: boolean;
 
 	@Column({ type: "varchar", length: 36, nullable: true })
