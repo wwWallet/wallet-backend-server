@@ -69,18 +69,21 @@ if (process.env.NODE_ENV === "production") {
 	}
 }
 
-async function startServer(): Promise<void> {
-	await initializeMetadataService();
+const server = http.createServer(app);
+appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
 
-	const server = http.createServer(app);
-	appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
+server.listen(config.port, () => {
+	console.log(`Wallet Backend Server listening with ${config.url}`);
+});
 
-	server.listen(config.port, () => {
-		console.log(`Wallet Backend Server listening with ${config.url}`);
-	});
-}
+initializeMetadataService()
+	.then(() => {
+		console.log('FIDO convenience metadata initialized successfully.');
+	})
+	.catch((error) => {
+		console.error(
+			'WARNING: Could not initialize FIDO convenience metadata.',
+			error
+		);
 
-startServer().catch((error) => {
-	console.error('FATAL: Could not initialize FIDO convenience metadata', error);
-	process.exit(1);
 });
