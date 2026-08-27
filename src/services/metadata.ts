@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 const C_MDS_URL = 'http://localhost:8080/';
 const COMMUNITY_AAGUID_URL = 'https://raw.githubusercontent.com/passkeydeveloper/passkey-authenticator-aaguids/main/aaguid.json';
 
-type ConvenienceMetadataEntry	=	{
+type ConvenienceMetadataEntry = {
 	friendlyNames?: Record<string, string>;
 };
 
@@ -32,7 +32,11 @@ export function initializeMetadataService(): Promise<void> {
 
 			const [fidoResult, communityResult] = await Promise.allSettled([fetchFido, fetchCommunity]);
 
+			let fidoSuccess = false;
+			let communitySuccess = false;
+
 			if (fidoResult.status === 'fulfilled') {
+				fidoSuccess = true;
 				const fidoData = fidoResult.value;
 				for (const [aaguid, entry] of Object.entries(fidoData)) {
 					const names = entry.friendlyNames || {};
@@ -41,24 +45,34 @@ export function initializeMetadataService(): Promise<void> {
 						combinedMetadataByAaguid[aaguid.toLowerCase()] = bestName;
 					}
 				}
-				console.log(`Loaded FIDO Convenience MDS metadata`);
 			} else {
 				console.warn('Could not load FIDO Convenience MDS metadata', fidoResult.reason);
 			}
 
 			if (communityResult.status === 'fulfilled') {
+				communitySuccess = true;
 				const communityData = communityResult.value;
 				for (const [aaguid, entry] of Object.entries(communityData)) {
 					if (entry.name) {
 						combinedMetadataByAaguid[aaguid.toLowerCase()] = entry.name;
 					}
 				}
-				console.log(`Loaded Community Passkey names`);
 			} else {
 				console.warn('Could not load Community Passkey metadata', communityResult.reason);
 			}
 
-			console.log(`Total known authenticators: ${Object.keys(combinedMetadataByAaguid).length}`);
+			const totalAuthenticators = Object.keys(combinedMetadataByAaguid).length;
+
+			if (fidoSuccess && communitySuccess) {
+				console.log(`[Metadata Service] Fully initialized. Total known authenticators: ${totalAuthenticators}`);
+			} else if (fidoSuccess || communitySuccess) {
+				console.warn(
+					`[Metadata Service] Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
+					`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
+				);
+			} else {
+				console.error(`[Metadata Service] Initialization failed. Both MDS sources could not be fetched.`);
+			}
 		})();
 	}
 

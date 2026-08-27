@@ -77,13 +77,3 @@ server.listen(config.port, () => {
 });
 
 initializeMetadataService()
-	.then(() => {
-		console.log('FIDO convenience metadata initialized successfully.');
-	})
-	.catch((error) => {
-		console.error(
-			'WARNING: Could not initialize FIDO convenience metadata.',
-			error
-		);
-
-});
