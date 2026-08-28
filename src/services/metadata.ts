@@ -1,8 +1,5 @@
-import fetch from 'node-fetch';
-
-//const C_MDS_URL = 'https://c-mds.fidoalliance.org/';
-const C_MDS_URL = 'http://localhost:8080/';
-const COMMUNITY_AAGUID_URL = 'https://raw.githubusercontent.com/passkeydeveloper/passkey-authenticator-aaguids/main/aaguid.json';
+import fetch, { Response } from 'node-fetch';
+import { config } from '../../config';
 
 type ConvenienceMetadataEntry = {
 	friendlyNames?: Record<string, string>;
@@ -14,67 +11,114 @@ type CommunityMetadataEntry = {
 	icon_dark?: string;
 };
 
+type MetadataCache<T> = {
+	data: T;
+	etag?: string;
+	fetchedAt?: number;
+	inFlight?: Promise<void>;
+};
+
+const fidoMetadata: MetadataCache<Record<string, ConvenienceMetadataEntry>> = { data: {} };
+const communityMetadata: MetadataCache<Record<string, CommunityMetadataEntry>> = { data: {} };
+
 let combinedMetadataByAaguid: Record<string, string> = {};
 let initialization: Promise<void> | undefined;
 
-export function initializeMetadataService(): Promise<void> {
-	if (!initialization) {
-		initialization = (async () => {
-			const fetchFido = fetch(C_MDS_URL).then(async (res) => {
-				if (!res.ok) throw new Error(`C-MDS returned HTTP ${res.status}`);
-				return res.json() as Promise<Record<string, ConvenienceMetadataEntry>>;
-			});
+function isStale(cache: MetadataCache<unknown>): boolean {
+	return cache.fetchedAt === undefined || Date.now() - cache.fetchedAt >= config.metadata.refreshIntervalMs;
+}
 
-			const fetchCommunity = fetch(COMMUNITY_AAGUID_URL).then(async (res) => {
-				if (!res.ok) throw new Error(`Community MDS returned HTTP ${res.status}`);
-				return res.json() as Promise<Record<string, CommunityMetadataEntry>>;
-			});
+function conditionalRequest(url: string, etag?: string): Promise<Response> {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-			const [fidoResult, communityResult] = await Promise.allSettled([fetchFido, fetchCommunity]);
-
-			let fidoSuccess = false;
-			let communitySuccess = false;
-
-			if (fidoResult.status === 'fulfilled') {
-				fidoSuccess = true;
-				const fidoData = fidoResult.value;
-				for (const [aaguid, entry] of Object.entries(fidoData)) {
-					const names = entry.friendlyNames || {};
-					const bestName = names['en-US'] || Object.values(names)[0];
-					if (bestName) {
-						combinedMetadataByAaguid[aaguid.toLowerCase()] = bestName;
-					}
-				}
-			} else {
-				console.warn('Could not load FIDO Convenience MDS metadata', fidoResult.reason);
-			}
-
-			if (communityResult.status === 'fulfilled') {
-				communitySuccess = true;
-				const communityData = communityResult.value;
-				for (const [aaguid, entry] of Object.entries(communityData)) {
-					if (entry.name) {
-						combinedMetadataByAaguid[aaguid.toLowerCase()] = entry.name;
-					}
-				}
-			} else {
-				console.warn('Could not load Community Passkey metadata', communityResult.reason);
-			}
-
-			const totalAuthenticators = Object.keys(combinedMetadataByAaguid).length;
-
-			if (fidoSuccess && communitySuccess) {
-				console.log(`[Metadata Service] Fully initialized. Total known authenticators: ${totalAuthenticators}`);
-			} else if (fidoSuccess || communitySuccess) {
-				console.warn(
-					`[Metadata Service] Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
-					`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
-				);
-			} else {
-				console.error(`[Metadata Service] Initialization failed. Both MDS sources could not be fetched.`);
-			}
-		})();
+	const headers: Record<string, string> = {};
+	if (etag) {
+		headers['If-None-Match'] = etag;
 	}
+
+	return fetch(url, {
+		headers,
+		signal: controller.signal as any
+	}).finally(() => {
+		clearTimeout(timeoutId);
+	});
+}
+
+function rebuildCombinedMetadata(): void {
+	const combined: Record<string, string> = {};
+
+	for (const [aaguid, entry] of Object.entries(fidoMetadata.data)) {
+		const names = entry.friendlyNames || {};
+		const bestName = names['en-US'] || Object.values(names)[0];
+		if (bestName) combined[aaguid.toLowerCase()] = bestName;
+	}
+
+	for (const [aaguid, entry] of Object.entries(communityMetadata.data)) {
+		if (entry.name) combined[aaguid.toLowerCase()] = entry.name;
+	}
+
+	combinedMetadataByAaguid = combined;
+}
+
+async function refreshCache<T>(cache: MetadataCache<T>, url: string, sourceName: string): Promise<void> {
+	if (!isStale(cache)) return;
+	if (cache.inFlight) return cache.inFlight;
+
+	cache.inFlight = (async () => {
+		try {
+			const response = await conditionalRequest(url, cache.etag);
+			if (response.status === 304) {
+				cache.fetchedAt = Date.now();
+				return;
+			}
+			if (!response.ok) throw new Error(`${sourceName} returned HTTP ${response.status}`);
+
+			cache.data = await response.json() as T;
+			cache.etag = response.headers.get('etag') || undefined;
+			cache.fetchedAt = Date.now();
+			rebuildCombinedMetadata();
+		} catch (error) {
+			console.warn(`Could not load ${sourceName} metadata`, error);
+		} finally {
+			cache.inFlight = undefined;
+		}
+	})();
+
+	return cache.inFlight;
+}
+
+export function fetchFido(): Promise<void> {
+	return refreshCache(fidoMetadata, config.metadata.fidoUrl, 'FIDO Convenience MDS');
+}
+
+export function fetchCommunity(): Promise<void> {
+	return refreshCache(communityMetadata, config.metadata.communityAaguidUrl, 'Community Passkey MDS');
+}
+
+export function initializeMetadataService(): Promise<void> {
+	if (initialization) return initialization;
+
+	initialization = (async () => {
+		await Promise.all([fetchFido(), fetchCommunity()]);
+
+		const fidoSuccess = fidoMetadata.fetchedAt !== undefined;
+		const communitySuccess = communityMetadata.fetchedAt !== undefined;
+		const totalAuthenticators = Object.keys(combinedMetadataByAaguid).length;
+
+		if (fidoSuccess && communitySuccess) {
+			console.log(`[Metadata Service] Initialized. Total known authenticators: ${totalAuthenticators}`);
+		} else if (fidoSuccess || communitySuccess) {
+			console.warn(
+				`[Metadata Service] Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
+				`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
+			);
+		} else {
+			console.error('[Metadata Service] Initialization failed. Both MDS sources could not be fetched.');
+		}
+	})().finally(() => {
+		initialization = undefined;
+	});
 
 	return initialization;
 }

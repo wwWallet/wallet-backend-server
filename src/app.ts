@@ -72,8 +72,8 @@ if (process.env.NODE_ENV === "production") {
 const server = http.createServer(app);
 appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).register(server);
 
+void initializeMetadataService();
+
 server.listen(config.port, () => {
 	console.log(`Wallet Backend Server listening with ${config.url}`);
-});
-
-initializeMetadataService()
+	});
