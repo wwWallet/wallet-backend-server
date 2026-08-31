@@ -340,7 +340,6 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			prfCapable: cred.prfCapable,
 			backupEligibility: cred.backupEligibility,
 			backupState: cred.backupState,
-			aaguid,
 			authenticatorName: await getAuthenticatorFriendlyName(aaguid),
 			};
 		})),
