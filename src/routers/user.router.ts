@@ -178,7 +178,7 @@ if (!config.registerDisabled) {
 						create_clientDataJSON: credential.response.clientDataJSON,
 						prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 						backupEligibility: flags.backupEligibility,
-						backupState: flags.backupState,
+						backupState: flags.backupState
 					}),
 				],
 			};
@@ -447,7 +447,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 					backupEligibility: flags.backupEligibility,
-					backupState: flags.backupState,
+					backupState: flags.backupState
 				}, manager)
 			);
 
