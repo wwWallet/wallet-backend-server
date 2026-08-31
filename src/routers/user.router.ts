@@ -162,7 +162,6 @@ if (!config.registerDisabled) {
 				return res.status(400).send({ error: walletInitializationResult.val })
 			}
 			var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
-			const aaguid = verification.registrationInfo.aaguid;
 
 			const newUser: CreateUser = {
 				...walletInitializationResult.unwrap(),
@@ -180,7 +179,6 @@ if (!config.registerDisabled) {
 						prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 						backupEligibility: flags.backupEligibility,
 						backupState: flags.backupState,
-						aaguid,
 					}),
 				],
 			};
@@ -331,7 +329,9 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 		settings: {
 			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
 		},
-		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => ({
+		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
+			const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
+			return{
 			createTime: cred.createTime,
 			credentialId: cred.credentialId,
 			id: cred.id,
@@ -340,9 +340,10 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			prfCapable: cred.prfCapable,
 			backupEligibility: cred.backupEligibility,
 			backupState: cred.backupState,
-			aaguid: cred.aaguid,
-			authenticatorName: await getAuthenticatorFriendlyName(cred.aaguid),
-		}))),
+			aaguid,
+			authenticatorName: await getAuthenticatorFriendlyName(aaguid),
+			};
+		})),
 	});
 })
 
@@ -433,7 +434,6 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 
 	if (verification.verified) {
 		var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
-		const aaguid = verification.registrationInfo.aaguid;
 		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
@@ -449,7 +449,6 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 					backupEligibility: flags.backupEligibility,
 					backupState: flags.backupState,
-					aaguid,
 				}, manager)
 			);
 

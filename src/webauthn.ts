@@ -155,3 +155,26 @@ export function parseAuthenticatorFlags(input: Buffer | Uint8Array,isAttestation
 
 	return parseAuthenticatorFlagsFromAuthenticatorData(input);
 }
+
+export function getAaguidFromAttestationObject(
+	attestationObject: Buffer | Uint8Array,
+): string | undefined {
+	const attestation = cbor.decode(attestationObject);
+	const authData = toUint8Array(attestation.authData);
+
+	const attestedCredentialData = (authData[32] & 0x40) !== 0;
+	if (!attestedCredentialData || authData.length < 53) {
+		return undefined;
+	}
+
+	const aaguid = authData.slice(37, 53);
+	const hex = Buffer.from(aaguid).toString("hex");
+
+	return [
+		hex.slice(0, 8),
+		hex.slice(8, 12),
+		hex.slice(12, 16),
+		hex.slice(16, 20),
+		hex.slice(20),
+	].join("-");
+}

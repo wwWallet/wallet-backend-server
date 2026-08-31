@@ -174,9 +174,6 @@ class WebauthnCredentialEntity {
 	@Column({ nullable: false, default: false })
 	backupState: boolean;
 
-	@Column({ type: "varchar", length: 36, nullable: true })
-	aaguid: string;
-
 	getCredentialDescriptor() {
 		return {
 			type: "public-key",
