@@ -62,7 +62,7 @@ function rebuildCombinedMetadata(): void {
 	const combined: Record<string, string> = {};
 
 	for (const [key, value] of Object.entries(fidoMetadata.data)) {
-		if (key === 'no') continue; 
+		if (key === 'no') continue;
 		const entry = value as { friendlyNames?: Record<string, string> };
 		const names = entry.friendlyNames || {};
 		const bestName = names['en-US'] || Object.values(names)[0];
