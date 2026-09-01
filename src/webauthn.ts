@@ -1,5 +1,5 @@
 import * as cbor from 'cbor-x';
-
+import { convertAAGUIDToString } from '@simplewebauthn/server/helpers';
 import { config } from '../config';
 import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
 
@@ -168,13 +168,5 @@ export function getAaguidFromAttestationObject(
 	}
 
 	const aaguid = authData.slice(37, 53);
-	const hex = Buffer.from(aaguid).toString("hex");
-
-	return [
-		hex.slice(0, 8),
-		hex.slice(8, 12),
-		hex.slice(12, 16),
-		hex.slice(16, 20),
-		hex.slice(20),
-	].join("-");
+	return convertAAGUIDToString(aaguid);
 }

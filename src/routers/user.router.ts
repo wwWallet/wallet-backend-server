@@ -330,7 +330,11 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
 		},
 		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
-			const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
+			let authenticatorName = undefined;
+			try {
+				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
+				authenticatorName = await getAuthenticatorFriendlyName(aaguid);
+			} catch (e) {console.log("Error getting aaguid from attestation object", e)};
 			return{
 			createTime: cred.createTime,
 			credentialId: cred.credentialId,
@@ -340,7 +344,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			prfCapable: cred.prfCapable,
 			backupEligibility: cred.backupEligibility,
 			backupState: cred.backupState,
-			authenticatorName: await getAuthenticatorFriendlyName(aaguid),
+			authenticatorName,
 			};
 		})),
 	});

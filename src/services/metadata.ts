@@ -2,16 +2,26 @@ import fetch, { Response } from 'node-fetch';
 import { config } from '../../config';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { z } from 'zod';
 
-type ConvenienceMetadataEntry = {
-	friendlyNames?: Record<string, string>;
-};
+const FidoMetadataSchema = z.record(
+	z.string(),
+	z.object({
+		friendlyNames: z.record(z.string(), z.string()).optional()
+	})
+);
 
-type CommunityMetadataEntry = {
-	name: string;
-	icon_light?: string;
-	icon_dark?: string;
-};
+const CommunityMetadataSchema = z.record(
+	z.string(),
+	z.object({
+		name: z.string(),
+		icon_light: z.string().optional(),
+		icon_dark: z.string().optional()
+	})
+);
+
+type FidoMetadata = z.infer<typeof FidoMetadataSchema>;
+type CommunityMetadata = z.infer<typeof CommunityMetadataSchema>;
 
 type MetadataCache<T> = {
 	data: T;
@@ -20,8 +30,8 @@ type MetadataCache<T> = {
 	inFlight?: Promise<void>;
 };
 
-const fidoMetadata: MetadataCache<Record<string, ConvenienceMetadataEntry>> = { data: {} };
-const communityMetadata: MetadataCache<Record<string, CommunityMetadataEntry>> = { data: {} };
+const fidoMetadata: MetadataCache<FidoMetadata> = { data: {} };
+const communityMetadata: MetadataCache<CommunityMetadata> = { data: {} };
 
 let combinedMetadataByAaguid: Record<string, string> = {};
 let initialization: Promise<void> | undefined;
@@ -67,7 +77,8 @@ async function refreshCache<T>(
 	cache: MetadataCache<T>,
 	url: string,
 	sourceName: string,
-	fallbackFilePath: string
+	fallbackFilePath: string,
+	schema: z.Schema<T>
 ): Promise<void> {
 	if (!isStale(cache)) return;
 	if (cache.inFlight) return cache.inFlight;
@@ -83,19 +94,25 @@ async function refreshCache<T>(
 			}
 			if (!response.ok) throw new Error(`${sourceName} returned HTTP ${response.status}`);
 
-			cache.data = await response.json() as T;
+			const rawJson = await response.json();
+
+			cache.data = schema.parse(rawJson);
+
 			cache.etag = response.headers.get('etag') || undefined;
 			cache.fetchedAt = Date.now();
 			networkSuccess = true;
 		} catch (error) {
-			console.warn(`[Metadata Service] Could not load ${sourceName} from network:`, (error as Error).message);
+			console.warn(`[Metadata Service] Could not load (or validate) ${sourceName} from network:`, (error as Error).message);
 		}
 
 		if (!networkSuccess && Object.keys(cache.data as Record<string, unknown>).length === 0) {
 			try {
 				console.log(`[Metadata Service] Attempting to load ${sourceName} from local fallback...`);
 				const fileContent = await readFile(fallbackFilePath, 'utf-8');
-				cache.data = JSON.parse(fileContent) as T;
+				const rawJson = JSON.parse(fileContent);
+
+				cache.data = schema.parse(rawJson);
+
 				cache.fetchedAt = Date.now();
 				console.log(`[Metadata Service] Successfully loaded ${sourceName} from fallback.`);
 			} catch (fallbackError) {
@@ -110,15 +127,14 @@ async function refreshCache<T>(
 
 	return cache.inFlight;
 }
-
 export function fetchFido(): Promise<void> {
 	const fallbackPath = path.join(process.cwd(), 'src/metadata/convenience-metadata.json');
-	return refreshCache(fidoMetadata, config.metadata.fidoUrl, 'FIDO Convenience MDS', fallbackPath);
+	return refreshCache(fidoMetadata, config.metadata.fidoUrl, 'FIDO Convenience MDS', fallbackPath, FidoMetadataSchema);
 }
 
 export function fetchCommunity(): Promise<void> {
 	const fallbackPath = path.join(process.cwd(), 'src/metadata/aaguid.json');
-	return refreshCache(communityMetadata, config.metadata.communityAaguidUrl, 'Community Passkey MDS', fallbackPath);
+	return refreshCache(communityMetadata, config.metadata.communityAaguidUrl, 'Community Passkey MDS', fallbackPath, CommunityMetadataSchema);
 }
 
 export function initializeMetadataService(): Promise<void> {
