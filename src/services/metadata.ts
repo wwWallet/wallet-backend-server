@@ -4,8 +4,9 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 
-const FidoMetadataSchema = z.record(
-	z.string(),
+const FidoMetadataSchema = z.object({
+	no: z.number().optional()
+}).catchall(
 	z.object({
 		friendlyNames: z.record(z.string(), z.string()).optional()
 	})
@@ -60,16 +61,16 @@ function conditionalRequest(url: string, etag?: string): Promise<Response> {
 function rebuildCombinedMetadata(): void {
 	const combined: Record<string, string> = {};
 
-	for (const [aaguid, entry] of Object.entries(fidoMetadata.data)) {
+	for (const [key, value] of Object.entries(fidoMetadata.data)) {
+		if (key === 'no') continue; 
+		const entry = value as { friendlyNames?: Record<string, string> };
 		const names = entry.friendlyNames || {};
 		const bestName = names['en-US'] || Object.values(names)[0];
-		if (bestName) combined[aaguid.toLowerCase()] = bestName;
+		if (bestName) combined[key.toLowerCase()] = bestName;
 	}
-
 	for (const [aaguid, entry] of Object.entries(communityMetadata.data)) {
 		if (entry.name) combined[aaguid.toLowerCase()] = entry.name;
 	}
-
 	combinedMetadataByAaguid = combined;
 }
 
@@ -128,12 +129,12 @@ async function refreshCache<T>(
 	return cache.inFlight;
 }
 export function fetchFido(): Promise<void> {
-	const fallbackPath = path.join(process.cwd(), 'src/metadata/convenience-metadata.json');
+	const fallbackPath = path.join(process.cwd(), 'resources/metadata/convenience-metadata.json');
 	return refreshCache(fidoMetadata, config.metadata.fidoUrl, 'FIDO Convenience MDS', fallbackPath, FidoMetadataSchema);
 }
 
 export function fetchCommunity(): Promise<void> {
-	const fallbackPath = path.join(process.cwd(), 'src/metadata/aaguid.json');
+	const fallbackPath = path.join(process.cwd(), 'resources/metadata/aaguid.json');
 	return refreshCache(communityMetadata, config.metadata.communityAaguidUrl, 'Community Passkey MDS', fallbackPath, CommunityMetadataSchema);
 }
 
