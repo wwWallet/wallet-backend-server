@@ -31,7 +31,7 @@ export const config = {
 	keysDir: process.env.KEYS_DIR || undefined,
 	ohttpGatewayUrl: process.env.OHTTP_GATEWAY_URL || "http://localhost:4567",
 	metadata: {
-		fidoUrl: process.env.METADATA_FIDO_URL || "http://localhost:8080/",
+		fidoUrl: process.env.METADATA_FIDO_URL || "https://c-mds.fidoalliance.org",
 		communityAaguidUrl: process.env.METADATA_COMMUNITY_AAGUID_URL || "https://raw.githubusercontent.com/passkeydeveloper/passkey-authenticator-aaguids/main/aaguid.json",
 		refreshIntervalMs: getPositiveInteger(process.env.METADATA_REFRESH_INTERVAL_MS, 7 * 24 * 60 * 60 * 1000),
 	},

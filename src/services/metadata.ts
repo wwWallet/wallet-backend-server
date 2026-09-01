@@ -41,9 +41,9 @@ function isStale(cache: MetadataCache<unknown>): boolean {
 	return cache.fetchedAt === undefined || Date.now() - cache.fetchedAt >= config.metadata.refreshIntervalMs;
 }
 
-function conditionalRequest(url: string, etag?: string): Promise<Response> {
+async function conditionalRequest(url: string, etag?: string): Promise<Response> {
 	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), 5000);
+	const timeoutId = setTimeout(() => controller.abort(), 3000);
 
 	const headers: Record<string, string> = {};
 	if (etag) {
@@ -52,7 +52,8 @@ function conditionalRequest(url: string, etag?: string): Promise<Response> {
 
 	return fetch(url, {
 		headers,
-		signal: controller.signal as any
+		signal: controller.signal as any,
+		size: 12 * 1024 * 1024,
 	}).finally(() => {
 		clearTimeout(timeoutId);
 	});
