@@ -90,19 +90,24 @@ async function refreshCache<T>(
 
 		try {
 			const response = await conditionalRequest(url, cache.etag);
+
 			if (response.status === 304) {
 				cache.fetchedAt = Date.now();
+
+				console.log(`[Metadata Service] Background refresh: ${sourceName} is up to date (304 Not Modified).`);
 				return;
 			}
+
 			if (!response.ok) throw new Error(`${sourceName} returned HTTP ${response.status}`);
 
 			const rawJson = await response.json();
-
 			cache.data = schema.parse(rawJson);
-
 			cache.etag = response.headers.get('etag') || undefined;
 			cache.fetchedAt = Date.now();
 			networkSuccess = true;
+
+			console.log(`[Metadata Service] Background refresh: Successfully downloaded new data for ${sourceName}.`);
+
 		} catch (error) {
 			console.warn(`[Metadata Service] Could not load (or validate) ${sourceName} from network:`, (error as Error).message);
 		}
@@ -114,7 +119,6 @@ async function refreshCache<T>(
 				const rawJson = JSON.parse(fileContent);
 
 				cache.data = schema.parse(rawJson);
-
 				cache.fetchedAt = Date.now();
 				console.log(`[Metadata Service] Successfully loaded ${sourceName} from fallback.`);
 			} catch (fallbackError) {
@@ -129,6 +133,7 @@ async function refreshCache<T>(
 
 	return cache.inFlight;
 }
+
 export function fetchFido(): Promise<void> {
 	const fallbackPath = path.join(process.cwd(), 'resources/metadata/convenience-metadata.json');
 	return refreshCache(fidoMetadata, config.metadata.fidoUrl, 'FIDO Convenience MDS', fallbackPath, FidoMetadataSchema);

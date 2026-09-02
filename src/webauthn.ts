@@ -160,7 +160,7 @@ export function getAaguidFromAttestationObject(
 	attestationObject: Buffer | Uint8Array,
 ): string | undefined {
 	let authData: Uint8Array;
-
+	let aaguidstring: string;
 	try {
 		const attestation = cbor.decode(attestationObject);
 		authData = toUint8Array(attestation.authData);
@@ -169,11 +169,12 @@ export function getAaguidFromAttestationObject(
 		if (!attestedCredentialData || authData.length < 53) {
 			return undefined;
 		}
+
+		aaguidstring = convertAAGUIDToString(authData.slice(37, 53));
+		return aaguidstring;
+
 	} catch (error) {
 		console.error("Failed to decode attestation object:", (error as Error).message);
 		return undefined;
 	}
-
-	const aaguid = authData.slice(37, 53);
-	return convertAAGUIDToString(aaguid);
 }
