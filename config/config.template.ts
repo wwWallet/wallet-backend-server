@@ -33,7 +33,7 @@ export const config = {
 	metadata: {
 		fidoUrl: process.env.METADATA_FIDO_URL || "https://c-mds.fidoalliance.org",
 			communityAaguidUrl: process.env.METADATA_COMMUNITY_AAGUID_URL || "https://raw.githubusercontent.com/passkeydeveloper/passkey-authenticator-aaguids/main/aaguid.json",
-		refreshIntervalMs: getPositiveInteger(process.env.METADATA_REFRESH_INTERVAL_MS, 7 * 24 * 60 * 60 * 1000),
+		refreshIntervalMs: getPositiveInteger(process.env.METADATA_REFRESH_INTERVAL_MS, 604800000),
 	},
 	registerDisabled: process.env.REGISTRATION_DISABLED?.toLowerCase() === "true",
 	debugAcceptUnauthorizedHttps: (process.env.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS &&
