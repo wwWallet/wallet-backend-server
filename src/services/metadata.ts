@@ -139,6 +139,8 @@ export function fetchCommunity(): Promise<void> {
 	return refreshCache(communityMetadata, config.metadata.communityAaguidUrl, 'Community Passkey MDS', fallbackPath, CommunityMetadataSchema);
 }
 
+let loggedInit = false;
+
 export function initializeMetadataService(): Promise<void> {
 	if (initialization) return initialization;
 
@@ -149,15 +151,19 @@ export function initializeMetadataService(): Promise<void> {
 		const communitySuccess = communityMetadata.fetchedAt !== undefined;
 		const totalAuthenticators = Object.keys(combinedMetadataByAaguid).length;
 
-		if (fidoSuccess && communitySuccess) {
-			console.log(`[Metadata Service] Initialized. Total known authenticators: ${totalAuthenticators}`);
-		} else if (fidoSuccess || communitySuccess) {
-			console.warn(
-				`[Metadata Service] Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
-				`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
-			);
-		} else {
-			console.error('[Metadata Service] Initialization failed. Both MDS sources could not be fetched and fallbacks failed.');
+		if (!loggedInit) {
+			if (fidoSuccess && communitySuccess) {
+				console.log(`[Metadata Service] Initialized. Total known authenticators: ${totalAuthenticators}`);
+				loggedInit = true;
+			} else if (fidoSuccess || communitySuccess) {
+				console.warn(
+					`[Metadata Service] Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
+					`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
+				);
+				loggedInit = true;
+			} else {
+				console.error('[Metadata Service] Initialization failed. Both MDS sources could not be fetched and fallbacks failed.');
+			}
 		}
 	})().finally(() => {
 		initialization = undefined;
