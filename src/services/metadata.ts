@@ -10,6 +10,9 @@ const FidoMetadataSchema = z.object({
 	z.object({
 		friendlyNames: z.record(z.string(), z.string()).optional()
 	})
+).refine(
+	data => Object.keys(data).some(key => key !== 'no'),
+	{ message: 'Metadata must contain at least one authenticator entry' }
 );
 
 const CommunityMetadataSchema = z.record(
@@ -19,6 +22,9 @@ const CommunityMetadataSchema = z.record(
 		icon_light: z.string().optional(),
 		icon_dark: z.string().optional()
 	})
+).refine(
+	data => Object.keys(data).length > 0,
+	{ message: 'Metadata must contain at least one authenticator entry' }
 );
 
 type FidoMetadata = z.infer<typeof FidoMetadataSchema>;
