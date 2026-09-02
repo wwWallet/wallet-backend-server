@@ -19,7 +19,6 @@ import { runTransaction } from '../entities/common.entity';
 import { Err, Ok, Result } from 'ts-results';
 
 
-
 const walletKeystoreManagerService = appContainer.get<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService);
 
 /**
@@ -30,7 +29,6 @@ const noAuthUserController: Router = express.Router();
 const userController: Router = express.Router();
 userController.use(AuthMiddleware);
 noAuthUserController.use('/session', userController);
-
 
 async function initSession(user: UserEntity): Promise<{
 	uuid: UserId,
@@ -175,8 +173,8 @@ if (!config.registerDisabled) {
 						credentialId: credential.rawId,
 						_userHandle: challenge.userId.asUserHandle(),
 						name: credentialName,
-						publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
-						signatureCount: verification.registrationInfo.counter,
+						publicKeyCose: Buffer.from(credential.publicKey),
+						signatureCount: credential.counter,
 						transports: credential.response.transports || [],
 						attestationObject: credential.response.attestationObject,
 						create_clientDataJSON: credential.response.clientDataJSON,
@@ -281,10 +279,11 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 			expectedOrigin: config.webauthn.origin,
 			expectedRPID: config.webauthn.rp.id,
 			requireUserVerification: true,
-			authenticator: {
-				credentialID: credentialRecord.credentialId,
-				credentialPublicKey: credentialRecord.publicKeyCose,
+			credential: {
+				id: base64url.encode(credentialRecord.credentialId),
+				publicKey: new Uint8Array(credentialRecord.publicKeyCose),
 				counter: credentialRecord.signatureCount,
+				transports: (credentialRecord.transports || []) as AuthenticatorTransport[],
 			},
 		});
 	} catch (e) {
@@ -436,13 +435,13 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
 				newWebauthnCredentialEntity({
-					credentialId: Buffer.from(verification.registrationInfo.credentialID),
+					credentialId: Buffer.from(credential.rawId),
 					_userHandle: user.uuid.asUserHandle(),
 					name: req.body.name,
-					publicKeyCose: Buffer.from(verification.registrationInfo.credentialPublicKey),
-					signatureCount: verification.registrationInfo.counter,
+					publicKeyCose: Buffer.from(verification.registrationInfo.credential.publicKey),
+					signatureCount: verification.registrationInfo.credential.counter,
 					transports: credential.response.transports || [],
-					attestationObject: Buffer.from(verification.registrationInfo.attestationObject),
+					attestationObject: Buffer.from(credential.response.attestationObject),
 					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
 					backupEligibility: flags.backupEligibility,
