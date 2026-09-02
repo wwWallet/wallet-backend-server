@@ -10,6 +10,7 @@ interface CredentialPortalDisplayLogo {
 
 interface CredentialPortalDisplay {
 	name?: string;
+	description?: string;
 	locale?: string;
 	logo?: CredentialPortalDisplayLogo;
 	[key: string]: unknown;
@@ -26,8 +27,7 @@ class CredentialPortalEntity {
 	@Column({ type: "json", nullable: true, default: () => "NULL" })
 	display?: CredentialPortalDisplay[];
 
-	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ nullable: true, type: "tinyint", default: () => "NULL" })
+	@Column({ type: "tinyint", default: 1 })
 	visible: boolean;
 }
 
@@ -46,8 +46,6 @@ async function getAllCredentialPortals(): Promise<Result<CredentialPortalEntity[
 }
 
 export {
-	CredentialPortalDisplay,
-	CredentialPortalDisplayLogo,
 	CredentialPortalEntity,
 	getAllCredentialPortals,
 }
