@@ -35,6 +35,7 @@ type MetadataCache<T> = {
 	etag?: string;
 	fetchedAt?: number;
 	inFlight?: Promise<void>;
+	tillNextFetch?: number;
 };
 
 const fidoMetadata: MetadataCache<FidoMetadata> = { data: {} };
@@ -44,6 +45,9 @@ let combinedMetadataByAaguid: Record<string, string> = {};
 let initialization: Promise<void> | undefined;
 
 function isStale(cache: MetadataCache<unknown>): boolean {
+	if (cache.tillNextFetch !== undefined && Date.now() < cache.tillNextFetch) {
+		return false;
+	}
 	return cache.fetchedAt === undefined || Date.now() - cache.fetchedAt >= config.metadata.refreshIntervalMs;
 }
 
@@ -99,22 +103,28 @@ async function refreshCache<T>(
 
 			if (response.status === 304) {
 				cache.fetchedAt = Date.now();
+				cache.tillNextFetch = undefined;
 
 				console.log(`[Metadata Service] Background refresh: ${sourceName} is up to date (304 Not Modified).`);
 				return;
 			}
 
-			if (!response.ok) throw new Error(`${sourceName} returned HTTP ${response.status}`);
-
+			if (!response.ok) {
+				throw new Error(`${sourceName} returned HTTP ${response.status}`);
+			}
 			const rawJson = await response.json();
 			cache.data = schema.parse(rawJson);
 			cache.etag = response.headers.get('etag') || undefined;
 			cache.fetchedAt = Date.now();
+			cache.tillNextFetch = undefined;
 			networkSuccess = true;
 
 			console.log(`[Metadata Service] Background refresh: Successfully downloaded new data for ${sourceName}.`);
 
 		} catch (error) {
+			if (!cache.tillNextFetch || cache.tillNextFetch < Date.now()) {
+				cache.tillNextFetch = Date.now() + 24*60*60*1000;
+			}
 			console.warn(`[Metadata Service] Could not load (or validate) ${sourceName} from network:`, (error as Error).message);
 		}
 

@@ -75,5 +75,5 @@ appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).regi
 void initializeMetadataService();
 
 server.listen(config.port, () => {
-	console.log(`Wallet Backend Server listening with ${config.url}`);
+	console.log(`Wallet Backend Server listening with ${config.url}`)
 });
