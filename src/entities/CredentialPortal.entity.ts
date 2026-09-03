@@ -9,10 +9,12 @@ interface CredentialPortalDisplayLogo {
 }
 
 interface CredentialPortalDisplay {
-	name?: string;
+	name: string;
 	description?: string;
 	locale?: string;
 	logo?: CredentialPortalDisplayLogo;
+	background_color?: string;
+	text_color?: string;
 	[key: string]: unknown;
 }
 
