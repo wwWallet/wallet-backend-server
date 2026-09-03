@@ -11,6 +11,7 @@ import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
 import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
+import { getAuthenticatorFriendlyName } from '../services/metadata';
 import * as scrypt from "../scrypt";
 import { appContainer } from '../services/inversify.config';
 import { RegistrationParams, WalletKeystoreManager } from '../services/interfaces';
@@ -328,15 +329,25 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 		settings: {
 			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
 		},
-		webauthnCredentials: (user.webauthnCredentials || []).map(cred => ({
-			createTime: cred.createTime,
-			credentialId: cred.credentialId,
-			id: cred.id,
-			lastUseTime: cred.lastUseTime,
-			nickname: cred.nickname,
-			prfCapable: cred.prfCapable,
-			backupEligibility: cred.backupEligibility,
-			backupState: cred.backupState,
+		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
+			let authenticatorName = undefined;
+			try {
+				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
+				authenticatorName = await getAuthenticatorFriendlyName(aaguid);
+			} catch (e)
+				{console.log("Error getting aaguid from attestation object", e)
+			};
+			return{
+				createTime: cred.createTime,
+				credentialId: cred.credentialId,
+				id: cred.id,
+				lastUseTime: cred.lastUseTime,
+				nickname: cred.nickname,
+				prfCapable: cred.prfCapable,
+				backupEligibility: cred.backupEligibility,
+				backupState: cred.backupState,
+				authenticatorName,
+			};
 		})),
 	});
 })
