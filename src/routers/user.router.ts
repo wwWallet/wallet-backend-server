@@ -338,14 +338,14 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 				{console.log("Error getting aaguid from attestation object", e)
 			};
 			return{
-				reateTime: cred.createTime,
-				redentialId: cred.credentialId,
-				d: cred.id,
-				astUseTime: cred.lastUseTime,
-				ickname: cred.nickname,
-				rfCapable: cred.prfCapable,
-				ackupEligibility: cred.backupEligibility,
-				ackupState: cred.backupState,
+				createTime: cred.createTime,
+				credentialId: cred.credentialId,
+				id: cred.id,
+				lastUseTime: cred.lastUseTime,
+				nickname: cred.nickname,
+				prfCapable: cred.prfCapable,
+				backupEligibility: cred.backupEligibility,
+				backupState: cred.backupState,
 				authenticatorName,
 			};
 		})),
