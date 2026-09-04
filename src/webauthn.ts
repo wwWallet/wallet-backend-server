@@ -1,5 +1,5 @@
 import * as cbor from 'cbor-x';
-
+import { convertAAGUIDToString } from '@simplewebauthn/server/helpers';
 import { config } from '../config';
 import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
 
@@ -154,4 +154,27 @@ export function parseAuthenticatorFlags(input: Buffer | Uint8Array,isAttestation
 	}
 
 	return parseAuthenticatorFlagsFromAuthenticatorData(input);
+}
+
+export function getAaguidFromAttestationObject(
+	attestationObject: Buffer | Uint8Array,
+): string | undefined {
+	let authData: Uint8Array;
+	let aaguidstring: string;
+	try {
+		const attestation = cbor.decode(attestationObject);
+		authData = toUint8Array(attestation.authData);
+
+		const attestedCredentialData = (authData[32] & 0x40) !== 0;
+		if (!attestedCredentialData || authData.length < 53) {
+			return undefined;
+		}
+
+		aaguidstring = convertAAGUIDToString(authData.slice(37, 53));
+		return aaguidstring;
+
+	} catch (error) {
+		console.error("Failed to decode attestation object:", (error as Error).message);
+		return undefined;
+	}
 }
