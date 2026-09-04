@@ -165,7 +165,7 @@ if (!config.registerDisabled) {
 			}
 			var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
 
-			const credentialName =typeof req.body.name === "string" && req.body.nname? req.body.name: (typeof req.body.displayName === "string" && req.body.displayName? req.body.displayName: null);
+			const credentialName =typeof req.body.name === "string" && req.body.name? req.body.name: (typeof req.body.displayName === "string" && req.body.displayName? req.body.displayName: null);
 			const newUser: CreateUser = {
 				...walletInitializationResult.unwrap(),
 				uuid: challenge.userId,
