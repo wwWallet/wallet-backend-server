@@ -17,6 +17,7 @@ import { RegistrationParams, WalletKeystoreManager } from '../services/interface
 import { TYPES } from '../services/types';
 import { runTransaction } from '../entities/common.entity';
 import { Err, Ok, Result } from 'ts-results';
+import { renameWebauthnCredentials } from '../entities/user.entity';
 
 
 
@@ -495,6 +496,16 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 		res.status(400).send({});
 	}
 })
+
+userController.post('/webauthn/credentials/rename', async (req: Request, res: Response) => {
+	// Credential names use the existing nullable varchar(255) column.
+	if (typeof req.body?.name !== 'string' || Array.from(req.body.name).length > 255) {
+		res.status(400).send();
+		return;
+	}
+	const result = await renameWebauthnCredentials(req.user.id, req.body.name);
+	res.status(result.ok ? 204 : 500).send();
+});
 
 userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
 	console.log("webauthn rename", req.params.id);

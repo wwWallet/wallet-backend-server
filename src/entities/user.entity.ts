@@ -444,6 +444,25 @@ async function updateWebauthnCredentialById(userId: UserId, credentialUuid: stri
 	});
 }
 
+export async function renameWebauthnCredentials(userId: UserId, name: string): Promise<Result<void, UpdateUserErr>> {
+	try {
+		const userQuery = userRepository.createQueryBuilder("user")
+			.select("user.id")
+			.where("user.uuid = :uuid", { uuid: userId.id });
+		// A single UPDATE changes only names, without saving stale credential/key state.
+		await webauthnCredentialRepository.createQueryBuilder()
+			.update()
+			.set({ name: name || null })
+			.where(`userId IN (${userQuery.getQuery()})`)
+			.setParameters(userQuery.getParameters())
+			.execute();
+		return Ok(undefined);
+	} catch (e) {
+		console.error("Failed to rename WebAuthn credentials", e);
+		return Err(UpdateUserErr.DB_ERR);
+	}
+}
+
 async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, updatePrivateData: EtagUpdate<Buffer>): Promise<Result<void, UpdateUserErr>> {
 	try {
 		return Ok(await runTransaction(async (manager) => {
