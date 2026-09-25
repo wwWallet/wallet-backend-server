@@ -331,7 +331,20 @@ async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer)
 	}
 	catch(e) {
 		console.log(e);
-		return Err(GetUserErr.NOT_EXISTS);
+		return Err(GetUserErr.DB_ERR);
+	}
+}
+
+async function hasWebauthnCredentialId(credentialId: Buffer): Promise<Result<boolean, GetUserErr>> {
+	try {
+		const count = await webauthnCredentialRepository.createQueryBuilder("credential")
+			.where("credential.credentialId = :credentialId", { credentialId })
+			.getCount();
+		return Ok(count > 0);
+	}
+	catch(e) {
+		console.log(e);
+		return Err(GetUserErr.DB_ERR);
 	}
 }
 
@@ -488,6 +501,7 @@ export {
 	getUser,
 	getUserByCredentials,
 	getUserByWebauthnCredential,
+	hasWebauthnCredentialId,
 	getAllUsers,
 	newWebauthnCredentialEntity,
 	updateUser,
