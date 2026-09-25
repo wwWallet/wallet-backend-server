@@ -134,6 +134,12 @@ export function removeCertificateMarkers(certString: string) {
 		.trim();
 }
 
+export function certificateChainToX5c(certChainPem: string): string[] {
+	return [...certChainPem.matchAll(
+		/-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g
+	)].map((match) => match[1].replace(/\s+/g, ''));
+}
+
 export async function importPrivateKeyPem(privateKeyPEM: string, algorithm: string) {
 	try {
 		const privateKey = await importPKCS8(privateKeyPEM, algorithm);

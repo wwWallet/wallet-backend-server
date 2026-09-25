@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { readFile } from 'fs/promises';
 import path from "path";
-import { importX509, SignJWT } from "jose";
-import { importPrivateKeyPem, removeCertificateMarkers } from "../util/util";
+import { SignJWT } from "jose";
+import { certificateChainToX5c, importPrivateKeyPem } from "../util/util";
 import { config } from "../../config";
 
 const walletProviderRouter = Router();
@@ -81,9 +81,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 			.setProtectedHeader({
 				alg: 'ES256',
 				typ: 'key-attestation+jwt',
-				x5c: [
-					removeCertificateMarkers(walletProviderCertificate)
-				],
+				x5c: certificateChainToX5c(walletProviderCertificate),
 			})
 			.setExpirationTime("15s")
 			.sign(await importPrivateKeyPem(pemPrivateKey, 'ES256'))
