@@ -328,9 +328,6 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 		},
 		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
 			var flags = webauthn.parseAuthenticatorFlags(cred.attestationObject, true);
-			let backupEligibility: false | undefined;
-			let	backupState: false | undefined;
-
 			let authenticatorName = undefined;
 			try {
 				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
