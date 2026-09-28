@@ -14,7 +14,7 @@ jobs:
       contents: read  # To check out repo
       packages: read  # To read NPM registry
 
-    uses: wwwallet/wallet-ecosystem/.github/workflows/docker-build-push.yml@master
+    uses: wwwallet/wwwallet/.github/workflows/docker-build-push.yml@master
     secrets: inherit
     with:
       image-tag: ghcr.io/wwwallet/wallet-backend-server:latest
