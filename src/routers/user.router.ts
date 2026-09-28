@@ -1,13 +1,11 @@
 import express, { Request, Response, Router } from 'express';
-import * as uuid from 'uuid';
 import crypto from 'node:crypto';
 import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
-import { EntityManager } from "typeorm"
-
+import { EntityManager } from "typeorm";
 import { config } from '../../config';
-import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, hasWebauthnCredentialId, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
-import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
+import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, hasWebauthnCredentialId, newWebauthnCredentialEntity, privateDataEtag, renameWebauthnCredentials, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
+import { checkedUpdate, EtagUpdate } from '../util/util';
 import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
@@ -18,7 +16,6 @@ import { RegistrationParams, WalletKeystoreManager } from '../services/interface
 import { TYPES } from '../services/types';
 import { runTransaction } from '../entities/common.entity';
 import { Err, Ok, Result } from 'ts-results';
-import { renameWebauthnCredentials } from '../entities/user.entity';
 
 
 const walletKeystoreManagerService = appContainer.get<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService);
