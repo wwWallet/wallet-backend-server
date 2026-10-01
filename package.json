@@ -22,7 +22,7 @@
   "description": "",
   "dependencies": {
     "@simplewebauthn/server": "^13.3.2",
-    "axios": "^0.31.0",
+    "axios": "^1.18.0",
     "base64url": "^3.0.1",
     "body-parser": "^1.20.0",
     "cbor-x": "^1.6.0",
