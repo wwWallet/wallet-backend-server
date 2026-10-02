@@ -134,8 +134,8 @@ function parseAuthenticatorFlagsFromAuthenticatorData(authenticatorData: Buffer 
 	};
 }
 
-export function parseAuthenticatorFlags(input: Buffer | Uint8Array,isAttestation: boolean): AuthenticatorFlags {
-	if (isAttestation) {
+export function parseAuthenticatorFlags(input: Buffer | Uint8Array): AuthenticatorFlags {
+	try {
 		const decoded = cbor.decode(input);
 
 		if (!decoded.authData) {
@@ -151,10 +151,21 @@ export function parseAuthenticatorFlags(input: Buffer | Uint8Array,isAttestation
 		}
 
 		return parseAuthenticatorFlagsFromAuthenticatorData(decoded.authData);
-	}
+	} catch (error) {
 
-	return parseAuthenticatorFlagsFromAuthenticatorData(input);
+		console.error("Cbor decode error:", (error as Error).message);
+		return {
+			userPresent: false,
+			userVerified: false,
+			backupEligibility: false,
+			backupState: false,
+			attestedCredentialData: false,
+			extensionData: false,
+			rawFlagsByte: 0,
+		};
+	}
 }
+
 
 export function getAaguidFromAttestationObject(
 	attestationObject: Buffer | Uint8Array,

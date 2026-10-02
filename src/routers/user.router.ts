@@ -327,7 +327,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
 		},
 		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
-			var flags = webauthn.parseAuthenticatorFlags(cred.attestationObject, true);
+			var flags = webauthn.parseAuthenticatorFlags(cred.attestationObject);
 			let authenticatorName = undefined;
 			try {
 				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
