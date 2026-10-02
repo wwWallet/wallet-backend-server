@@ -1,27 +1,70 @@
+# wwWallet Backend Server
+wwWallet Backend Server is the backend of [wwWallet/wallet-frontend](https://github.com/wwWallet/wallet-frontend). It manages user accounts and WebAuthn passkeys, stores each user's encrypted wallet data, and provides helper services for the wallet like an HTTP proxy and an OHTTP relay.
 
-# 1 Development
-## Install
+> [!NOTE]
+> To quickly setup the **wwWallet** ecosystem see https://github.com/wwWallet/wwwallet
 
+## How to run
+
+Install dependencies
 ```
 yarn install
 ```
 
-## Change configuration
+Create the configuration (see [Configuration](#configuration))
+```
+cp .env.template .env
+```
 
-Edit `config/config.dev.ts` file to change the configuration of the app.
-## Run in dev mode
+Run database migrations (needs a running MariaDB/MySQL, see `DB_*` below)
+```
+yarn typeorm migration:run
+```
 
+Run in dev mode
 ```
 yarn dev
 ```
 
-Set `REGISTRATION_DISABLED=true` to omit the public user-registration endpoints from the server. By default, registration remains enabled. This disables `/user/register`, `/user/register-webauthn-begin`, and `/user/register-webauthn-finish`; authenticated passkey-management endpoints remain available.
+## Configuration
+Configuration is loaded from `.env` (see `.env.template`). Values are read via `dotenv` and validated in `config/index.ts`.
+
+The server refuses to start if a required variable is missing or invalid. Empty values count as unset.
+
+| Variable | Purpose | Default / Notes |
+| --- | --- | --- |
+| `PORT` | Port the server listens on. | **Required.** |
+| `APP_URL` | Public URL of the server. | Only used in the startup log. Default: `http://localhost:$PORT`. |
+| `APP_SECRET` | Secret used to sign session tokens. | **Required.** The `.env.template` value is for local development only and is refused when `NODE_ENV=production`; `yarn setup` in the parent repo generates a random one. Use a long random value in production. |
+| `DB_HOST` | Database host (MariaDB/MySQL). | **Required.** |
+| `DB_PORT` | Database port. | **Required.** |
+| `DB_USER` | Database user. | **Required.** |
+| `DB_PASSWORD` | Database password. | **Required.** |
+| `DB_NAME` | Database name. | **Required.** |
+| `WEBAUTHN_ORIGIN` | Origin(s) of the wallet frontend accepted in WebAuthn ceremonies. | **Required.** Comma-separated, e.g. `https://wallet.example.com`. |
+| `WEBAUTHN_RP_ID` | WebAuthn Relying Party ID, usually the frontend's domain. | **Required.** e.g. `wallet.example.com`. |
+| `WEBAUTHN_RP_NAME` | Relying Party name shown by authenticators. | Default: `wwWallet demo`. |
+| `KEYS_DIR` | Directory with the wallet-provider keys: `wallet-provider.key`, `wallet-provider.pem` and `ca.pem`. | Default: `/app/keys` (Docker image layout). |
+| `OHTTP_GATEWAY_URL` | Oblivious HTTP gateway that `/relay` forwards to. | Default: `http://localhost:4567`. |
+| `METADATA_FIDO_URL` | FIDO Metadata Service used to identify authenticators. | Default: `https://c-mds.fidoalliance.org`. |
+| `METADATA_COMMUNITY_AAGUID_URL` | Community list of passkey provider AAGUIDs. | Default: the [passkey-authenticator-aaguids](https://github.com/passkeydeveloper/passkey-authenticator-aaguids) list. |
+| `METADATA_REFRESH_INTERVAL_MS` | How often authenticator metadata is refreshed (ms). | Default: `604800000` (7 days). |
+| `REGISTRATION_DISABLED` | Set to `true` to disable new user registration (`/user/register`, `/user/register-webauthn-begin`, `/user/register-webauthn-finish`). | Default: `false`. Passkey management for existing users keeps working. |
+| `DEBUG_ACCEPT_UNAUTHORIZED_HTTPS` | Set to `true` to accept invalid TLS certificates in `/proxy` and `/helper/get-cert`. | **Development only.** With `NODE_ENV=production`, the server refuses to start if any `DEBUG_*` variable is set. |
+
+## Production
+
+Build the Docker image from `Dockerfile` (version tags publish it as `ghcr.io/wwwallet/wallet-backend-server:<tag>`). To run it:
+
+- Set the variables above as environment variables (at least the required ones).
+- Mount the wallet-provider keys at `/app/keys` (or set `KEYS_DIR`).
+- Run the migrations before starting a new version: `yarn migration:run:prod` inside the container.
 
 ## Pre-commit
 
 We use [pre-commit](https://pre-commit.com/) to enforce our `.editorconfig` before code is committed.
 
-### One-time setup
+#### One-time setup
 
 ```
 # install pre-commit if you don’t already have it
@@ -35,74 +78,12 @@ pre-commit run --all-files
 
 git add -A
 ```
-### What happens on commit
+
+#### What happens on commit
+
 - Auto-fixers run (e.g. add final newlines).
 - After the auto-fixers, the editorconfig-checker runs inside Docker to validate all staged files.
 - If violations remain, fix them manually until the commit passes.
-
-# 2 Production
-
-## 2.1. Preparation (The following steps should run on a clone of the production VM)
-
-### 2.1.1. Configuration
-
-1. Copy `config/config.template.ts` to `config/config.dev.ts`  and change it accordingly
-
-2. Place the ssl keys on the ssl_keys/ directory
-
-This directory must contain the following files
-
-- `<server_name>-chain-only.pem`
-
-- `<server_name>-server-only.pem`
-
-- `<server_name>-server-with-chain.pem`
-
-3. Change the server_name variable on the `entrypoint.sh` file
-
-### 2.1.2. Install and Build for production
-
-This step must run on a VM identical to the production system (same distribution, version and architecture)
-
-```
-yarn build:prod
-```
-
-Test the application
-
-```
-yarn start
-```
-
-### 2.1.3. Install 'paketo' globally and produce a snapshot
-
-```
-npm i -g @gsiou/paketo
-yarn snapshot
-```
-
-
-### 2.1.4. Transfer the snapshot to the production server with rsync
-
-```
-rsync --rsh='ssh -p 65432' <snapshot_name>.tar.gz root@ip:/tmp
-```
-
-## 2.2. Deploy on the production server
-
-```
-cd /tmp
-rm -rf wallet-backend
-mkdir wallet-backend
-tar -xf <snapshot_name>.tar.gz -C wallet-backend
-cd wallet-backend
-chmod +x entrypoint.sh
-./entrypoint.sh
-```
-
-Add `Listen 9002` below the `Listen 443` line on `/etc/apache2/ports.conf`
-and restart apache
-
 
 ## 💡Contributing
 Want to contribute? Check out our [Contribution Guidelines](https://github.com/wwWallet/.github/blob/main/CONTRIBUTING.md) for more details!
