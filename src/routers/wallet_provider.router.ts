@@ -7,8 +7,7 @@ import { config } from "../../config";
 
 const walletProviderRouter = Router();
 
-// @ts-ignore
-const keysDir: string = config.keysDir ?? "/app/keys";
+const keysDir = config.keysDir;
 const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
 const walletProviderCertificatePath = path.join(keysDir, 'wallet-provider.pem');
 const caCertificatePath = path.join(keysDir, 'ca.pem');

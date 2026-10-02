@@ -12,9 +12,9 @@ jobs:
     # Permissions for GITHUB_TOKEN
     permissions:
       contents: read  # To check out repo
-      packages: write  # To read NPM registry
+      packages: write  # To read NPM registry and push Docker image
 
-    uses: wwwallet/wallet-ecosystem/.github/workflows/docker-build-push.yml@master
+    uses: wwwallet/wwwallet/.github/workflows/docker-build-push.yml@master
     secrets: inherit
     with:
       image-tag: ghcr.io/wwwallet/wallet-backend-server:${{ github.ref_name }}
