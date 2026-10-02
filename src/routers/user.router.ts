@@ -163,7 +163,6 @@ if (!config.registerDisabled) {
 			if (walletInitializationResult.err) {
 				return res.status(400).send({ error: walletInitializationResult.val })
 			}
-			var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
 
 			const credentialName =typeof req.body.name === "string" && req.body.name? req.body.name: (typeof req.body.displayName === "string" && req.body.displayName? req.body.displayName: null);
 			const newUser: CreateUser = {
@@ -180,8 +179,6 @@ if (!config.registerDisabled) {
 						attestationObject: credential.response.attestationObject,
 						create_clientDataJSON: credential.response.clientDataJSON,
 						prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
-						backupEligibility: flags.backupEligibility,
-						backupState: flags.backupState
 					}),
 				],
 			};
@@ -304,12 +301,9 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	}
 
 	if (verification.verified) {
-		var flags = webauthn.parseAuthenticatorFlags(credential.response.authenticatorData, false);
 		const updateCredentialRes = await updateWebauthnCredential(credentialRecord, (entity) => {
 			entity.signatureCount = verification.authenticationInfo.newCounter;
 			entity.lastUseTime = new Date();
-			entity.backupEligibility = flags.backupEligibility;
-			entity.backupState = flags.backupState;
 			return entity;
 		});
 
@@ -344,6 +338,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
 		},
 		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
+			var flags = webauthn.parseAuthenticatorFlags(cred.attestationObject);
 			let authenticatorName = undefined;
 			try {
 				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
@@ -358,8 +353,8 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 				lastUseTime: cred.lastUseTime,
 				name: cred.name,
 				prfCapable: cred.prfCapable,
-				backupEligibility: cred.backupEligibility,
-				backupState: cred.backupState,
+				backupEligibility: flags.backupEligibility,
+				backupState: flags.backupState,
 				authenticatorName,
 			};
 		})),
@@ -452,7 +447,6 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	}
 
 	if (verification.verified) {
-		var flags = webauthn.parseAuthenticatorFlags(credential.response.attestationObject, true);
 		const updateUserRes = await updateUser(user.uuid, (userEntity, manager) => {
 			userEntity.webauthnCredentials = userEntity.webauthnCredentials || [];
 			userEntity.webauthnCredentials.push(
@@ -466,8 +460,6 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 					attestationObject: Buffer.from(credential.response.attestationObject),
 					create_clientDataJSON: Buffer.from(credential.response.clientDataJSON),
 					prfCapable: credential.clientExtensionResults?.prf?.enabled || false,
-					backupEligibility: flags.backupEligibility,
-					backupState: flags.backupState
 				}, manager)
 			);
 
