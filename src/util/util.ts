@@ -134,6 +134,18 @@ export function removeCertificateMarkers(certString: string) {
 		.trim();
 }
 
+export function getKeyAttestationCertificateChain(walletProviderCertificate: string): string[] {
+	const certificates = [...walletProviderCertificate
+		.matchAll(/-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g)];
+
+	if (certificates.length > 0) {
+		return certificates.map((match) => match[1].replace(/\s+/g, ''));
+	}
+	else {
+		return [removeCertificateMarkers(walletProviderCertificate)];
+	}
+}
+
 export async function importPrivateKeyPem(privateKeyPEM: string, algorithm: string) {
 	try {
 		const privateKey = await importPKCS8(privateKeyPEM, algorithm);
