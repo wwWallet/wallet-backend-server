@@ -99,6 +99,16 @@ type AuthenticatorFlags = {
 	rawFlagsByte: number;
 };
 
+const defaultAuthenticatorFlags: AuthenticatorFlags = {
+	userPresent: false,
+	userVerified: false,
+	backupEligibility: false,
+	backupState: false,
+	attestedCredentialData: false,
+	extensionData: false,
+	rawFlagsByte: 0,
+}
+
 function toUint8Array(value: Buffer | Uint8Array | ArrayBuffer): Uint8Array {
 	if (value instanceof Uint8Array) {
 		return value;
@@ -110,15 +120,7 @@ function parseAuthenticatorFlagsFromAuthenticatorData(authenticatorData: Buffer 
 	const data = toUint8Array(authenticatorData);
 
 	if (data.length < 37) {
-		return {
-			userPresent: false,
-			userVerified: false,
-			backupEligibility: false,
-			backupState: false,
-			attestedCredentialData: false,
-			extensionData: false,
-			rawFlagsByte: 0,
-		};
+		return defaultAuthenticatorFlags;
 	}
 
 	const flags = data[32];
@@ -138,33 +140,18 @@ export function parseAuthenticatorFlags(input: Buffer | Uint8Array): Authenticat
 	try {
 		const decoded = cbor.decode(input);
 
-		if (!decoded.authData) {
-			return {
-				userPresent: false,
-				userVerified: false,
-				backupEligibility: false,
-				backupState: false,
-				attestedCredentialData: false,
-				extensionData: false,
-				rawFlagsByte: 0,
-			};
+		if (!decoded || !decoded.authData) {
+			return defaultAuthenticatorFlags;
 		}
 
 		return parseAuthenticatorFlagsFromAuthenticatorData(decoded.authData);
 	} catch (error) {
 
 		console.error("Cbor decode error:", (error as Error).message);
-		return {
-			userPresent: false,
-			userVerified: false,
-			backupEligibility: false,
-			backupState: false,
-			attestedCredentialData: false,
-			extensionData: false,
-			rawFlagsByte: 0,
-		};
-	}
+		return defaultAuthenticatorFlags;
+	};
 }
+
 
 
 export function getAaguidFromAttestationObject(
