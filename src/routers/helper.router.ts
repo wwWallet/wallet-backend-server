@@ -16,9 +16,11 @@ helperRouter.all('/auth-check', (req, res) => {
 })
 
 helperRouter.post('/get-cert', async (req, res) => {
-	axios.get(req.body.url, { httpsAgent: agent }).then((response) => {
+	// Stream the response so it resolves on headers, while the TLS socket is still open
+	axios.get(req.body.url, { httpsAgent: agent, responseType: 'stream' }).then((response) => {
 		const socket = response.request.socket; // Access the underlying socket
 		const certificate = socket.getPeerCertificate(true); // Get full certificate chain
+		response.data.destroy(); // The body itself is not needed
 
 		if (certificate) {
 			console.log("parsing cert...")
