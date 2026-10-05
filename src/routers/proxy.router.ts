@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import express, { Router } from 'express';
 import https from 'https';
 import { config } from '../../config';
@@ -9,6 +9,8 @@ const agent = new https.Agent({
 	rejectUnauthorized: !config.debugAcceptUnauthorizedHttps
 });
 
+const plainHeaders = (headers: unknown) => headers instanceof AxiosHeaders ? headers.toJSON() : headers;
+
 proxyRouter.post('/', async (req, res) => {
 	const { headers, method, url, data } = req.body;
 	try {
@@ -16,7 +18,8 @@ proxyRouter.post('/', async (req, res) => {
 		console.log("URL = ", url)
 		const response = await axios({
 			url: url,
-			headers: headers,
+			// no compression by default: binary responses forward the upstream content-length, which would not match the decompressed body
+			headers: { 'Accept-Encoding': false, ...headers },
 			httpsAgent: agent,
 			method: method,
 			data: data,
@@ -40,7 +43,7 @@ proxyRouter.post('/', async (req, res) => {
 		// JSON or other text content
 		return res.status(response.status).send({
 			status: response.status,
-			headers: response.headers,
+			headers: plainHeaders(response.headers),
 			data: response.data,
 		});
 	}
@@ -49,9 +52,9 @@ proxyRouter.post('/', async (req, res) => {
 			console.error("Error data = ", err.response.data)
 		}
 		if (err.response && err.response.status == 302) {
-			return res.status(200).send({ status: err.response.status, headers: err.response.headers, data: {} })
+			return res.status(200).send({ status: err.response.status, headers: plainHeaders(err.response.headers), data: {} })
 		}
-		return res.status(err.response?.status ?? 104).send({ status: err.response?.status ?? 104, data: err.response?.data, headers: err.response?.headers });
+		return res.status(err.response?.status ?? 104).send({ status: err.response?.status ?? 104, data: err.response?.data, headers: plainHeaders(err.response?.headers) });
 	}
 })
 
