@@ -7,7 +7,8 @@
     "node": ">=24"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build": "rm -rf dist && npx tsc",
     "dev": "nodemon --config nodemon.json --exec \"npx tsc && yarn start\"",
     "dev-docker": "npx nodemon --config nodemon.json --exec \"npx tsc --outdir /dist && yarn start-docker\"",
@@ -53,6 +54,7 @@
     "nodemon": "^2.0.19",
     "source-map-support": "^0.5.21",
     "ts-node": "^10.9.2",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.11"
   }
 }

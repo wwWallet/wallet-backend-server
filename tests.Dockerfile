@@ -1,0 +1,12 @@
+FROM node:24-bookworm-slim AS builder-base
+
+WORKDIR /home/node/app
+
+# Install dependencies first so rebuild of these layers is only needed when dependencies change
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production=false --non-interactive
+
+FROM builder-base AS test
+
+COPY . .
+RUN yarn test
