@@ -88,11 +88,25 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 		return res.status(400).send(errorResponse);
 	}
 
+	const statusListUri = `${config.url ?? 'http://localhost:3000'}/wallet-provider/status-lists/ka`;
+	const statusMaintenanceExp = Math.floor(Date.now() / 1000) + (31 * 24 * 60 * 60);
 
 	try {
 		const keyAttestation = await new SignJWT({
 			attested_keys: jwks,
 			nonce: nonce,
+			key_storage: ['iso_18045_basic'],
+			user_authentication: ['iso_18045_basic'],
+			certification: `${config.url ?? 'http://localhost:3000'}/certification`,
+			key_storage_status: {
+				status: {
+					status_list: {
+						idx: 0,
+						uri: statusListUri,
+					},
+				},
+				exp: statusMaintenanceExp,
+			},
 		}).setIssuedAt()
 			.setProtectedHeader({
 				alg: 'ES256',
@@ -189,7 +203,6 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', async (req, r
 			.setProtectedHeader({
 				alg: 'ES256',
 				typ: 'oauth-client-attestation+jwt',
-				// JOSE x5c requires standard Base64 DER, without PEM line breaks.
 				x5c: getKeyAttestationCertificateChain(walletProviderCertificate),
 			})
 			.setExpirationTime("15s")
