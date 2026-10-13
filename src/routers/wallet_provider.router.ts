@@ -5,6 +5,7 @@ import { SignJWT } from "jose";
 import type { JWK } from "jose";
 import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/util";
 import { config } from "../../config";
+import { zeroStatusListReference } from "./wallet_provider_status_list.router";
 
 type KeyAttestationRequestBody = {
 	jwks: JWK[];
@@ -88,8 +89,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 		return res.status(400).send(errorResponse);
 	}
 
-	const statusListUri = `${config.url ?? 'http://localhost:3000'}/wallet-provider/status-lists/ka`;
-	const statusMaintenanceExp = Math.floor(Date.now() / 1000) + (31 * 24 * 60 * 60);
+	const keyStorageStatus = zeroStatusListReference();
 
 	try {
 		const keyAttestation = await new SignJWT({
@@ -98,15 +98,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 			key_storage: ['iso_18045_basic'],
 			user_authentication: ['iso_18045_basic'],
 			certification: `${config.url ?? 'http://localhost:3000'}/certification`,
-			key_storage_status: {
-				status: {
-					status_list: {
-						idx: 0,
-						uri: statusListUri,
-					},
-				},
-				exp: statusMaintenanceExp,
-			},
+			key_storage_status: keyStorageStatus,
 		}).setIssuedAt()
 			.setProtectedHeader({
 				alg: 'ES256',
@@ -179,8 +171,7 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', async (req, r
 	}
 
 	try {
-		const statusListUri = `${config.url ?? 'http://localhost:3000'}/wallet-provider/status-lists/wia`;
-		const statusMaintenanceExp = Math.floor(Date.now() / 1000) + (31 * 24 * 60 * 60);
+		const clientStatus = zeroStatusListReference();
 
 		const walletInstanceAttestation = await new SignJWT({
 			sub: clientId,
@@ -190,15 +181,7 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', async (req, r
 			wallet_link: 'https://webuild.wwwallet.org',
 			wallet_version: '1.0.0',
 			wallet_solution_certification_information: 'Development instance — no wallet solution certification asserted',
-			client_status: {
-				status: {
-					status_list: {
-						idx: 0,
-						uri: statusListUri,
-					},
-				},
-				exp: statusMaintenanceExp,
-			},
+			client_status: clientStatus,
 		}).setIssuedAt()
 			.setProtectedHeader({
 				alg: 'ES256',
@@ -221,4 +204,17 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', async (req, r
 
 export {
 	walletProviderRouter,
+}
+
+/** Use the same signing identity for the status list and its WIA/KA references. */
+export async function signWalletProviderStatus(token: SignJWT): Promise<string> {
+	const [privateKey, certificate] = await Promise.all([
+		readFile(walletProviderPrivateKeyPath, 'utf-8'),
+		readFile(walletProviderCertificatePath, 'utf-8'),
+	]);
+	return token.setProtectedHeader({
+		alg: 'ES256',
+		typ: 'statuslist+jwt',
+		x5c: getKeyAttestationCertificateChain(certificate),
+	}).sign(await importPrivateKeyPem(privateKey, 'ES256'));
 }

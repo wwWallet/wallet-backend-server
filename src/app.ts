@@ -16,6 +16,7 @@ import { proxyRouter } from './routers/proxy.router';
 import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
 import { walletProviderRouter } from './routers/wallet_provider.router';
+import { walletProviderStatusListRouter } from './routers/wallet_provider_status_list.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
 import { initializeMetadataService } from './services/metadata';
@@ -44,6 +45,7 @@ app.use(cors({
 app.use('/status', statusRouter);
 app.use('/user', userController);
 
+app.use('/wallet-provider/status-lists', walletProviderStatusListRouter);
 
 app.use(AuthMiddleware);
 
