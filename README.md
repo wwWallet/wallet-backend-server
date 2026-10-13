@@ -79,10 +79,20 @@ pre-commit run --all-files
 git add -A
 ```
 
+#### Local checks without committing
+
+Run only the EditorConfig check, without running auto-fixers:
+
+```sh
+pre-commit run editorconfig-checker --all-files
+```
+
+Omit `--all-files` to check only staged files. The first run installs the pinned native checker in pre-commit's cache. This check reports violations without changing or staging files.
+
 #### What happens on commit
 
 - Auto-fixers run (e.g. add final newlines).
-- After the auto-fixers, the editorconfig-checker runs inside Docker to validate all staged files.
+- After the auto-fixers, editorconfig-checker validates staged files.
 - If violations remain, fix them manually until the commit passes.
 
 ## 💡Contributing
