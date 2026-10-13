@@ -50,6 +50,7 @@ The server refuses to start if a required variable is missing or invalid. Empty 
 | `METADATA_COMMUNITY_AAGUID_URL` | Community list of passkey provider AAGUIDs. | Default: the [passkey-authenticator-aaguids](https://github.com/passkeydeveloper/passkey-authenticator-aaguids) list. |
 | `METADATA_REFRESH_INTERVAL_MS` | How often authenticator metadata is refreshed (ms). | Default: `604800000` (7 days). |
 | `REGISTRATION_DISABLED` | Set to `true` to disable new user registration (`/user/register`, `/user/register-webauthn-begin`, `/user/register-webauthn-finish`). | Default: `false`. Passkey management for existing users keeps working. |
+| `STATUS_LIST_REVOKATION_ADMIN_BEARER_TOKEN` | Private bearer token for operator account-wide status revocation | Optional. Unset/empty disables operator revocation. |
 | `DEBUG_ACCEPT_UNAUTHORIZED_HTTPS` | Set to `true` to accept invalid TLS certificates in `/proxy` and `/helper/get-cert`. | **Development only.** With `NODE_ENV=production`, the server refuses to start if any `DEBUG_*` variable is set. |
 
 ## Production

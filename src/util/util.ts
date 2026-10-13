@@ -127,13 +127,6 @@ export function generateCodeVerifier() {
 
 export const verifiablePresentationSchemaURL = "https://api-pilot.ebsi.eu/trusted-schemas-registry/v2/schemas/zFj7VdCiHdG4GB6fezdAUKhDEuxFR2bri2ihKLkiZYpE9";
 
-export function removeCertificateMarkers(certString: string) {
-	return certString
-		.replace(/-----BEGIN CERTIFICATE-----/g, '')
-		.replace(/-----END CERTIFICATE-----/g, '')
-		.trim();
-}
-
 /** Parse one PEM or Base64 DER certificate and emit canonical JOSE x5c encoding. */
 export function canonicalizeCertificateForJosex5c(certificate: string): string {
 	const trimmed = certificate.trim();
