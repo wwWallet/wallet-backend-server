@@ -3,6 +3,9 @@ import { Request, Response, NextFunction } from "express";
 import { jwtVerify, SignJWT } from 'jose';
 import { config } from "../../config";
 import { getUser, UserEntity, UserId } from "../entities/user.entity";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "Auth" });
 
 
 type TokenPayloadVersion = 1;
@@ -40,21 +43,21 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 			// guarantees that this type assertion is sound
 			return payload as AppTokenPayload;
 		} else {
-			console.log(`Incorrect token version: expected: ${TOKEN_PAYLOAD_VERSION}, got: ${payload?.v}`);
+			log.warn({ expected: TOKEN_PAYLOAD_VERSION, got: payload?.v }, "Incorrect token version");
 			return null;
 		}
 	}
 	catch (err) {
-		console.log('Signature verification failed');
+		log.warn({ err }, 'Signature verification failed');
 		return false;
 	}
 }
 
 export function AuthMiddleware(req: Request, res: Response, next: NextFunction) {
 	const authorizationHeader = req.headers?.authorization;
-	console.log("Authorization header = ", authorizationHeader)
+	log.info({ authorizationHeader }, "Authorization header");
 	if (authorizationHeader?.substring(0, 7) !== 'Bearer ') {
-		console.log("Invalid authorization header:", authorizationHeader);
+		log.warn({ authorizationHeader }, "Invalid authorization header");
 		res.status(401).send();
 		return;
 	}
@@ -63,7 +66,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 
 	verifyApptoken(token).then(async (payload) => {
 		if (!payload) {
-			console.log("Unauthorized access to ", token);
+			log.warn({ token }, "Unauthorized access");
 			res.status(401).send(); // Unauthorized
 			return;
 		}
@@ -83,7 +86,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		return;
 	})
 	.catch(e => {
-		console.log("Unauthorized access to ", token);
+		log.warn({ token }, "Unauthorized access");
 		res.status(401).send(); // Unauthorized
 		return;
 	});

@@ -8,6 +8,9 @@ import { TYPES } from "./types";
 import { config } from "../../config";
 import { SignatureAction, ServerSocketMessage } from "./shared.types";
 import { UserId } from "../entities/user.entity";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "ClientKeystore" });
 
 
 
@@ -53,7 +56,7 @@ export class ClientKeystoreService implements WalletKeystore {
 				audience: audience
 			}
 		}
-		console.log("MessageID = ", message_id_sent)
+		log.info({ message_id: message_id_sent }, "Sending message to client keystore");
 		await this.socketManagerService.send(userId, msg as ServerSocketMessage);
 		const result = await this.socketManagerService.expect(userId, message_id_sent, SignatureAction.generateOpenid4vciProof);
 		if (result.err) {

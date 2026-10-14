@@ -1,6 +1,9 @@
 import express, { Router } from 'express';
 import fetch from 'node-fetch';
 import { config } from '../../config';
+import { logger } from '../logger';
+
+const log = logger.child({ module: 'OhttpRelay' });
 
 const ohttpRelayRouter: Router = Router();
 
@@ -40,7 +43,7 @@ ohttpRelayRouter.post('/', express.raw({ type: '*/*', limit: '17mb' }), async (r
 		return res.send(responseBody);
 	}
 	catch (error) {
-		console.error('OHTTP relay proxy error:', error);
+		log.error({ err: error }, 'OHTTP relay proxy error');
 		return res.status(502).send();
 	}
 });

@@ -1,6 +1,9 @@
 import { Result, Ok, Err } from "ts-results";
 import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
 import AppDataSource from "../AppDataSource";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "CredentialPortal" });
 
 interface CredentialPortalDisplayLogo {
 	uri: string;
@@ -42,7 +45,7 @@ async function getAllCredentialPortals(): Promise<Result<CredentialPortalEntity[
 		return Ok(portals);
 	}
 	catch(e) {
-		console.log(e);
+		log.error({ err: e }, "Failed to get credential portals");
 		return Err("DB_ERR");
 	}
 }

@@ -2,6 +2,9 @@ import * as crypto from 'crypto';
 import base64url from "base64url";
 import { Err, Ok, Result } from 'ts-results';
 import { importPKCS8 } from "jose";
+import { logger } from '../logger';
+
+const log = logger.child({ module: 'Util' });
 
 export function isResult<T>(a: T | Result<T, unknown>): a is Result<T, unknown> {
 	return a instanceof Object && "val" in a && "ok" in a && "err" in a;
@@ -103,11 +106,11 @@ export async function generateCodeChallengeFromVerifier(v: any) {
 			.createHash("sha256")
 			.update(v)
 			.digest());
-		console.log("code chall = ", challenge)
+		log.info({ challenge }, "Generated code challenge");
 		return challenge;
 	}
 	catch (e) {
-		console.log("Failed to generate code challenge")
+		log.error({ err: e }, "Failed to generate code challenge");
 		return null;
 	}
 }
@@ -115,11 +118,11 @@ export async function generateCodeChallengeFromVerifier(v: any) {
 export function generateCodeVerifier() {
 	try {
 		const verifier = base64url.encode(crypto.randomBytes(32));
-		console.log("ver = ", verifier)
+		log.info({ verifier }, "Generated code verifier");
 		return verifier;
 	}
 	catch (e) {
-		console.log("Failed to generate code verifier")
+		log.error({ err: e }, "Failed to generate code verifier");
 		return null;
 	}
 }
@@ -139,6 +142,6 @@ export async function importPrivateKeyPem(privateKeyPEM: string, algorithm: stri
 		const privateKey = await importPKCS8(privateKeyPEM, algorithm);
 		return privateKey;
 	} catch (err) {
-		console.error('Error importing private key:', err);
+		log.error({ err }, 'Error importing private key');
 	}
 }

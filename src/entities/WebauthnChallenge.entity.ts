@@ -3,6 +3,9 @@ import { Entity, PrimaryColumn, Column, Repository} from "typeorm"
 import AppDataSource from "../AppDataSource";
 import crypto from "node:crypto";
 import { UserId } from "./user.entity";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "WebauthnChallenge" });
 @Entity({ name: "webauthn_challenge" })
 class WebauthnChallengeEntity {
 	@PrimaryColumn()
@@ -74,7 +77,7 @@ async function createChallenge(type: "create" | "get", userId?: UserId, prfSalt?
 		return Ok(returnData);
 	}
 	catch (e) {
-		console.log(e);
+		log.error({ err: e }, "Failed to create challenge");
 		return Err(ChallengeErr.DB_ERR);
 	}
 }
@@ -105,7 +108,7 @@ async function popChallenge(id: string): Promise<Result<WebauthnChallengeEntity,
 			}
 		}
 		catch (e) {
-			console.log(e);
+			log.error({ err: e }, "Failed to pop challenge");
 			return Err(ChallengeErr.DB_ERR);
 		}
 	});

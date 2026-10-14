@@ -19,6 +19,9 @@ import { walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
 import { initializeMetadataService } from './services/metadata';
+import { logger } from './logger';
+
+const log = logger.child({ module: 'App' });
 
 
 const app: Express = express();
@@ -61,9 +64,7 @@ if (process.env.NODE_ENV === "production") {
 		const names = unsafeEnvironmentVariables
 			.join(', ');
 
-		console.error(
-			`FATAL: Unsafe env flags found in production: ${names}`
-		);
+		log.fatal(`Unsafe env flags found in production: ${names}`);
 
 		process.exit(1);
 	}
@@ -75,5 +76,5 @@ appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).regi
 void initializeMetadataService();
 
 server.listen(config.port, () => {
-	console.log(`Wallet Backend Server listening with ${config.url}`)
+	log.info(`Wallet Backend Server listening with ${config.url}`);
 });

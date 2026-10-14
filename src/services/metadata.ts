@@ -3,6 +3,9 @@ import { config } from '../../config';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
+import { logger } from '../logger';
+
+const log = logger.child({ module: 'MetadataService' });
 
 const FidoMetadataSchema = z.object({
 	no: z.number().optional()
@@ -105,7 +108,7 @@ async function refreshCache<T>(
 				cache.fetchedAt = Date.now();
 				cache.tillNextFetch = undefined;
 
-				console.log(`[Metadata Service] Background refresh: ${sourceName} is up to date (304 Not Modified).`);
+				log.info(`Background refresh: ${sourceName} is up to date (304 Not Modified).`);
 				return;
 			}
 
@@ -119,26 +122,26 @@ async function refreshCache<T>(
 			cache.tillNextFetch = undefined;
 			networkSuccess = true;
 
-			console.log(`[Metadata Service] Background refresh: Successfully downloaded new data for ${sourceName}.`);
+			log.info(`Background refresh: Successfully downloaded new data for ${sourceName}.`);
 
 		} catch (error) {
 			if (!cache.tillNextFetch || cache.tillNextFetch < Date.now()) {
 				cache.tillNextFetch = Date.now() + 24*60*60*1000;
 			}
-			console.warn(`[Metadata Service] Could not load (or validate) ${sourceName} from network:`, (error as Error).message);
+			log.warn({ err: error }, `Could not load (or validate) ${sourceName} from network`);
 		}
 
 		if (!networkSuccess && Object.keys(cache.data as Record<string, unknown>).length === 0) {
 			try {
-				console.log(`[Metadata Service] Attempting to load ${sourceName} from local fallback...`);
+				log.info(`Attempting to load ${sourceName} from local fallback...`);
 				const fileContent = await readFile(fallbackFilePath, 'utf-8');
 				const rawJson = JSON.parse(fileContent);
 
 				cache.data = schema.parse(rawJson);
 				cache.fetchedAt = Date.now();
-				console.log(`[Metadata Service] Successfully loaded ${sourceName} from fallback.`);
+				log.info(`Successfully loaded ${sourceName} from fallback.`);
 			} catch (fallbackError) {
-				console.error(`[Metadata Service] Failed to load ${sourceName} from local fallback:`, (fallbackError as Error).message);
+				log.error({ err: fallbackError }, `Failed to load ${sourceName} from local fallback`);
 			}
 		}
 
@@ -174,16 +177,16 @@ export function initializeMetadataService(): Promise<void> {
 
 		if (!loggedInit) {
 			if (fidoSuccess && communitySuccess) {
-				console.log(`[Metadata Service] Initialized. Total known authenticators: ${totalAuthenticators}`);
+				log.info(`Initialized. Total known authenticators: ${totalAuthenticators}`);
 				loggedInit = true;
 			} else if (fidoSuccess || communitySuccess) {
-				console.warn(
-					`[Metadata Service] Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
+				log.warn(
+					`Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
 					`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
 				);
 				loggedInit = true;
 			} else {
-				console.error('[Metadata Service] Initialization failed. Both MDS sources could not be fetched and fallbacks failed.');
+				log.error('Initialization failed. Both MDS sources could not be fetched and fallbacks failed.');
 			}
 		}
 	})().finally(() => {
