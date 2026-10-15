@@ -115,7 +115,7 @@ if (!config.registerDisabled) {
 	});
 
 	noAuthUserController.post('/register-webauthn-finish', async (req: Request, res: Response) => {
-		log.info({ body: req.body }, "webauthn register-finish");
+		log.debug({ body: req.body }, "webauthn register-finish");
 
 		const challengeRes = await popChallenge(req.body.challengeId);
 		if (challengeRes.err) {
@@ -127,7 +127,7 @@ if (!config.registerDisabled) {
 			return;
 		}
 		const challenge = challengeRes.unwrap();
-		log.info({ challenge }, "webauthn register-finish challenge");
+		log.debug({ challenge }, "webauthn register-finish challenge");
 
 		const credential = req.body.credential;
 		const verification = await SimpleWebauthn.verifyRegistrationResponse({
@@ -188,7 +188,7 @@ if (!config.registerDisabled) {
 
 			const userRes = await createUser(newUser, false,);
 			if (userRes.ok) {
-				log.info({ user: userRes.val }, "Created user");
+				log.debug({ user: userRes.val }, "Created user");
 				res.status(200)
 					.header({ 'X-Private-Data-ETag': privateDataEtag(userRes.val.privateData) })
 					.send(await initSession(userRes.val));
@@ -213,7 +213,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 		res.status(500).send({});
 		return;
 	}
-	log.info({ userRes }, 'Password login user');
+	log.debug({ userRes }, 'Password login user');
 	const user = userRes.unwrap();
 	res.status(200)
 		.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
@@ -236,7 +236,7 @@ noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Res
 });
 
 noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Response) => {
-	log.info({ body: req.body }, "webauthn login-finish");
+	log.debug({ body: req.body }, "webauthn login-finish");
 
 	const credential = req.body.credential;
 	const userId = UserId.fromUserHandle(credential.response.userHandle);
@@ -271,7 +271,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	}
 	const challenge = challengeRes.unwrap();
 
-	log.info({ challenge }, "webauthn login-finish challenge");
+	log.debug({ challenge }, "webauthn login-finish challenge");
 
 	let verification;
 	try {
@@ -346,10 +346,10 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			try {
 				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
 				authenticatorName = await getAuthenticatorFriendlyName(aaguid);
-			} catch (e)
-				{log.warn({ err: e }, "Error getting aaguid from attestation object");
+			} catch (e) {
+				log.warn({ err: e }, "Error getting aaguid from attestation object");
 			};
-			return{
+			return {
 				createTime: cred.createTime,
 				credentialId: cred.credentialId,
 				id: cred.id,
@@ -397,7 +397,7 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 });
 
 userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
-	log.info({ body: req.body }, "webauthn register-finish");
+	log.debug({ body: req.body }, "webauthn register-finish");
 
 	const userRes = await getUser(req.user.id);
 	if (userRes.err) {
@@ -417,7 +417,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	}
 	const challenge = challengeRes.unwrap();
 
-	log.info({ challenge }, "webauthn register-finish challenge");
+	log.debug({ challenge }, "webauthn register-finish challenge");
 
 	const credential = req.body.credential;
 	let verification;
@@ -501,7 +501,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 })
 
 userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
-	log.info({ credentialId: req.params.id }, "webauthn rename");
+	log.debug({ credentialId: req.params.id }, "webauthn rename");
 
 	const updateRes = await updateWebauthnCredentialById(req.user.id, req.params.id, (credentialEntity, manager) => {
 		credentialEntity.name = req.body.name || null;
@@ -522,7 +522,7 @@ userController.post('/webauthn/credential/:id/rename', async (req: Request, res:
 })
 
 userController.post('/webauthn/credential/:id/delete', async (req: Request, res: Response) => {
-	log.info({ credentialId: req.params.id }, "webauthn delete");
+	log.debug({ credentialId: req.params.id }, "webauthn delete");
 
 	const userRes = await getUser(req.user.id);
 	if (userRes.err) {

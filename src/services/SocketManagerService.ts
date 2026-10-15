@@ -28,7 +28,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 			log.info('WebSocket client connected');
 			// Handle incoming messages from the WebSocket client
 			ws.on('message', async (message) => {
-				log.info({ message: message.toString() }, "Received WebSocket message");
+				log.info("Received WebSocket message");
 				// Parse Handshake Request
 				// wait for appToken to authenticate
 				try {
@@ -41,7 +41,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					ws.send(JSON.stringify({ type: "FIN_INIT" }));
 					log.info("Handshake established");
 				}
-				catch(e) {
+				catch (e) {
 					log.warn({ err: e }, "Handshake failed");
 				}
 			});
@@ -72,7 +72,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					}
 					return resolve(Ok({ message: clientMessage }));
 				}
-				catch(e) {
+				catch (e) {
 					resolve(Err(ExpectingSocketMessageErr.FAILED_TO_RECEIVE));
 				}
 			}

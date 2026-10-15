@@ -27,7 +27,7 @@ Promise.all([
 
 walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 
-	log.info({ body: req.body }, "Received key attestation request");
+	log.debug({ body: req.body }, "Received key attestation request");
 	const { jwks, openid4vci: { nonce } } = req.body;
 
 	if (!jwks || !Array.isArray(jwks) || jwks.length == 0) {

@@ -231,7 +231,7 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 		}));
 		return Ok(user);
 	}
-	catch(e) {
+	catch (e) {
 		log.error({ err: e }, "Failed to create user");
 		return Err(CreateUserErr.ALREADY_EXISTS);
 	}
@@ -245,7 +245,7 @@ async function getUser(id: UserId): Promise<Result<UserEntity, GetUserErr>> {
 		}
 		return Ok(res);
 	}
-	catch(e) {
+	catch (e) {
 		log.error({ err: e }, "getUser failed");
 		return Err(GetUserErr.NOT_EXISTS);
 	}
@@ -260,7 +260,7 @@ async function deleteUser(id: UserId, options?: { entityManager: EntityManager }
 			return Ok({})
 		});
 	}
-	catch(e) {
+	catch (e) {
 		log.error({ err: e }, "deleteUser failed");
 		return Err(DeleteUserErr.FAILED_TO_DELETE);
 	}
@@ -309,14 +309,14 @@ async function getUserByCredentials(username: string, password: string): Promise
 
 async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
 	try {
-		log.info({ userId, credentialId: base64url.encode(credentialId) }, "getUserByWebauthnCredential");
+		log.debug({ userId, credentialId: base64url.encode(credentialId) }, "getUserByWebauthnCredential");
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
 			.where("user.uuid = :uuid", { uuid: userId.id })
 			.andWhere("credential.credentialId = :credentialId", { credentialId });
-		log.info({ sql: q.getSql() }, "getUserByWebauthnCredential query");
+		log.debug({ sql: q.getSql() }, "getUserByWebauthnCredential query");
 		const userRes = await q.getOne();
-		log.info({ userRes }, "getUserByWebauthnCredential result");
+		log.debug({ userRes }, "getUserByWebauthnCredential result");
 		if (!userRes) {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
@@ -326,7 +326,7 @@ async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer)
 			return Ok([userRes, userRes.webauthnCredentials[0]]);
 		}
 	}
-	catch(e) {
+	catch (e) {
 		log.error({ err: e }, "getUserByWebauthnCredential failed");
 		return Err(GetUserErr.DB_ERR);
 	}
@@ -339,7 +339,7 @@ async function hasWebauthnCredentialId(credentialId: Buffer): Promise<Result<boo
 			.getCount();
 		return Ok(count > 0);
 	}
-	catch(e) {
+	catch (e) {
 		log.error({ err: e }, "hasWebauthnCredentialId failed");
 		return Err(GetUserErr.DB_ERR);
 	}
@@ -356,7 +356,7 @@ async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 		}
 		return Ok(res);
 	}
-	catch(e) {
+	catch (e) {
 		log.error({ err: e }, "getAllUsers failed");
 		return Err(GetUserErr.DB_ERR)
 	}
@@ -427,15 +427,15 @@ async function updateWebauthnCredential(
 }
 
 async function updateWebauthnCredentialById(userId: UserId, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
-	log.info({ userId, credentialUuid }, "updateWebauthnCredentialById");
+	log.debug({ userId, credentialUuid }, "updateWebauthnCredentialById");
 	return await webauthnCredentialRepository.manager.transaction(async (manager) => {
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
 			.where("user.uuid = :uuid", { uuid: userId.id })
 			.andWhere("credential.id = :credentialUuid", { credentialUuid });
-		log.info({ query: q.getQueryAndParameters() }, "updateWebauthnCredentialById query");
+		log.debug({ query: q.getQueryAndParameters() }, "updateWebauthnCredentialById query");
 		const userRes = await q.getOne();
-		log.info({ userRes }, "updateWebauthnCredentialById result");
+		log.debug({ userRes }, "updateWebauthnCredentialById result");
 
 		return updateWebauthnCredentialWithManager(userRes.webauthnCredentials[0], update, manager);
 	});

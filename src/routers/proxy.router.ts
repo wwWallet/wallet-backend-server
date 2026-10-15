@@ -18,7 +18,7 @@ proxyRouter.post('/', async (req, res) => {
 	const { headers, method, url, data } = req.body;
 	try {
 		const isBinaryRequest = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico)(\?.*)?(#.*)?$/i.test(url);
-		log.info({ url }, "Proxying request");
+		log.debug({ url }, "Proxying request");
 		const response = await axios({
 			url: url,
 			// no compression by default: binary responses forward the upstream content-length, which would not match the decompressed body
@@ -52,7 +52,7 @@ proxyRouter.post('/', async (req, res) => {
 	}
 	catch (err) {
 		if (err.response && err.response.data) {
-			log.error({ data: err.response.data }, "Upstream error response");
+			log.error({ data: err.response.data?.error }, "Upstream error response");
 		}
 		if (err.response && err.response.status == 302) {
 			return res.status(200).send({ status: err.response.status, headers: plainHeaders(err.response.headers), data: {} })

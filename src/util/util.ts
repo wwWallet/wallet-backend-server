@@ -106,7 +106,7 @@ export async function generateCodeChallengeFromVerifier(v: any) {
 			.createHash("sha256")
 			.update(v)
 			.digest());
-		log.info({ challenge }, "Generated code challenge");
+		log.debug({ challenge }, "Generated code challenge");
 		return challenge;
 	}
 	catch (e) {
@@ -118,7 +118,7 @@ export async function generateCodeChallengeFromVerifier(v: any) {
 export function generateCodeVerifier() {
 	try {
 		const verifier = base64url.encode(crypto.randomBytes(32));
-		log.info({ verifier }, "Generated code verifier");
+		log.debug({ verifier }, "Generated code verifier");
 		return verifier;
 	}
 	catch (e) {
