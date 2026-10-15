@@ -36,6 +36,7 @@
     "mysql2": "^3.24.5",
     "node-fetch": "2",
     "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
     "reflect-metadata": "^0.1.13",
     "ts-results": "^3.3.0",
     "typeorm": "^0.3.31",
