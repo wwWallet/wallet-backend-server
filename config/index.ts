@@ -40,6 +40,7 @@ const schema = z.object({
 	METADATA_REFRESH_INTERVAL_MS: z.string().optional().transform((value) => positiveInteger(value, 604800000)),
 	REGISTRATION_DISABLED: flag,
 	DEBUG_ACCEPT_UNAUTHORIZED_HTTPS: flag,
+	STATUS_LIST_REVOKATION_ADMIN_BEARER_TOKEN: z.string().regex(/^\S+$/, "must not contain whitespace").optional()
 });
 
 const parsed = schema.safeParse(Object.fromEntries(Object.keys(schema.shape).map((name) => [name, env(name)])));
@@ -77,4 +78,5 @@ export const config = {
 	},
 	registerDisabled: vars.REGISTRATION_DISABLED,
 	debugAcceptUnauthorizedHttps: vars.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS,
+	statusListRevokationBearerToken: vars.STATUS_LIST_REVOKATION_ADMIN_BEARER_TOKEN
 };
