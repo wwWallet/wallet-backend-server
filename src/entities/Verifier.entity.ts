@@ -1,6 +1,9 @@
 import { Err, Ok, Result } from "ts-results";
 import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
 import AppDataSource from "../AppDataSource";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "Verifier" });
 
 
 @Entity({ name: "verifier" })
@@ -29,7 +32,7 @@ async function getAllVerifiers(): Promise<Result<VerifierEntity[], GetVerifierEr
 		return Ok(issuers);
 	}
 	catch(e) {
-		console.log(e);
+		log.error({ err: e }, "Failed to get verifiers");
 		return Err(GetVerifierErr.DB_ERR);
 	}
 }

@@ -18,6 +18,9 @@ import { RegistrationParams, WalletKeystoreManager } from '../services/interface
 import { TYPES } from '../services/types';
 import { runTransaction } from '../entities/common.entity';
 import { Err, Ok, Result } from 'ts-results';
+import { logger } from '../logger';
+
+const log = logger.child({ module: 'UserRouter' });
 
 
 const walletKeystoreManagerService = appContainer.get<WalletKeystoreManager>(TYPES.WalletKeystoreManagerService);
@@ -80,7 +83,7 @@ if (!config.registerDisabled) {
 				.send(await initSession(result.val));
 
 		} else {
-			console.log("Failed to create user")
+			log.error({ error: result.val }, "Failed to create user");
 			res.status(500).send({ error: result.val });
 		}
 	});
@@ -112,7 +115,7 @@ if (!config.registerDisabled) {
 	});
 
 	noAuthUserController.post('/register-webauthn-finish', async (req: Request, res: Response) => {
-		console.log("webauthn register-finish", req.body);
+		log.debug({ body: req.body }, "webauthn register-finish");
 
 		const challengeRes = await popChallenge(req.body.challengeId);
 		if (challengeRes.err) {
@@ -124,7 +127,7 @@ if (!config.registerDisabled) {
 			return;
 		}
 		const challenge = challengeRes.unwrap();
-		console.log("webauthn register-finish challenge", challenge);
+		log.debug({ challenge }, "webauthn register-finish challenge");
 
 		const credential = req.body.credential;
 		const verification = await SimpleWebauthn.verifyRegistrationResponse({
@@ -185,7 +188,7 @@ if (!config.registerDisabled) {
 
 			const userRes = await createUser(newUser, false,);
 			if (userRes.ok) {
-				console.log("Created user", userRes.val);
+				log.debug({ user: userRes.val }, "Created user");
 				res.status(200)
 					.header({ 'X-Private-Data-ETag': privateDataEtag(userRes.val.privateData) })
 					.send(await initSession(userRes.val));
@@ -210,7 +213,7 @@ noAuthUserController.post('/login', async (req: Request, res: Response) => {
 		res.status(500).send({});
 		return;
 	}
-	console.log('user res = ', userRes)
+	log.debug({ userRes }, 'Password login user');
 	const user = userRes.unwrap();
 	res.status(200)
 		.header({ 'X-Private-Data-ETag': privateDataEtag(user.privateData) })
@@ -233,7 +236,7 @@ noAuthUserController.post('/login-webauthn-begin', async (req: Request, res: Res
 });
 
 noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Response) => {
-	console.log("webauthn login-finish", req.body);
+	log.debug({ body: req.body }, "webauthn login-finish");
 
 	const credential = req.body.credential;
 	const userId = UserId.fromUserHandle(credential.response.userHandle);
@@ -268,7 +271,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 	}
 	const challenge = challengeRes.unwrap();
 
-	console.log("webauthn login-finish challenge", challenge);
+	log.debug({ challenge }, "webauthn login-finish challenge");
 
 	let verification;
 	try {
@@ -296,7 +299,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 			},
 		});
 	} catch (e) {
-		console.log(e);
+		log.warn({ err: e }, "Authentication response could not be verified");
 		return res.status(400).send({});
 	}
 
@@ -343,10 +346,10 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			try {
 				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
 				authenticatorName = await getAuthenticatorFriendlyName(aaguid);
-			} catch (e)
-				{console.log("Error getting aaguid from attestation object", e)
+			} catch (e) {
+				log.warn({ err: e }, "Error getting aaguid from attestation object");
 			};
-			return{
+			return {
 				createTime: cred.createTime,
 				credentialId: cred.credentialId,
 				id: cred.id,
@@ -394,7 +397,7 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 });
 
 userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
-	console.log("webauthn register-finish", req.body);
+	log.debug({ body: req.body }, "webauthn register-finish");
 
 	const userRes = await getUser(req.user.id);
 	if (userRes.err) {
@@ -414,7 +417,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 	}
 	const challenge = challengeRes.unwrap();
 
-	console.log("webauthn register-finish challenge", challenge);
+	log.debug({ challenge }, "webauthn register-finish challenge");
 
 	const credential = req.body.credential;
 	let verification;
@@ -442,7 +445,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 			expectedRPID: config.webauthn.rp.id,
 		});
 	} catch (e) {
-		console.log(e);
+		log.warn({ err: e }, "Registration response could not be verified");
 		return res.status(400).send({ error: "Registration response could not be verified" })
 	}
 
@@ -498,7 +501,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 })
 
 userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
-	console.log("webauthn rename", req.params.id);
+	log.debug({ credentialId: req.params.id }, "webauthn rename");
 
 	const updateRes = await updateWebauthnCredentialById(req.user.id, req.params.id, (credentialEntity, manager) => {
 		credentialEntity.name = req.body.name || null;
@@ -519,7 +522,7 @@ userController.post('/webauthn/credential/:id/rename', async (req: Request, res:
 })
 
 userController.post('/webauthn/credential/:id/delete', async (req: Request, res: Response) => {
-	console.log("webauthn delete", req.params.id);
+	log.debug({ credentialId: req.params.id }, "webauthn delete");
 
 	const userRes = await getUser(req.user.id);
 	if (userRes.err) {

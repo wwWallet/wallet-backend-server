@@ -1,6 +1,9 @@
 import crypto from "node:crypto";
 import base64url from "base64url";
 import { Err, Ok, Result } from "ts-results";
+import { logger } from "./logger";
+
+const log = logger.child({ module: "Scrypt" });
 
 
 // Settings for new password hashes
@@ -38,7 +41,7 @@ async function computeScrypt(password: string, salt: Buffer, keyLen: number, cos
 			{ cost, blockSize, maxmem },
 			(err, derivedKey) => {
 				if (err) {
-					console.error("Failed to compute scrypt hash", err);
+					log.error({ err }, "Failed to compute scrypt hash");
 					reject(err);
 				} else {
 					const result = "$" + [keyLen, cost, blockSize, base64url.encode(salt), base64url.encode(derivedKey)].join("$");

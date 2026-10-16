@@ -2,6 +2,9 @@ import axios, { AxiosHeaders } from 'axios';
 import express, { Router } from 'express';
 import https from 'https';
 import { config } from '../../config';
+import { logger } from '../logger';
+
+const log = logger.child({ module: 'Proxy' });
 
 const proxyRouter: Router = express.Router();
 
@@ -15,7 +18,7 @@ proxyRouter.post('/', async (req, res) => {
 	const { headers, method, url, data } = req.body;
 	try {
 		const isBinaryRequest = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico)(\?.*)?(#.*)?$/i.test(url);
-		console.log("URL = ", url)
+		log.debug({ url: typeof url === "string" ? url.split(/[?#]/)[0] : url }, "Proxying request");
 		const response = await axios({
 			url: url,
 			// no compression by default: binary responses forward the upstream content-length, which would not match the decompressed body
@@ -49,7 +52,11 @@ proxyRouter.post('/', async (req, res) => {
 	}
 	catch (err) {
 		if (err.response && err.response.data) {
-			console.error("Error data = ", err.response.data)
+			log.error({
+				status: err.response.status,
+				error: err.response.data?.error,
+				error_description: err.response.data?.error_description,
+			}, "Upstream error response");
 		}
 		if (err.response && err.response.status == 302) {
 			return res.status(200).send({ status: err.response.status, headers: plainHeaders(err.response.headers), data: {} })
