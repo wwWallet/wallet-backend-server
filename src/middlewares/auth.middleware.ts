@@ -48,7 +48,7 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 		}
 	}
 	catch (err) {
-		log.warn({ err }, 'Signature verification failed');
+		log.error({ err }, 'Signature verification failed');
 		return false;
 	}
 }
