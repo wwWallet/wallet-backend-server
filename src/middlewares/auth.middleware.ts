@@ -56,7 +56,7 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 export function AuthMiddleware(req: Request, res: Response, next: NextFunction) {
 	const authorizationHeader = req.headers?.authorization;
 	if (authorizationHeader?.substring(0, 7) !== 'Bearer ') {
-		log.warn("Invalid authorization header");
+		log.error("Invalid authorization header");
 		res.status(401).send();
 		return;
 	}
