@@ -3,8 +3,6 @@ import path from "path";
 import { SignJWT } from "jose";
 import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/util";
 import { config } from "../../config";
-import { Request, Response, NextFunction } from 'express';
-import { timingSafeEqual } from 'node:crypto';
 
 const keysDir = config.keysDir;
 const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
@@ -34,34 +32,3 @@ export async function signWalletProviderStatus(token: SignJWT): Promise<string> 
 		x5c: getKeyAttestationCertificateChain(certificate),
 	}).sign(await importPrivateKeyPem(privateKey, 'ES256'));
 }
-
-const forbidden = (res: Response) => {
-	res.setHeader('WWW-Authenticate', 'Bearer');
-	return res.status(403).send({
-		error: 'forbidden',
-		error_description: 'Missing or invalid bearer token',
-	});
-};
-
-export const walletProviderStatusListRevokationBearerAuth = (
-	req: Request,
-	res: Response,
-	next: NextFunction,
-) => {
-	// An unset secret disables operator revocation; it never permits anonymous access.
-	if (!config.statusListRevokationBearerToken) {
-		return forbidden(res);
-	}
-	const match = req.get('authorization')?.match(/^Bearer ([^\s]+)$/i);
-	if (!match) {
-		return forbidden(res);
-	}
-
-	const suppliedToken = Buffer.from(match[1]);
-	const expectedToken = Buffer.from(config.statusListRevokationBearerToken);
-	if (suppliedToken.length !== expectedToken.length || !timingSafeEqual(suppliedToken, expectedToken)) {
-		return forbidden(res);
-	}
-
-	return next();
-};

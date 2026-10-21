@@ -88,11 +88,15 @@ async function runStatusTransaction<T>(operation: (manager: EntityManager) => Pr
 			// Reads use current committed state; row locks serialize allocation and revocation.
 			return await AppDataSource.manager.transaction('READ COMMITTED', async (manager) => {
 				const result = await operation(manager);
-				if (result.err) throw result;
+				if (result.err) {
+					throw result;
+				}
 				return result;
 			});
 		} catch (error) {
-			if (error instanceof Err) return error;
+			if (error instanceof Err) {
+				return error;
+			}
 			const code = error instanceof QueryFailedError ? error.driverError.code : undefined;
 			// Retry the whole rolled-back transaction, never an individual write.
 			if (attempt >= 4 || !['ER_CHECKREAD', 'ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(code)) {

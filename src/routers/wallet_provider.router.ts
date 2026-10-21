@@ -7,7 +7,7 @@ import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/
 import { config } from "../../config";
 import { allocateWalletProviderStatus, revokeWalletProviderStatus, getWalletProviderStatusList, WalletProviderStatusErr, STATUS_TOKEN_SECONDS } from "../entities/WalletProviderStatus.entity";
 import { AuthMiddleware } from "../middlewares/auth.middleware";
-import { signWalletProviderStatus, walletProviderStatusListRevokationBearerAuth } from "../services/WalletProviderService";
+import { signWalletProviderStatus } from "../services/WalletProviderService";
 
 type KeyAttestationRequestBody = {
 	jwks: JWK[];
@@ -95,7 +95,9 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 	try {
 		const allocation = await allocateWalletProviderStatus(req.user.id.id, 'ka');
 		if (allocation.ok === false) {
-			if (allocation.val === WalletProviderStatusErr.WALLET_REVOKED) return res.status(403).send({ error: 'WALLET_REVOKED' });
+			if (allocation.val === WalletProviderStatusErr.WALLET_REVOKED) {
+				return res.status(403).send({ error: 'WALLET_REVOKED' });
+			}
 			return res.status(503).send({ error: 'STATUS_UNAVAILABLE' });
 		}
 		const entry = allocation.val;
@@ -189,7 +191,9 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', AuthMiddlewar
 	try {
 		const allocation = await allocateWalletProviderStatus(req.user.id.id, 'wia');
 		if (allocation.ok === false) {
-			if (allocation.val === WalletProviderStatusErr.WALLET_REVOKED) return res.status(403).send({ error: 'WALLET_REVOKED' });
+			if (allocation.val === WalletProviderStatusErr.WALLET_REVOKED) {
+				return res.status(403).send({ error: 'WALLET_REVOKED' });
+			}
 			return res.status(503).send({ error: 'STATUS_UNAVAILABLE' });
 		}
 		const entry = allocation.val;
@@ -246,7 +250,9 @@ walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
 	try {
 		const list = await getWalletProviderStatusList(req.params.statusListId);
 		if (list.ok === false) {
-			if (list.val === WalletProviderStatusErr.NOT_EXISTS) return res.status(404).json({ error: 'NOT_FOUND' });
+			if (list.val === WalletProviderStatusErr.NOT_EXISTS) {
+				return res.status(404).json({ error: 'NOT_FOUND' });
+			}
 			return res.status(503).json({ error: 'STATUS_LIST_UNAVAILABLE' });
 		}
 		const token = await signWalletProviderStatus(new SignJWT({
@@ -272,28 +278,14 @@ walletProviderRouter.post('/status-lists/revoke', AuthMiddleware, async (req, re
 	}
 	try {
 		const revoked = await revokeWalletProviderStatus(req.user.id.id);
-		if (revoked.err) return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
+		if (revoked.err) {
+			return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
+		}
 		return res.status(204).send();
 	} catch {
 		return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
 	}
 });
-
-walletProviderRouter.post('/status-lists/accounts/:accountId/revoke',
-	walletProviderStatusListRevokationBearerAuth,
-	async (req, res) => {
-		try {
-			if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.accountId)) {
-				return res.status(400).json({ error: 'INVALID_ACCOUNT_ID' });
-			}
-			const revoked = await revokeWalletProviderStatus(req.params.accountId);
-			if (revoked.err) return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
-			return res.status(204).send();
-		} catch {
-			return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
-		}
-	}
-);
 
 walletProviderRouter.get('/certification', (_req, res) => {
 	if (process.env.NODE_ENV === 'production') {
