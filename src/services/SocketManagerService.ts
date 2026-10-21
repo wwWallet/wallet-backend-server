@@ -42,7 +42,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					log.info("Handshake established");
 				}
 				catch (e) {
-					log.warn({ err: e }, "Handshake failed");
+					log.error({ err: e }, "Handshake failed");
 				}
 			});
 			ws.on('close', () => {
