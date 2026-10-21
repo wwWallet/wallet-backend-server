@@ -128,7 +128,7 @@ async function refreshCache<T>(
 			if (!cache.tillNextFetch || cache.tillNextFetch < Date.now()) {
 				cache.tillNextFetch = Date.now() + 24*60*60*1000;
 			}
-			log.warn({ err: error }, `Could not load (or validate) ${sourceName} from network`);
+			log.error({ err: error }, `Could not load (or validate) ${sourceName} from network`);
 		}
 
 		if (!networkSuccess && Object.keys(cache.data as Record<string, unknown>).length === 0) {
