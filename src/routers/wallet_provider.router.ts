@@ -35,7 +35,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 			error: "INVALID_JWKS",
 			message: "'jwks' JSON body parameter is missing or not type of 'array' or array is empty",
 		};
-		log.warn({ errorResponse }, "Invalid key attestation request");
+		log.error({ errorResponse }, "Invalid key attestation request");
 		return res.status(400).send(errorResponse);
 	}
 
