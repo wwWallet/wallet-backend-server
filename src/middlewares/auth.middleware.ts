@@ -65,7 +65,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 
 	verifyApptoken(token).then(async (payload) => {
 		if (!payload) {
-			log.warn("Unauthorized access");
+			log.error("Unauthorized access");
 			res.status(401).send(); // Unauthorized
 			return;
 		}
