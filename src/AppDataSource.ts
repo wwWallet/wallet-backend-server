@@ -42,7 +42,7 @@ const AppDataSource: DataSource = new DataSource({
 					connected = true;
 				})
 				.catch((err) => {
-					log.error({ err }, "Error during Data Source initialization");
+					log.fatal({ err }, "Error during Data Source initialization");
 				});
 		});
 	}
