@@ -44,7 +44,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 			error: "INVALID_OPENID4VCI_NONCE_VALUE",
 			message: "'openid4vci.nonce' JSON body parameter is missing or not type of 'string'",
 		};
-		log.warn({ errorResponse }, "Invalid key attestation request");
+		log.error({ errorResponse }, "Invalid key attestation request");
 		return res.status(400).send(errorResponse);
 	}
 
