@@ -1,13 +1,11 @@
 import { Router } from "express";
-import { readFile } from 'fs/promises';
-import path from "path";
 import { SignJWT } from "jose";
 import type { JWK } from "jose";
-import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/util";
 import { config } from "../../config";
+import type { WalletProviderSigningMaterial } from "../services/WalletProviderService";
 import { allocateWalletProviderStatus, revokeWalletProviderStatus, getWalletProviderStatusList, WalletProviderStatusErr, STATUS_TOKEN_SECONDS } from "../entities/WalletProviderStatus.entity";
 import { AuthMiddleware } from "../middlewares/auth.middleware";
-import { signWalletProviderStatus } from "../services/WalletProviderService";
+import { loadWalletProviderSigningMaterial, signWalletProviderAttestation, buildWalletProviderStatusClaim, signWalletProviderStatus } from "../services/WalletProviderService";
 
 type KeyAttestationRequestBody = {
 	jwks: JWK[];
@@ -27,22 +25,6 @@ type WalletInstanceAttestationRequestBody = {
 
 const walletProviderUrl = config.url.replace(/\/+$/, '');
 const walletProviderRouter = Router();
-
-const keysDir = config.keysDir;
-const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
-const walletProviderCertificatePath = path.join(keysDir, 'wallet-provider.pem');
-const caCertificatePath = path.join(keysDir, 'ca.pem');
-
-Promise.all([
-	readFile(walletProviderPrivateKeyPath, 'utf-8'),
-	readFile(walletProviderCertificatePath, 'utf-8'),
-	readFile(caCertificatePath, 'utf-8')
-]).then(() =>
-	console.log("Test importing keys passed")
-).catch((err) => {
-	console.error("Error imported wallet provider keys");
-	console.error(err);
-});
 
 walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (req, res) => {
 
@@ -67,20 +49,10 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 		return res.status(400).send(errorResponse);
 	}
 
-	let pemPrivateKey: string | null = null;
-	let walletProviderCertificate: string | null = null;
-	let caCertificate: string | null = null;
+	let signingMaterial: WalletProviderSigningMaterial;
 
 	try {
-		[
-			pemPrivateKey,
-			walletProviderCertificate,
-			caCertificate
-		] = await Promise.all([
-			readFile(walletProviderPrivateKeyPath, 'utf-8'),
-			readFile(walletProviderCertificatePath, 'utf-8'),
-			readFile(caCertificatePath, 'utf-8')
-		]);
+		signingMaterial = await loadWalletProviderSigningMaterial(true);
 	}
 	catch (err) {
 		const errorResponse = {
@@ -101,30 +73,14 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 			return res.status(503).send({ error: 'STATUS_UNAVAILABLE' });
 		}
 		const entry = allocation.val;
-		const statusListUri = `${walletProviderUrl}/wallet-provider/status-lists/${entry.listId}`;
-		const keyAttestation = await new SignJWT({
+		const keyAttestation = await signWalletProviderAttestation({
 			attested_keys: jwks,
 			nonce: nonce,
 			key_storage: ['iso_18045_basic'],
 			user_authentication: ['iso_18045_basic'],
 			certification: `${walletProviderUrl}/certification`,
-			key_storage_status: {
-				status: {
-					status_list: {
-						idx: entry.idx,
-						uri: statusListUri,
-					},
-				},
-				exp: entry.exp,
-			},
-		}).setIssuedAt()
-			.setProtectedHeader({
-				alg: 'ES256',
-				typ: 'key-attestation+jwt',
-				x5c: getKeyAttestationCertificateChain(walletProviderCertificate),
-			})
-			.setExpirationTime("15s")
-			.sign(await importPrivateKeyPem(pemPrivateKey, 'ES256'))
+			key_storage_status: buildWalletProviderStatusClaim(entry),
+		}, 'key-attestation+jwt', signingMaterial);
 
 		return res.send({ key_attestation: keyAttestation });
 	}
@@ -171,14 +127,10 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', AuthMiddlewar
 		});
 	}
 
-	let pemPrivateKey: string;
-	let walletProviderCertificate: string;
+	let signingMaterial: WalletProviderSigningMaterial;
 
 	try {
-		[pemPrivateKey, walletProviderCertificate] = await Promise.all([
-			readFile(walletProviderPrivateKeyPath, 'utf-8'),
-			readFile(walletProviderCertificatePath, 'utf-8'),
-		]);
+		signingMaterial = await loadWalletProviderSigningMaterial();
 	}
 	catch (err) {
 		console.error(err);
@@ -197,9 +149,8 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', AuthMiddlewar
 			return res.status(503).send({ error: 'STATUS_UNAVAILABLE' });
 		}
 		const entry = allocation.val;
-		const statusListUri = `${walletProviderUrl}/wallet-provider/status-lists/${entry.listId}`;
 
-		const walletInstanceAttestation = await new SignJWT({
+		const walletInstanceAttestation = await signWalletProviderAttestation({
 			jti: entry.id,
 			sub: clientId,
 			aud: authorizationServer,
@@ -208,23 +159,8 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', AuthMiddlewar
 			wallet_link: 'https://webuild.wwwallet.org',
 			wallet_version: '1.0.0',
 			wallet_solution_certification_information: 'Development instance — no wallet solution certification asserted',
-			client_status: {
-				status: {
-					status_list: {
-						idx: entry.idx,
-						uri: statusListUri,
-					},
-				},
-				exp: entry.exp,
-			},
-		}).setIssuedAt()
-			.setProtectedHeader({
-				alg: 'ES256',
-				typ: 'oauth-client-attestation+jwt',
-				x5c: getKeyAttestationCertificateChain(walletProviderCertificate),
-			})
-			.setExpirationTime("15s")
-			.sign(await importPrivateKeyPem(pemPrivateKey, 'ES256'));
+			client_status: buildWalletProviderStatusClaim(entry),
+		}, 'oauth-client-attestation+jwt', signingMaterial);
 
 		return res.send({ wallet_instance_attestation: walletInstanceAttestation });
 	}
