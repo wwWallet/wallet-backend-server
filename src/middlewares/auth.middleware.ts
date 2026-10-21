@@ -43,7 +43,7 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 			// guarantees that this type assertion is sound
 			return payload as AppTokenPayload;
 		} else {
-			log.warn({ expected: TOKEN_PAYLOAD_VERSION, got: payload?.v }, "Incorrect token version");
+			log.error({ expected: TOKEN_PAYLOAD_VERSION, got: payload?.v }, "Incorrect token version");
 			return null;
 		}
 	}
