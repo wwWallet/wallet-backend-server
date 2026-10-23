@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import userController from './routers/user.router';
 import { AuthMiddleware } from './middlewares/auth.middleware';
+import { HttpLoggerMiddleware } from './middlewares/httpLogger.middleware';
 import { statusRouter } from './routers/status.router';
 import { replacerBufferToTaggedBase64Url, reviverTaggedBase64UrlToBuffer } from './util/util';
 import http from 'http';
@@ -19,11 +20,17 @@ import { walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
 import { initializeMetadataService } from './services/metadata';
+import { logger } from './logger';
+
+const log = logger.child({ module: 'App' });
 
 
 const app: Express = express();
 // __dirname is "/path/to/dist/src"
 
+if (config.logHttp) {
+	app.use(HttpLoggerMiddleware);
+}
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true, limit: '17mb' }));
 app.use(bodyParser.json({ reviver: reviverTaggedBase64UrlToBuffer, limit: '17mb' }));
@@ -61,9 +68,7 @@ if (process.env.NODE_ENV === "production") {
 		const names = unsafeEnvironmentVariables
 			.join(', ');
 
-		console.error(
-			`FATAL: Unsafe env flags found in production: ${names}`
-		);
+		log.fatal(`Unsafe env flags found in production: ${names}`);
 
 		process.exit(1);
 	}
@@ -75,5 +80,5 @@ appContainer.get<SocketManagerServiceInterface>(TYPES.SocketManagerService).regi
 void initializeMetadataService();
 
 server.listen(config.port, () => {
-	console.log(`Wallet Backend Server listening with ${config.url}`)
+	log.info(`Wallet Backend Server listening with ${config.url}`);
 });

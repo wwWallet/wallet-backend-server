@@ -7,6 +7,9 @@ import { ServerSocketMessage, ClientSocketMessage, SignatureAction } from "./sha
 import { jwtVerify } from "jose";
 import { config } from "../../config";
 import { UserId } from "../entities/user.entity";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "SocketManager" });
 
 const openSockets = new Map<string, WebSocket.WebSocket>();
 
@@ -22,10 +25,10 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 		this.wss = new WebSocket.Server({ server });
 
 		this.wss.on('connection', (ws) => {
-			console.log('WebSocket client connected');
+			log.info('WebSocket client connected');
 			// Handle incoming messages from the WebSocket client
 			ws.on('message', async (message) => {
-				console.log(`Received: ${message}`);
+				log.info("Received WebSocket message");
 				// Parse Handshake Request
 				// wait for appToken to authenticate
 				try {
@@ -36,14 +39,14 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					const { payload } = await jwtVerify(appToken, secret);
 					openSockets.set(payload.uuid as string, ws);
 					ws.send(JSON.stringify({ type: "FIN_INIT" }));
-					console.log("Handshake established");
+					log.info("Handshake established");
 				}
-				catch(e) {
-					console.log("Handshake failed ", e);
+				catch (e) {
+					log.error({ err: e }, "Handshake failed");
 				}
 			});
 			ws.on('close', () => {
-				console.log('socket closed----')
+				log.info('WebSocket closed');
 			})
 		});
 	}
@@ -61,7 +64,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 				try {
 					const clientMessage = JSON.parse(event.data.toString()) as ClientSocketMessage;
 					if (message_id !== clientMessage.message_id) {
-						console.error("Wrong message id");
+						log.error({ expected: message_id, got: clientMessage.message_id }, "Wrong message id");
 						return;
 					}
 					else if (action !== clientMessage.response.action) {
@@ -69,7 +72,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					}
 					return resolve(Ok({ message: clientMessage }));
 				}
-				catch(e) {
+				catch (e) {
 					resolve(Err(ExpectingSocketMessageErr.FAILED_TO_RECEIVE));
 				}
 			}

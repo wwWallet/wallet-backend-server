@@ -39,6 +39,7 @@ const schema = z.object({
 	METADATA_COMMUNITY_AAGUID_URL: z.string().default("https://raw.githubusercontent.com/passkeydeveloper/passkey-authenticator-aaguids/main/aaguid.json"),
 	METADATA_REFRESH_INTERVAL_MS: z.string().optional().transform((value) => positiveInteger(value, 604800000)),
 	REGISTRATION_DISABLED: flag,
+	LOG_HTTP: flag,
 	DEBUG_ACCEPT_UNAUTHORIZED_HTTPS: flag,
 });
 
@@ -76,5 +77,6 @@ export const config = {
 		refreshIntervalMs: vars.METADATA_REFRESH_INTERVAL_MS,
 	},
 	registerDisabled: vars.REGISTRATION_DISABLED,
+	logHttp: vars.LOG_HTTP,
 	debugAcceptUnauthorizedHttps: vars.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS,
 };

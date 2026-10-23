@@ -3,6 +3,9 @@ import { Router } from "express";
 import https from 'https';
 import { getAllTrustedRootCertificates } from "../entities/TrustedRootCertificate.entity";
 import { config } from "../../config";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "Helper" });
 
 const helperRouter = Router()
 
@@ -11,7 +14,7 @@ const agent = new https.Agent({
 });
 
 helperRouter.all('/auth-check', (req, res) => {
-	console.log("Auth from Relay: OK");
+	log.info("Auth from Relay: OK");
 	return res.status(200).send();
 })
 
@@ -23,9 +26,8 @@ helperRouter.post('/get-cert', async (req, res) => {
 		response.data.destroy(); // The body itself is not needed
 
 		if (certificate) {
-			console.log("parsing cert...")
-			console.log('Subject:', certificate.subject);
-			console.log('Issuer:', certificate.issuer);
+			log.info("parsing cert...");
+			log.info({ subject: certificate.subject, issuer: certificate.issuer }, 'Fetched certificate');
 			let cert = certificate;
 			let certChainPEM = [];
 			const x5c = [];
@@ -40,7 +42,7 @@ helperRouter.post('/get-cert', async (req, res) => {
 		return res.status(400).send({ error: "INVALID_CERT" });
 
 	}).catch((error) => {
-		console.error('Error fetching certificate:', error);
+		log.error({ err: error }, 'Error fetching certificate');
 		return res.status(400).send({ error: "INVALID_CERT" });
 	});
 })

@@ -8,6 +8,9 @@ import AppDataSource from "../AppDataSource";
 import * as scrypt from "../scrypt";
 import { checkedUpdate, EtagUpdate, isResult } from "../util/util";
 import { runTransaction } from "./common.entity";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "UserEntity" });
 
 export enum WalletType {
 	DB,
@@ -228,8 +231,8 @@ async function createUser(createUser: CreateUser, isAdmin: boolean = false): Pro
 		}));
 		return Ok(user);
 	}
-	catch(e) {
-		console.log(e);
+	catch (e) {
+		log.error({ err: e }, "Failed to create user");
 		return Err(CreateUserErr.ALREADY_EXISTS);
 	}
 }
@@ -242,8 +245,8 @@ async function getUser(id: UserId): Promise<Result<UserEntity, GetUserErr>> {
 		}
 		return Ok(res);
 	}
-	catch(e) {
-		console.log(e);
+	catch (e) {
+		log.error({ err: e }, "getUser failed");
 		return Err(GetUserErr.NOT_EXISTS);
 	}
 }
@@ -257,8 +260,8 @@ async function deleteUser(id: UserId, options?: { entityManager: EntityManager }
 			return Ok({})
 		});
 	}
-	catch(e) {
-		console.log(e);
+	catch (e) {
+		log.error({ err: e }, "deleteUser failed");
 		return Err(DeleteUserErr.FAILED_TO_DELETE);
 	}
 }
@@ -298,7 +301,7 @@ async function getUserByCredentials(username: string, password: string): Promise
 			}
 		});
 	} catch (e) {
-		console.log(e);
+		log.error({ err: e }, "getUserByCredentials failed");
 		return Err(GetUserErr.DB_ERR)
 	}
 }
@@ -306,14 +309,14 @@ async function getUserByCredentials(username: string, password: string): Promise
 
 async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
 	try {
-		console.log("getUserByWebauthnCredential", userId, base64url.encode(credentialId));
+		log.debug({ userId, credentialId: base64url.encode(credentialId) }, "getUserByWebauthnCredential");
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
 			.where("user.uuid = :uuid", { uuid: userId.id })
 			.andWhere("credential.credentialId = :credentialId", { credentialId });
-		console.log(q.getSql());
+		log.debug({ sql: q.getSql() }, "getUserByWebauthnCredential query");
 		const userRes = await q.getOne();
-		console.log(userRes);
+		log.debug({ userRes }, "getUserByWebauthnCredential result");
 		if (!userRes) {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
@@ -323,8 +326,8 @@ async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer)
 			return Ok([userRes, userRes.webauthnCredentials[0]]);
 		}
 	}
-	catch(e) {
-		console.log(e);
+	catch (e) {
+		log.error({ err: e }, "getUserByWebauthnCredential failed");
 		return Err(GetUserErr.DB_ERR);
 	}
 }
@@ -336,8 +339,8 @@ async function hasWebauthnCredentialId(credentialId: Buffer): Promise<Result<boo
 			.getCount();
 		return Ok(count > 0);
 	}
-	catch(e) {
-		console.log(e);
+	catch (e) {
+		log.error({ err: e }, "hasWebauthnCredentialId failed");
 		return Err(GetUserErr.DB_ERR);
 	}
 }
@@ -353,8 +356,8 @@ async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 		}
 		return Ok(res);
 	}
-	catch(e) {
-		console.log(e);
+	catch (e) {
+		log.error({ err: e }, "getAllUsers failed");
 		return Err(GetUserErr.DB_ERR)
 	}
 }
@@ -393,7 +396,7 @@ async function updateUser<E = never>(id: UserId, update: (user: UserEntity, enti
 				return e as Result<UserEntity, UpdateUserErr | E>;
 			}
 		} else {
-			console.log(e);
+			log.error({ err: e }, "updateUser failed");
 			return Err(UpdateUserErr.DB_ERR);
 		}
 	}
@@ -409,7 +412,7 @@ async function updateWebauthnCredentialWithManager(
 		const res = await manager.save(updated);
 		return Ok(res);
 	} catch (e) {
-		console.log(e);
+		log.error({ err: e }, "updateWebauthnCredentialWithManager failed");
 		return Err(UpdateUserErr.DB_ERR);
 	}
 }
@@ -424,15 +427,15 @@ async function updateWebauthnCredential(
 }
 
 async function updateWebauthnCredentialById(userId: UserId, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
-	console.log("updateWebauthnCredentialById", userId, credentialUuid);
+	log.debug({ userId, credentialUuid }, "updateWebauthnCredentialById");
 	return await webauthnCredentialRepository.manager.transaction(async (manager) => {
 		const q = userRepository.createQueryBuilder("user")
 			.leftJoinAndSelect("user.webauthnCredentials", "credential")
 			.where("user.uuid = :uuid", { uuid: userId.id })
 			.andWhere("credential.id = :credentialUuid", { credentialUuid });
-		console.log("q", q.getQueryAndParameters());
+		log.debug({ query: q.getQueryAndParameters() }, "updateWebauthnCredentialById query");
 		const userRes = await q.getOne();
-		console.log(userRes);
+		log.debug({ userRes }, "updateWebauthnCredentialById result");
 
 		return updateWebauthnCredentialWithManager(userRes.webauthnCredentials[0], update, manager);
 	});
@@ -480,7 +483,7 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 		}));
 
 	} catch (e) {
-		console.log('Failed to delete WebAuthn credential:', e);
+		log.error({ err: e }, 'Failed to delete WebAuthn credential');
 		return Err(e);
 	}
 }
