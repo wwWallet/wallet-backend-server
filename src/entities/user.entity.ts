@@ -391,14 +391,11 @@ async function updateUser<E = never>(id: UserId, update: (user: UserEntity, enti
 			}
 		});
 	} catch (e) {
-		if (isResult(e)) {
-			if (e.err) {
-				return e as Result<UserEntity, UpdateUserErr | E>;
-			}
-		} else {
-			log.error({ err: e }, "updateUser failed");
-			return Err(UpdateUserErr.DB_ERR);
+		if (isResult(e) && e.err) {
+			return e as Result<UserEntity, UpdateUserErr | E>;
 		}
+		log.error({ err: e }, "updateUser failed");
+		return Err(UpdateUserErr.DB_ERR);
 	}
 }
 
@@ -437,7 +434,11 @@ async function updateWebauthnCredentialById(userId: UserId, credentialUuid: stri
 		const userRes = await q.getOne();
 		log.debug({ userRes }, "updateWebauthnCredentialById result");
 
-		return updateWebauthnCredentialWithManager(userRes.webauthnCredentials[0], update, manager);
+		const credential = userRes?.webauthnCredentials[0];
+		if (!credential) {
+			return Err(UpdateUserErr.NOT_EXISTS);
+		}
+		return updateWebauthnCredentialWithManager(credential, update, manager);
 	});
 }
 
@@ -463,6 +464,9 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 				.from(WebauthnCredentialEntity)
 				.where({ user, id: credentialUuid })
 				.execute();
+			if (res.affected == null) {
+				return Err(UpdateUserErr.DB_ERR);
+			}
 			if (res.affected > 0) {
 				const newPrivateData = checkedUpdate(
 					updatePrivateData.expectTag,

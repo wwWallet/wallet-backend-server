@@ -53,12 +53,18 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 
 	async send(userId: UserId, message: ServerSocketMessage): Promise<Result<void, void>> {
 		const ws = openSockets.get(userId.id);
+		if (!ws) {
+			return Err.EMPTY;
+		}
 		ws.send(JSON.stringify(message));
 		return Ok.EMPTY;
 	}
 
 	async expect(userId: UserId, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>> {
 		const ws = openSockets.get(userId.id);
+		if (!ws) {
+			return Err(ExpectingSocketMessageErr.FAILED_TO_RECEIVE);
+		}
 		return new Promise((resolve, reject) => {
 			ws.onmessage = event => {
 				try {
