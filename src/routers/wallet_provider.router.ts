@@ -6,6 +6,9 @@ import type { WalletProviderSigningMaterial } from "../services/WalletProviderSe
 import { allocateWalletProviderStatus, revokeWalletProviderStatus, getWalletProviderStatusList, WalletProviderStatusErr, STATUS_TOKEN_SECONDS } from "../entities/WalletProviderStatus.entity";
 import { AuthMiddleware } from "../middlewares/auth.middleware";
 import { loadWalletProviderSigningMaterial, signWalletProviderAttestation, buildWalletProviderStatusClaim, signWalletProviderStatus } from "../services/WalletProviderService";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "WalletProvider" });
 
 type KeyAttestationRequestBody = {
 	jwks: JWK[];
@@ -36,7 +39,7 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 			error: "INVALID_JWKS",
 			message: "'jwks' JSON body parameter is missing or not type of 'array' or array is empty",
 		};
-		console.log(errorResponse);
+		log.error({ errorResponse }, "Invalid key attestation request");
 		return res.status(400).send(errorResponse);
 	}
 
@@ -45,7 +48,7 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 			error: "INVALID_OPENID4VCI_NONCE_VALUE",
 			message: "'openid4vci.nonce' JSON body parameter is missing or not type of 'string'",
 		};
-		console.log(errorResponse);
+		log.error({ errorResponse }, "Invalid key attestation request");
 		return res.status(400).send(errorResponse);
 	}
 
@@ -59,8 +62,7 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 			error: "UNSUPPORTED",
 			message: "key attestation generation is not supported",
 		};
-		console.error(err);
-		console.log(errorResponse);
+		log.error({ err, errorResponse }, "Key attestation generation is not supported");
 		return res.status(400).send(errorResponse);
 	}
 
@@ -85,7 +87,7 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 		return res.send({ key_attestation: keyAttestation });
 	}
 	catch (err) {
-		console.error(err);
+		log.error({ err }, "Failed to sign key attestation");
 		return res.status(503).send({
 			error: "FAILED",
 			message: "key attestation signature generation failed",

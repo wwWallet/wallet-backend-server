@@ -5,6 +5,9 @@ import type { JWTPayload } from "jose";
 import type { WalletProviderStatusReference } from "../entities/WalletProviderStatus.entity";
 import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/util";
 import { config } from "../../config";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "WalletProvider" });
 
 const keysDir = config.keysDir;
 const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
@@ -29,9 +32,9 @@ export async function loadWalletProviderSigningMaterial(requireCa = false): Prom
 }
 
 loadWalletProviderSigningMaterial(true).then(() =>
-	console.log("Test importing keys passed")
+	log.info("Test importing keys passed")
 ).catch((err) => {
-	console.error(`Error imported wallet provider keys: ${err}`);
+	log.error({ err }, "Error importing wallet provider keys");
 });
 
 /** The maintenance expiry is independent of the short-lived attestation JWT. */

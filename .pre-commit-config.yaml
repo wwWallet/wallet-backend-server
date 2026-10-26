@@ -6,12 +6,10 @@ repos:
         name: Minor auto-fixes
         exclude: ^(node_modules|dist|build|public)/
 
-  - repo: local
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker
+    rev: v4.0.2
     hooks:
-      - id: editorconfig-checker-docker
+      - id: editorconfig-checker
         name: Check .editorconfig rules
-        language: docker_image
-        entry: mstruebing/editorconfig-checker:latest
-        args: ["ec", "-no-color"]
+        args: ["-no-color"]
         types_or: [text]
-        exclude: ^(node_modules|dist|build|public)/

@@ -1,6 +1,9 @@
 import { Err, Ok, Result } from "ts-results";
 import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
 import AppDataSource from "../AppDataSource";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "CredentialIssuer" });
 
 
 @Entity({ name: "credential_issuer" })
@@ -36,7 +39,7 @@ async function getAllCredentialIssuers(): Promise<Result<CredentialIssuerEntity[
 		return Ok(issuers);
 	}
 	catch(e) {
-		console.log(e);
+		log.error({ err: e }, "Failed to get credential issuers");
 		return Err(GetLegalPersonErr.DB_ERR);
 	}
 }
