@@ -1,6 +1,9 @@
 {
 	"exclude": [
-		"cli/"
+		"cli/",
+    "**/*.test.ts",
+    "vitest.config.ts",
+    "config/test-environment.ts"
 	],
   "compilerOptions": {
     /* Visit https://aka.ms/tsconfig to read more about this file */
