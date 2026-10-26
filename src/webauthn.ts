@@ -2,6 +2,9 @@ import * as cbor from 'cbor-x';
 import { convertAAGUIDToString } from '@simplewebauthn/server/helpers';
 import { config } from '../config';
 import { UserId, WebauthnCredentialEntity } from './entities/user.entity';
+import { logger } from './logger';
+
+const log = logger.child({ module: 'WebAuthn' });
 
 
 export function getRpId(): string {
@@ -147,7 +150,7 @@ export function parseAuthenticatorFlags(input: Buffer | Uint8Array): Authenticat
 		return parseAuthenticatorFlagsFromAuthenticatorData(decoded.authData);
 	} catch (error) {
 
-		console.error("Cbor decode error:", (error as Error).message);
+		log.error({ err: error }, "Cbor decode error");
 		return defaultAuthenticatorFlags;
 	};
 }
@@ -172,7 +175,7 @@ export function getAaguidFromAttestationObject(
 		return aaguidstring;
 
 	} catch (error) {
-		console.error("Failed to decode attestation object:", (error as Error).message);
+		log.error({ err: error }, "Failed to decode attestation object");
 		return undefined;
 	}
 }

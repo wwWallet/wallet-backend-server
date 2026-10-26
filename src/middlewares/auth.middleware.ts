@@ -3,6 +3,9 @@ import { Request, Response, NextFunction } from "express";
 import { jwtVerify, SignJWT } from 'jose';
 import { config } from "../../config";
 import { getUser, UserEntity, UserId } from "../entities/user.entity";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "Auth" });
 
 
 type TokenPayloadVersion = 1;
@@ -40,21 +43,20 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 			// guarantees that this type assertion is sound
 			return payload as AppTokenPayload;
 		} else {
-			console.log(`Incorrect token version: expected: ${TOKEN_PAYLOAD_VERSION}, got: ${payload?.v}`);
+			log.error({ expected: TOKEN_PAYLOAD_VERSION, got: payload?.v }, "Incorrect token version");
 			return null;
 		}
 	}
 	catch (err) {
-		console.log('Signature verification failed');
+		log.error({ err }, 'Signature verification failed');
 		return false;
 	}
 }
 
 export function AuthMiddleware(req: Request, res: Response, next: NextFunction) {
 	const authorizationHeader = req.headers?.authorization;
-	console.log("Authorization header = ", authorizationHeader)
 	if (authorizationHeader?.substring(0, 7) !== 'Bearer ') {
-		console.log("Invalid authorization header:", authorizationHeader);
+		log.error("Invalid authorization header");
 		res.status(401).send();
 		return;
 	}
@@ -63,7 +65,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 
 	verifyApptoken(token).then(async (payload) => {
 		if (!payload) {
-			console.log("Unauthorized access to ", token);
+			log.error("Unauthorized access");
 			res.status(401).send(); // Unauthorized
 			return;
 		}
@@ -82,9 +84,9 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		res.status(401).send(); // Unauthorized
 		return;
 	})
-	.catch(e => {
-		console.log("Unauthorized access to ", token);
-		res.status(401).send(); // Unauthorized
-		return;
-	});
+		.catch(e => {
+			log.error("Unauthorized access");
+			res.status(401).send(); // Unauthorized
+			return;
+		});
 }

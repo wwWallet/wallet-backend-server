@@ -1,0 +1,59 @@
+name: Bug report
+description: Create a report to help us improve
+body:
+  - type: textarea
+    id: describe-the-bug
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: to-reproduce
+    attributes:
+      label: To Reproduce
+      description: "Steps to reproduce the behavior"
+      value: |
+        1. Start the backend with the relevant configuration '...'
+        2. Perform the wallet action or send the API request '...'
+        3. Include the relevant request details or sequence of actions '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+
+  - type: textarea
+    id: environment-information
+    attributes:
+      label: Environment information (if available)
+      description: Please complete the lines that apply.
+      value: |
+        - wallet-backend-server version, commit, or image tag:
+        - Deployment method: [Docker / source]
+        - Node version (if running from source):
+        - Server OS:
+        - MariaDB/MySQL version (if applicable):
+        - wallet-frontend version or commit (if applicable):
+        - Device and OS (if applicable):
+        - Browser and version (if applicable):
+        - Authenticator or passkey provider (if applicable):
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here.

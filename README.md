@@ -50,6 +50,8 @@ The server refuses to start if a required variable is missing or invalid. Empty 
 | `METADATA_COMMUNITY_AAGUID_URL` | Community list of passkey provider AAGUIDs. | Default: the [passkey-authenticator-aaguids](https://github.com/passkeydeveloper/passkey-authenticator-aaguids) list. |
 | `METADATA_REFRESH_INTERVAL_MS` | How often authenticator metadata is refreshed (ms). | Default: `604800000` (7 days). |
 | `REGISTRATION_DISABLED` | Set to `true` to disable new user registration (`/user/register`, `/user/register-webauthn-begin`, `/user/register-webauthn-finish`). | Default: `false`. Passkey management for existing users keeps working. |
+| `LOG_LEVEL` | Minimum log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `silent`. | Default: `info`. Logs are JSON on stdout when `NODE_ENV=production`, pretty-printed otherwise. |
+| `LOG_HTTP` | Set to `true` to log every HTTP request (method, path, status, response time). | Default: `false`. The `Authorization` and `Cookie` headers and all query values are redacted. |
 | `DEBUG_ACCEPT_UNAUTHORIZED_HTTPS` | Set to `true` to accept invalid TLS certificates in `/proxy` and `/helper/get-cert`. | **Development only.** With `NODE_ENV=production`, the server refuses to start if any `DEBUG_*` variable is set. |
 
 ## Production
@@ -90,10 +92,20 @@ pre-commit run --all-files
 git add -A
 ```
 
+#### Local checks without committing
+
+Run only the EditorConfig check, without running auto-fixers:
+
+```sh
+pre-commit run editorconfig-checker --all-files
+```
+
+Omit `--all-files` to check only staged files. The first run installs the pinned native checker in pre-commit's cache. This check reports violations without changing or staging files.
+
 #### What happens on commit
 
 - Auto-fixers run (e.g. add final newlines).
-- After the auto-fixers, the editorconfig-checker runs inside Docker to validate all staged files.
+- After the auto-fixers, editorconfig-checker validates staged files.
 - If violations remain, fix them manually until the commit passes.
 
 ## 💡Contributing
