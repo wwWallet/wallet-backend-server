@@ -72,7 +72,7 @@ export enum ExpectingSocketMessageErr {
 }
 
 export interface SocketManagerServiceInterface {
-	register(server: http.Server);
+	register(server: http.Server): void;
 
 	send(userId: UserId, message: ServerSocketMessage): Promise<Result<void, void>>;
 	expect(userId: UserId, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;

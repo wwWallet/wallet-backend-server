@@ -572,7 +572,7 @@ userController.post('/private-data', async (req: Request, res: Response) => {
 			userEntity.privateData = newPrivateData.val;
 			return Ok(userEntity);
 		} else {
-			return Err([UpdateUserErr.PRIVATE_DATA_CONFLICT, userEntity]);
+			return Err<[UpdateUserErr.PRIVATE_DATA_CONFLICT, UserEntity]>([UpdateUserErr.PRIVATE_DATA_CONFLICT, userEntity]);
 		}
 	});
 
@@ -584,7 +584,7 @@ userController.post('/private-data', async (req: Request, res: Response) => {
 		if (updateUserRes.val === UpdateUserErr.NOT_EXISTS) {
 			res.status(404).send();
 
-		} else if (updateUserRes.val[0] === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
+		} else if (Array.isArray(updateUserRes.val) && updateUserRes.val[0] === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
 			res.status(412)
 				.header({ 'X-Private-Data-ETag': privateDataEtag(updateUserRes.val[1].privateData) })
 				.send();
