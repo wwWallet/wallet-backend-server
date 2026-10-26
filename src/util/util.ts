@@ -40,7 +40,7 @@ export function jsonParseTaggedBinary(json: string): any {
 	return JSON.parse(json, reviverTaggedBase64UrlToBuffer);
 }
 
-export function replacerBufferToTaggedBase64Url(key: string, value: any): any {
+export function replacerBufferToTaggedBase64Url(this: Record<string, unknown>, key: string, value: any): any {
 	if (this[key] instanceof Buffer) {
 		return { '$b64u': base64url.encode(this[key]) };
 	} else {
