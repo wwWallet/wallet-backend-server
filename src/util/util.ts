@@ -143,6 +143,5 @@ export async function importPrivateKeyPem(privateKeyPEM: string, algorithm: stri
 		return privateKey;
 	} catch (err) {
 		log.error({ err }, 'Error importing private key');
-		throw err;
 	}
 }
