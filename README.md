@@ -62,17 +62,6 @@ Build the Docker image from `Dockerfile` (version tags publish it as `ghcr.io/ww
 - Mount the wallet-provider keys at `/app/keys` (or set `KEYS_DIR`).
 - Run the migrations before starting a new version: `yarn migration:run:prod` inside the container.
 
-## Tests
-
-Use Node 24+ and Yarn v1. Run the Vitest suite and TypeScript checks with:
-
-```sh
-yarn test
-yarn tsc --noEmit
-```
-
-Alternatively, `docker build -f tests.Dockerfile .` installs dependencies and runs `yarn test` during the image build.
-
 ## Pre-commit
 
 We use [pre-commit](https://pre-commit.com/) to enforce our `.editorconfig` before code is committed.
