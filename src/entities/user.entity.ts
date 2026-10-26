@@ -69,7 +69,7 @@ class UserEntity {
 	 */
 	@Column({ primary: true, unique: true, nullable: false, update: false })
 	@Generated("increment")
-	private id: number;
+	private id!: number;
 
 	/**
 	 * This was renamed in PR (TBD).
@@ -84,92 +84,92 @@ class UserEntity {
 		length: 36,
 		transformer: { from: UserId.fromId, to: (userId: UserId) => userId.id },
 	})
-	uuid: UserId;
+	uuid!: UserId;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ unique: true, nullable: true, default: () => "NULL" })
-	username: string;
+	username!: string;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ unique: false, nullable: true, default: () => "NULL" })
-	displayName: string;
+	displayName!: string;
 
 	@Column({ unique: true, nullable: false })
-	did: string;
+	did!: string;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
-	passwordHash: string;
+	passwordHash!: string;
 
 
 	@Column({ type: 'blob', nullable: false })
-	keys: Buffer;
+	keys!: Buffer;
 
 
 	@Column({ type: "bool", default: false })
 	isAdmin: boolean = false;
 
 	@Column({ type: "mediumblob", nullable: false })
-	privateData: Buffer;
+	privateData!: Buffer;
 
 
 	@Column({ type: "enum" ,enum: WalletType, default: WalletType.DB })
-	walletType: WalletType;
+	walletType!: WalletType;
 
 	@OneToMany(
 		() => WebauthnCredentialEntity, (credential) => credential.user,
 		{ cascade: true, onDelete: "CASCADE", orphanedRowAction: "delete", eager: true, nullable: false })
-	webauthnCredentials: WebauthnCredentialEntity[];
+	webauthnCredentials!: WebauthnCredentialEntity[];
 
 	@Column({ nullable: false, default: 0 })
-	openidRefreshTokenMaxAgeInSeconds: number;
+	openidRefreshTokenMaxAgeInSeconds!: number;
 }
 
 @Entity({ name: "webauthn_credential" })
 class WebauthnCredentialEntity {
 	@PrimaryGeneratedColumn("uuid")
-	id: string;
+	id!: string;
 
 	@ManyToOne(() => UserEntity, (user) => user.webauthnCredentials, { nullable: false })
-	user: UserEntity;
+	user?: UserEntity;
 
 	@Column({ nullable: false, update: false })
-	credentialId: Buffer;
+	credentialId!: Buffer;
 
 	/**
 	 * This was obsoleted by PR (TBD).
 	 * We keep the table column for forward- and backwards compatibility between application and schema versions.
 	 */
 	@Column({ name: "userHandle", nullable: false, select: false, update: false })
-	_userHandle: Buffer;
+	_userHandle?: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
-	name: string;
+	name!: string;
 
 	@Column({ type: "datetime", nullable: false, update: false })
-	createTime: Date;
+	createTime!: Date;
 
 	@Column({ type: "datetime", nullable: false })
-	lastUseTime: Date;
+	lastUseTime!: Date;
 
 	@Column({ nullable: false, update: false })
-	publicKeyCose: Buffer;
+	publicKeyCose!: Buffer;
 
 	@Column({ nullable: false })
 	signatureCount: number = 0;
 
 	@Column("simple-json", { nullable: false })
-	transports: string[];
+	transports!: string[];
 
 	@Column({ nullable: false, update: false })
-	attestationObject: Buffer;
+	attestationObject!: Buffer;
 
 	@Column({ nullable: false, update: false })
-	create_clientDataJSON: Buffer;
+	create_clientDataJSON!: Buffer;
 
 	@Column({ nullable: false })
-	prfCapable: boolean;
+	prfCapable!: boolean;
 
 	getCredentialDescriptor() {
 		return {

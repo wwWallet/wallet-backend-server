@@ -21,7 +21,7 @@ class CredentialIssuerEntity {
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, type: "tinyint", default: () => "NULL" })
-	visible: boolean;
+	visible!: boolean;
 }
 
 enum GetLegalPersonErr {

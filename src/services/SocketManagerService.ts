@@ -17,7 +17,7 @@ const secret = new TextEncoder().encode(config.appSecret);
 
 @injectable()
 export class SocketManagerService implements SocketManagerServiceInterface {
-	wss: WebSocket.Server;
+	wss?: WebSocket.Server;
 
 	constructor() { }
 

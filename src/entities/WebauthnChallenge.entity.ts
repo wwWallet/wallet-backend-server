@@ -9,10 +9,10 @@ const log = logger.child({ module: "WebauthnChallenge" });
 @Entity({ name: "webauthn_challenge" })
 class WebauthnChallengeEntity {
 	@PrimaryColumn()
-	id: string;
+	id!: string;
 
 	@Column({ nullable: false})
-	type: string;
+	type!: string;
 
 	/**
 	 * This was renamed in PR (TBD).
@@ -30,14 +30,14 @@ class WebauthnChallengeEntity {
 	userId?: UserId;
 
 	@Column({ nullable: false })
-	challenge: Buffer;
+	challenge!: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, default: () => "NULL" })
-	prfSalt: Buffer;
+	prfSalt!: Buffer;
 
 	@Column({ type: "datetime", nullable: false })
-	createTime: Date;
+	createTime!: Date;
 }
 
 const TIMEOUT_MILLISECONDS = 15 * 60 * 1000;

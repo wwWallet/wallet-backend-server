@@ -33,7 +33,7 @@ class CredentialPortalEntity {
 	display?: CredentialPortalDisplay[];
 
 	@Column({ type: "tinyint", default: 1 })
-	visible: boolean;
+	visible!: boolean;
 }
 
 const credentialPortalRepository: Repository<CredentialPortalEntity> = AppDataSource.getRepository(CredentialPortalEntity);
