@@ -26,7 +26,7 @@ type WalletInstanceAttestationRequestBody = {
 	};
 };
 
-const walletProviderUrl = config.url.replace(/\/+$/, '');
+const walletProviderUrl = `${config.url.replace(/\/+$/, '')}/wallet-provider`;
 const walletProviderRouter = Router();
 
 walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (req, res) => {
@@ -194,7 +194,7 @@ walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
 			return res.status(503).json({ error: 'STATUS_LIST_UNAVAILABLE' });
 		}
 		const token = await signWalletProviderStatus(new SignJWT({
-			sub: `${walletProviderUrl}/wallet-provider/status-lists/${req.params.statusListId}`,
+			sub: `${walletProviderUrl}/status-lists/${req.params.statusListId}`,
 			ttl: STATUS_TOKEN_SECONDS,
 			status_list: list.val,
 		})

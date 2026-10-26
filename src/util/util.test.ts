@@ -1,11 +1,12 @@
 import { generateKeyPairSync } from 'node:crypto';
+import { rootCertificates } from 'node:tls';
 import { SignJWT, jwtVerify } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { Err, Ok } from 'ts-results';
 import {
 	checkedUpdate, decideVerifiableCredentialType, generateCodeChallengeFromVerifier,
 	generateCodeVerifier, isResult, isValidUri, jsonParseTaggedBinary, jsonStringifyTaggedBinary,
-	importPrivateKeyPem, removeCertificateMarkers,
+	importPrivateKeyPem, canonicalizeCertificateForJosex5c, getKeyAttestationCertificateChain,
 } from '../../src/util/util';
 
 describe('tagged binary JSON', () => {
@@ -126,10 +127,49 @@ describe('small utility boundaries', () => {
 	it.each([null, undefined, false, 0, 'value', {}, { val: 1 }])('does not treat ordinary value %j as a Result', value => {
 		expect(isResult<unknown>(value)).toBe(false);
 	});
+});
 
-	it('removes certificate delimiters and surrounding whitespace without altering its payload', () => {
-		expect(removeCertificateMarkers(' \n-----BEGIN CERTIFICATE-----\nYWJj\nZGVm\n-----END CERTIFICATE-----\n ')).toBe('YWJj\nZGVm');
+describe('JOSE x5c certificate encoding', () => {
+	// Use public certificates bundled with Node, independent of local signing material.
+	const [certificate, secondCertificate] = rootCertificates;
+	const base64Der = (pem: string) => pem
+		.replace('-----BEGIN CERTIFICATE-----', '')
+		.replace('-----END CERTIFICATE-----', '')
+		.replace(/\s+/g, '');
+	const encoded = base64Der(certificate);
+
+	it('canonicalizes a PEM certificate to unwrapped Base64 DER', () => {
+		expect(canonicalizeCertificateForJosex5c(` \n${certificate}\n `)).toBe(encoded);
 	});
+
+	it('canonicalizes Base64 DER containing whitespace', () => {
+		expect(canonicalizeCertificateForJosex5c(` \n${encoded.slice(0, 64)}\n${encoded.slice(64)}\n `)).toBe(encoded);
+	});
+
+	it.each(['', 'not a certificate!', 'YWJj',
+		'-----BEGIN CERTIFICATE-----\nYWJj\n-----END CERTIFICATE-----',
+	])('rejects invalid certificate input %j', input => {
+		expect(() => canonicalizeCertificateForJosex5c(input)).toThrow();
+	});
+
+	it('rejects a PEM bundle where a single certificate is expected', () => {
+		expect(() => canonicalizeCertificateForJosex5c(`${certificate}\n${secondCertificate}`)).toThrow();
+	});
+
+	it.each([certificate, encoded])('encodes a single certificate as a one-entry chain', input => {
+		expect(getKeyAttestationCertificateChain(input)).toEqual([encoded]);
+	});
+
+	it('preserves the supplied certificate order in a PEM bundle', () => {
+		expect(getKeyAttestationCertificateChain(` \n${certificate}\n${secondCertificate}\n `))
+			.toEqual([encoded, base64Der(secondCertificate)]);
+	});
+
+	it.each(['unexpected data\n', '-----BEGIN PRIVATE KEY-----\nYWJj\n-----END PRIVATE KEY-----\n'])
+		('rejects extraneous data surrounding a PEM chain', extra => {
+			expect(() => getKeyAttestationCertificateChain(`${extra}${certificate}`)).toThrow();
+			expect(() => getKeyAttestationCertificateChain(`${certificate}\n${extra}`)).toThrow();
+		});
 });
 
 describe('PKCS8 private-key import', () => {
