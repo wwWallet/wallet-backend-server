@@ -8,7 +8,7 @@ import { AuthMiddleware } from "../middlewares/auth.middleware";
 import { loadWalletProviderSigningMaterial, signWalletProviderAttestation, buildWalletProviderStatusClaim, signWalletProviderStatus } from "../services/WalletProviderService";
 import { logger } from "../logger";
 
-const log = logger.child({ module: "WalletProvider" });
+const log = logger.child({ module: "WalletProviderRouter" });
 
 type KeyAttestationRequestBody = {
 	jwks: JWK[];
@@ -135,7 +135,7 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', AuthMiddlewar
 		signingMaterial = await loadWalletProviderSigningMaterial();
 	}
 	catch (err) {
-		console.error(err);
+		log.error({ err }, "Wallet instance attestation generation is not supported");
 		return res.status(400).send({
 			error: "UNSUPPORTED",
 			message: "Wallet Instance Attestation generation is not supported",
@@ -167,7 +167,7 @@ walletProviderRouter.post('/wallet-instance-attestation/generate', AuthMiddlewar
 		return res.send({ wallet_instance_attestation: walletInstanceAttestation });
 	}
 	catch (err) {
-		console.error(err);
+		log.error({ err }, "Wallet instance attestation signature generation failed");
 		return res.status(503).send({
 			error: "FAILED",
 			message: "Wallet Instance Attestation signature generation failed",

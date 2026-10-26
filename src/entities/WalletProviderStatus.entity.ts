@@ -1,10 +1,11 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { deflateSync } from "node:zlib";
 import { Column, Entity, EntityManager, Index, JoinColumn, ManyToOne, PrimaryColumn, QueryFailedError, Repository } from "typeorm";
-
 import { Result, Ok, Err } from "ts-results";
-
 import AppDataSource from "../AppDataSource";
+import { logger } from "../logger";
+
+const log = logger.child({ module: "WalletProviderStatus" });
 
 export type StatusKind = 'wia' | 'ka';
 
@@ -100,7 +101,7 @@ async function runStatusTransaction<T>(operation: (manager: EntityManager) => Pr
 			const code = error instanceof QueryFailedError ? error.driverError.code : undefined;
 			// Retry the whole rolled-back transaction, never an individual write.
 			if (attempt >= 4 || !['ER_CHECKREAD', 'ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(code)) {
-				console.error(error);
+				log.error({ error }, "Database error during status transaction");
 				return Err(WalletProviderStatusErr.DB_ERR);
 			}
 			await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1) + randomInt(20)));
@@ -198,7 +199,7 @@ export async function getWalletProviderStatusList(listId: string): Promise<Resul
 		}
 		return Ok({ bits: 1, lst: deflateSync(bytes).toString('base64url') });
 	} catch (error) {
-		console.error(error);
+		log.error({ error }, "Database error during status transaction");
 		return Err(WalletProviderStatusErr.DB_ERR);
 	}
 }

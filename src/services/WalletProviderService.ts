@@ -7,7 +7,7 @@ import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/
 import { config } from "../../config";
 import { logger } from "../logger";
 
-const log = logger.child({ module: "WalletProvider" });
+const log = logger.child({ module: "WalletProviderService" });
 
 const keysDir = config.keysDir;
 const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
