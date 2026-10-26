@@ -484,7 +484,8 @@ async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string
 
 	} catch (e) {
 		log.error({ err: e }, 'Failed to delete WebAuthn credential');
-		return Err(e);
+		const error = Object.values(UpdateUserErr).find(value => value === e);
+		return Err(error ?? UpdateUserErr.DB_ERR);
 	}
 }
 

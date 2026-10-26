@@ -88,7 +88,7 @@
     "strictBindCallApply": true,                      /* Check that the arguments for 'bind', 'call', and 'apply' methods match the original function. */
     // "strictPropertyInitialization": true,             /* Check for class properties that are declared but not set in the constructor. */
     "noImplicitThis": true,                           /* Enable error reporting when 'this' is given the type 'any'. */
-    // "useUnknownInCatchVariables": true,               /* Default catch clause variables as 'unknown' instead of 'any'. */
+    "useUnknownInCatchVariables": true,               /* Default catch clause variables as 'unknown' instead of 'any'. */
     "alwaysStrict": true,                             /* Ensure 'use strict' is always emitted. */
     "strictBuiltinIteratorReturn": true,              /* Check that iterators have valid 'return' methods. */
     /* Options enabled by "strict" — end. */

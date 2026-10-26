@@ -51,17 +51,19 @@ proxyRouter.post('/', async (req, res) => {
 		});
 	}
 	catch (err) {
-		if (err.response && err.response.data) {
+		const response = axios.isAxiosError(err) ? err.response : undefined;
+		if (response && response.data) {
 			log.error({
-				status: err.response.status,
-				error: err.response.data?.error,
-				error_description: err.response.data?.error_description,
+				status: response.status,
+				error: response.data?.error,
+				error_description: response.data?.error_description,
 			}, "Upstream error response");
 		}
-		if (err.response && err.response.status == 302) {
-			return res.status(200).send({ status: err.response.status, headers: plainHeaders(err.response.headers), data: {} })
+		if (response && response.status == 302) {
+			return res.status(200).send({ status: response.status, headers: plainHeaders(response.headers), data: {} })
 		}
-		return res.status(err.response?.status ?? 104).send({ status: err.response?.status ?? 104, data: err.response?.data, headers: plainHeaders(err.response?.headers) });
+		const status = response?.status ?? 500;
+		return res.status(status).send({ status, data: response?.data, headers: plainHeaders(response?.headers) });
 	}
 })
 
