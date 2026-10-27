@@ -70,6 +70,15 @@ describe('buildKeyAttestationPayload', () => {
 });
 
 describe('validatePublicAttestationKey', () => {
+	it.each([true, false])('preserves public key extractability %s', (ext) => {
+		expect(validatePublicAttestationKey({ ...publicKey, ext })).toEqual({ ...publicKey, ext });
+	});
+	it('leaves omitted extractability absent', () => {
+		expect(validatePublicAttestationKey(publicKey)).not.toHaveProperty('ext');
+	});
+	it.each(['true', 1, null, {}, []].map((ext) => ({ ext })))('rejects invalid extractability $ext', ({ ext }) => {
+		expect(() => validatePublicAttestationKey({ ...publicKey, ext })).toThrow('Invalid JWK ext');
+	});
 	it('accepts a valid public EC key and strips unverified metadata', () => {
 		expect(validatePublicAttestationKey({ ...publicKey, alg: 'ES256', certification: 'fake', kid: 'client-key' }))
 			.toEqual({ ...publicKey, alg: 'ES256' });
@@ -109,6 +118,11 @@ describe('parseKeyAttestationRequest', () => {
 	it('returns sanitized keys and the nonce', () => {
 		expect(parseKeyAttestationRequest({ jwks: [{ ...publicKey, certification: 'fake' }], openid4vci: { nonce: 'nonce' } }))
 			.toEqual({ keys: [publicKey], nonce: 'nonce' });
+	});
+	it('preserves extractability through request parsing and payload construction', () => {
+		const key = { ...publicKey, ext: true };
+		const { keys, nonce } = parseKeyAttestationRequest({ jwks: [key], openid4vci: { nonce: 'nonce' } });
+		expect(buildKeyAttestationPayload(keys, nonce)).toEqual({ attested_keys: [key], nonce: 'nonce' });
 	});
 });
 

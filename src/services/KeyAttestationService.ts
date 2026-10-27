@@ -33,6 +33,9 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 	if (privateMembers.some((member) => Object.prototype.hasOwnProperty.call(jwk, member))) {
 		throw new Error('Private or symmetric key material is forbidden');
 	}
+	if (jwk.ext !== undefined && typeof jwk.ext !== 'boolean') {
+		throw new Error('Invalid JWK ext');
+	}
 	if (jwk.use !== undefined && typeof jwk.use !== 'string') {
 		throw new Error('Invalid JWK use');
 	}
@@ -84,7 +87,11 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 	if (jwk.kty === 'RSA' && (key.asymmetricKeyDetails?.modulusLength ?? 0) < 2048) {
 		throw new Error('RSA keys must have at least 2048 bits');
 	}
-	return { ...publicJwk, ...(compatibleAlgorithm ? { alg: jwk.alg } : {}) };
+	return {
+		...publicJwk,
+		...(compatibleAlgorithm ? { alg: jwk.alg } : {}),
+		...(jwk.ext !== undefined ? { ext: jwk.ext } : {}),
+	};
 }
 
 
