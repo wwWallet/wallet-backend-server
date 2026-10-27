@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { readFile } from 'fs/promises';
 import path from "path";
-import { importX509, SignJWT } from "jose";
+import { SignJWT } from "jose";
 import { importPrivateKeyPem, removeCertificateMarkers } from "../util/util";
 import { config } from "../../config";
 import { logger } from "../logger";
@@ -48,15 +48,13 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 		return res.status(400).send(errorResponse);
 	}
 
-	let pemPrivateKey: string | null = null;
-	let walletProviderCertificate: string | null = null;
-	let caCertificate: string | null = null;
+	let pemPrivateKey: string;
+	let walletProviderCertificate: string;
 
 	try {
 		[
 			pemPrivateKey,
 			walletProviderCertificate,
-			caCertificate
 		] = await Promise.all([
 			readFile(walletProviderPrivateKeyPath, 'utf-8'),
 			readFile(walletProviderCertificatePath, 'utf-8'),

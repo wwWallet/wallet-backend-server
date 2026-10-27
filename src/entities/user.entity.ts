@@ -348,7 +348,7 @@ async function hasWebauthnCredentialId(credentialId: Buffer): Promise<Result<boo
 async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 	try {
 
-		let res = await AppDataSource.getRepository(UserEntity)
+		const res = await AppDataSource.getRepository(UserEntity)
 			.createQueryBuilder("user")
 			.getMany();
 		if (!res) {

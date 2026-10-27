@@ -115,11 +115,21 @@ describe('config', () => {
 		expect(config.debugAcceptUnauthorizedHttps).toBe(false);
 	});
 
-	it.each(['PORT', 'APP_SECRET', 'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'WEBAUTHN_ORIGIN', 'WEBAUTHN_RP_ID'])
-		('rejects missing required setting %s', async name => {
-			delete process.env[name];
-			await expect(importConfig()).rejects.toThrow(`- ${name} is required`);
-		});
+	const requiredSettings = [
+		'PORT',
+		'APP_SECRET',
+		'DB_HOST',
+		'DB_PORT',
+		'DB_USER',
+		'DB_PASSWORD',
+		'DB_NAME',
+		'WEBAUTHN_ORIGIN',
+		'WEBAUTHN_RP_ID',
+	];
+	it.each(requiredSettings)('rejects missing required setting %s', async name => {
+		delete process.env[name];
+		await expect(importConfig()).rejects.toThrow(`- ${name} is required`);
+	});
 
 	it('treats an empty required value as unset', async () => {
 		process.env.APP_SECRET = '';

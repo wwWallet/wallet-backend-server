@@ -1,5 +1,4 @@
 import express, { Request, Response, Router } from 'express';
-import * as uuid from 'uuid';
 import crypto from 'node:crypto';
 import * as SimpleWebauthn from '@simplewebauthn/server';
 import base64url from 'base64url';
@@ -7,7 +6,7 @@ import { EntityManager } from "typeorm"
 
 import { config } from '../../config';
 import { CreateUser, createUser, deleteUser, deleteWebauthnCredential, getUserByCredentials, getUser, getUserByWebauthnCredential, GetUserErr, hasWebauthnCredentialId, newWebauthnCredentialEntity, privateDataEtag, updateUser, UpdateUserErr, updateWebauthnCredential, updateWebauthnCredentialById, UserEntity, UserId } from '../entities/user.entity';
-import { checkedUpdate, EtagUpdate, jsonParseTaggedBinary } from '../util/util';
+import { checkedUpdate, EtagUpdate } from '../util/util';
 import { AuthMiddleware, createAppToken } from '../middlewares/auth.middleware';
 import { ChallengeErr, createChallenge, popChallenge } from '../entities/WebauthnChallenge.entity';
 import * as webauthn from '../webauthn';
@@ -341,7 +340,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 			openidRefreshTokenMaxAgeInSeconds: user.openidRefreshTokenMaxAgeInSeconds,
 		},
 		webauthnCredentials: await Promise.all((user.webauthnCredentials || []).map(async (cred) => {
-			var flags = webauthn.parseAuthenticatorFlags(cred.attestationObject);
+			const flags = webauthn.parseAuthenticatorFlags(cred.attestationObject);
 			let authenticatorName = undefined;
 			try {
 				const aaguid = webauthn.getAaguidFromAttestationObject(cred.attestationObject);
@@ -503,7 +502,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
 	log.debug({ credentialId: req.params.id }, "webauthn rename");
 
-	const updateRes = await updateWebauthnCredentialById(req.user!.id, req.params.id, (credentialEntity, manager) => {
+	const updateRes = await updateWebauthnCredentialById(req.user!.id, req.params.id, (credentialEntity) => {
 		credentialEntity.name = req.body.name || null;
 		return credentialEntity;
 	});

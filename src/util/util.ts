@@ -95,7 +95,7 @@ export function isValidUri(uri: string): boolean {
 	try {
 		return Boolean(new URL(uri));
 	}
-	catch (e) {
+	catch {
 		return false;
 	}
 }

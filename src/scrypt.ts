@@ -27,7 +27,7 @@ function parseParams(passwordHash: string): Result<{ salt: Buffer, keyLen: numbe
 		const salt = base64url.toBuffer(splits[4]);
 		return Ok({ salt, keyLen, cost, blockSize });
 
-	} catch (e) {
+	} catch {
 		return Err.EMPTY;
 	}
 }
