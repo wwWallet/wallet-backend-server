@@ -117,7 +117,7 @@ describe('WEBUILD wallet defaults', () => {
 		})).toEqual({
 			jti: 'allocated-id', sub: 'client', aud: 'https://as.example', cnf: { jwk: keys[0] },
 			wallet_name: 'WE BUILD wwWallet', wallet_link: 'https://webuild.wwwallet.org', wallet_version: '1.0.0',
-			wallet_solution_certification_information: 'Development instance — no wallet solution certification asserted',
+			wallet_solution_certification_information: 'WE BUILD Development instance — no wallet solution certification asserted',
 			client_status: status,
 		});
 	});

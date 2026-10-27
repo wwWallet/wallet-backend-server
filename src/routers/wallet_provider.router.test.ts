@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ allocate: vi.fn(), load: vi.fn(), sign: vi.fn(), profile: 'OID4VCI' }));
 vi.mock('../../config', () => ({ config: { url: 'https://provider.example/', get walletProviderAttestationProfile() { return mocks.profile; } } }));
 vi.mock('../middlewares/auth.middleware', () => ({ AuthMiddleware: vi.fn() }));
-vi.mock('../logger', () => ({ logger: { child: () => ({ error: vi.fn() }) } }));
+vi.mock('../logger', () => ({ logger: { child: () => ({ error: vi.fn(), warn: vi.fn() }) } }));
 vi.mock('../entities/WalletProviderStatus.entity', () => ({
 	allocateWalletProviderStatus: mocks.allocate, revokeWalletProviderStatus: vi.fn(), getWalletProviderStatusList: vi.fn(),
 	WalletProviderStatusErr: {}, STATUS_TOKEN_SECONDS: 300,
@@ -100,7 +100,7 @@ describe('WEBUILD lifecycle payloads', () => {
 			expect(payload).toMatchObject({
 				jti: 'allocated-id', sub: 'client', aud: 'https://as.example', cnf: { jwk: publicKey },
 				wallet_name: 'WE BUILD wwWallet', wallet_link: 'https://webuild.wwwallet.org', wallet_version: '1.0.0',
-				wallet_solution_certification_information: 'Development instance — no wallet solution certification asserted',
+				wallet_solution_certification_information: 'WE BUILD Development instance — no wallet solution certification asserted',
 				client_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
 			});
 		}

@@ -1,12 +1,16 @@
 import { createPublicKey } from 'node:crypto';
 import type { JWK, JWTPayload } from 'jose';
 import type { KeyAttestationOptions } from './walletProviderAttestation/types';
+import { logger } from '../logger';
+
+const log = logger.child({ module: 'KeyAttestationService' });
 
 const privateMembers = ['d', 'p', 'q', 'dp', 'dq', 'qi', 'oth', 'k'];
 const curves: Record<string, { bytes: number; alg: string }> = {
 	'P-256': { bytes: 32, alg: 'ES256' },
 	'P-384': { bytes: 48, alg: 'ES384' },
 	'P-521': { bytes: 66, alg: 'ES512' },
+	secp256k1: { bytes: 32, alg: 'ES256K' },
 };
 
 function decode(value: unknown): Buffer {
@@ -29,11 +33,14 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 	if (privateMembers.some((member) => Object.prototype.hasOwnProperty.call(jwk, member))) {
 		throw new Error('Private or symmetric key material is forbidden');
 	}
+	if (jwk.use !== undefined && typeof jwk.use !== 'string') {
+		throw new Error('Invalid JWK use');
+	}
 	if (jwk.use !== undefined && jwk.use !== 'sig') {
-		throw new Error('Expected a signing key');
+		log.warn('Expected signing use in JWK use; ignoring advisory metadata');
 	}
 	if (jwk.key_ops !== undefined && (!Array.isArray(jwk.key_ops) || jwk.key_ops.length !== 1 || jwk.key_ops[0] !== 'verify')) {
-		throw new Error('Expected public signature verification operations');
+		log.warn('Expected public signature verification operations in JWK key_ops');
 	}
 	let publicJwk: JWK;
 	let algorithms: string[];
@@ -47,31 +54,37 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 	} else if (jwk.kty === 'RSA') {
 		const modulus = decode(jwk.n);
 		const exponent = decode(jwk.e);
-		if (modulus[0] === 0 || exponent[0] === 0 || modulus.length > 1024 || exponent.length > 4
+		if (modulus.length > 1024 || exponent.length > 4) {
+			log.warn('RSA key exceeds the usual modulus or exponent size');
+		}
+		if (modulus[0] === 0 || exponent[0] === 0
 			|| !(modulus[modulus.length - 1] & 1) || !(exponent[exponent.length - 1] & 1)
 			|| (exponent.length === 1 && exponent[0] < 3)) {
 			throw new Error('Invalid RSA public key');
 		}
 		publicJwk = { kty: jwk.kty, n: jwk.n, e: jwk.e };
 		algorithms = ['RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512'];
-	} else if (jwk.kty === 'OKP' && jwk.crv === 'Ed25519') {
-		if (decode(jwk.x).length !== 32) {
-			throw new Error('Invalid Ed25519 key');
+	} else if (jwk.kty === 'OKP' && (jwk.crv === 'Ed25519' || jwk.crv === 'Ed448')) {
+		if (decode(jwk.x).length !== (jwk.crv === 'Ed25519' ? 32 : 57)) {
+			throw new Error('Invalid Edwards public key');
 		}
 		publicJwk = { kty: jwk.kty, crv: jwk.crv, x: jwk.x };
 		algorithms = ['EdDSA'];
 	} else {
 		throw new Error('Unsupported public signing key');
 	}
-	if (jwk.alg !== undefined && !algorithms.includes(jwk.alg)) {
-		throw new Error('Incompatible signing algorithm');
+	if (jwk.alg !== undefined && (typeof jwk.alg !== 'string' || !/^[\x20-\x7e]+$/.test(jwk.alg))) {
+		throw new Error('Invalid JWK algorithm');
+	}
+	const compatibleAlgorithm = jwk.alg !== undefined && algorithms.includes(jwk.alg);
+	if (jwk.alg !== undefined && !compatibleAlgorithm) {
+		log.warn('Unrecognized or incompatible JWK algorithm; omitting advisory algorithm metadata');
 	}
 	const key = createPublicKey({ key: publicJwk, format: 'jwk' });
 	if (jwk.kty === 'RSA' && key.asymmetricKeyDetails.modulusLength < 2048) {
 		throw new Error('RSA keys must have at least 2048 bits');
 	}
-	// Retain only validated key material and signing metadata, never arbitrary request claims.
-	return { ...publicJwk, ...(jwk.alg === undefined ? {} : { alg: jwk.alg }) };
+	return { ...publicJwk, ...(compatibleAlgorithm ? { alg: jwk.alg } : {}) };
 }
 
 
@@ -112,7 +125,9 @@ export function parseKeyAttestationRequest(body: unknown): { keys: JWK[]; nonce:
 	}
 	try {
 		return { keys: jwks.map(validatePublicAttestationKey), nonce };
-	} catch {
+	} catch (err) {
+		const validationError = new Error(err instanceof Error ? err.message : 'Unknown key validation error');
+		log.warn({ err: validationError }, 'Invalid key attestation request');
 		throw new AttestationRequestValidationError({ error: 'INVALID_JWKS',
 			message: 'Every key must be a valid supported public signing JWK' });
 	}
