@@ -20,7 +20,7 @@ vi.mock('../services/WalletProviderService', () => ({
 const publicKey = generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey.export({ format: 'jwk' });
 const routes = ['/key-attestation/generate', '/wallet-attestation/generate'];
 
-async function request(path: string, jwks: unknown) {
+async function request(path: string, jwks: unknown, authenticated = true) {
 	const { walletProviderRouter } = await import('./wallet_provider.router');
 	const route = walletProviderRouter.stack.find((layer) => layer.route?.path === path)?.route;
 	if (!route || route.stack.length === 0) {
@@ -28,7 +28,7 @@ async function request(path: string, jwks: unknown) {
 	}
 	const res = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
 	const req = {
-		user: { id: { id: 'account' } },
+		user: authenticated ? { id: { id: 'account' } } : undefined,
 		body: { jwks, openid4vci: { nonce: 'nonce', client_id: 'client', authorization_server: 'https://as.example' } },
 	};
 	const next = vi.fn();
@@ -48,6 +48,13 @@ beforeEach(() => {
 });
 
 describe('wallet provider public key validation', () => {
+	it.each(routes)('rejects a missing authenticated user before allocation on %s', async (path) => {
+		const res = await request(path, [publicKey], false);
+		expect(res.status).toHaveBeenCalledWith(401);
+		expect(mocks.load).not.toHaveBeenCalled();
+		expect(mocks.allocate).not.toHaveBeenCalled();
+		expect(mocks.sign).not.toHaveBeenCalled();
+	});
 	it.each(routes)('validates keys before signing on %s', async (path) => {
 		const res = await request(path, [publicKey]);
 		expect(res.send).toHaveBeenCalledWith(path === routes[0]
@@ -56,12 +63,10 @@ describe('wallet provider public key validation', () => {
 		expect(mocks.sign).toHaveBeenCalledOnce();
 		expect(mocks.allocate).toHaveBeenCalledWith('account', path === routes[0] ? 'ka' : 'wa');
 		const payload = mocks.sign.mock.calls[0][0];
-		if (path === routes[0]) {
-			expect(payload.attested_keys).toEqual([publicKey]);
-		} else {
-			expect(payload.cnf).toEqual({ jwk: publicKey });
-			expect(payload.iss).toBe('https://provider.example/wallet-provider');
-		}
+		const expectedPayload = path === routes[0]
+			? { attested_keys: [publicKey] }
+			: { cnf: { jwk: publicKey }, iss: 'https://provider.example/wallet-provider' };
+		expect(payload).toMatchObject(expectedPayload);
 	});
 	it.each(routes)('rejects private keys before allocation on %s', async (path) => {
 		const res = await request(path, [{ ...publicKey, d: 'secret' }]);
@@ -90,19 +95,16 @@ describe('WEBUILD lifecycle payloads', () => {
 		expect(res.status).not.toHaveBeenCalled();
 		expect(mocks.sign).toHaveBeenCalledOnce();
 		const payload = mocks.sign.mock.calls[0][0];
-		if (path === routes[0]) {
-			expect(payload).toMatchObject({
-				attested_keys: [publicKey], nonce: 'nonce', key_storage: ['iso_18045_basic'],
-				user_authentication: ['iso_18045_basic'], certification: 'https://provider.example/wallet-provider/certification',
-				key_storage_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
-			});
-		} else {
-			expect(payload).toMatchObject({
-				jti: 'allocated-id', sub: 'client', aud: 'https://as.example', cnf: { jwk: publicKey },
-				wallet_name: 'WE BUILD wwWallet', wallet_link: 'https://webuild.wwwallet.org', wallet_version: '1.0.0',
-				wallet_solution_certification_information: 'WE BUILD Development instance — no wallet solution certification asserted',
-				client_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
-			});
-		}
+		const expectedPayload = path === routes[0] ? {
+			attested_keys: [publicKey], nonce: 'nonce', key_storage: ['iso_18045_basic'],
+			user_authentication: ['iso_18045_basic'], certification: 'https://provider.example/wallet-provider/certification',
+			key_storage_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
+		} : {
+			jti: 'allocated-id', sub: 'client', aud: 'https://as.example', cnf: { jwk: publicKey },
+			wallet_name: 'WE BUILD wwWallet', wallet_link: 'https://webuild.wwwallet.org', wallet_version: '1.0.0',
+			wallet_solution_certification_information: 'WE BUILD Development instance — no wallet solution certification asserted',
+			client_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
+		};
+		expect(payload).toMatchObject(expectedPayload);
 	});
 });

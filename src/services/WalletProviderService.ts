@@ -55,11 +55,15 @@ async function signWalletProviderToken(
 	type: WalletProviderAttestationType | 'statuslist+jwt',
 	material: WalletProviderSigningMaterial,
 ): Promise<string> {
+	const privateKey = await importPrivateKeyPem(material.privateKey, 'ES256');
+	if (!privateKey) {
+		throw new Error("Failed to import wallet provider private key");
+	}
 	return token.setProtectedHeader({
 		alg: 'ES256',
 		typ: type,
 		x5c: getKeyAttestationCertificateChain(material.certificate),
-	}).sign(await importPrivateKeyPem(material.privateKey, 'ES256'));
+	}).sign(privateKey);
 }
 
 export function signWalletProviderAttestation(

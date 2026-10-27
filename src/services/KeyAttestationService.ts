@@ -45,7 +45,7 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 	let publicJwk: JWK;
 	let algorithms: string[];
 	if (jwk.kty === 'EC') {
-		const curve = Object.prototype.hasOwnProperty.call(curves, jwk.crv) ? curves[jwk.crv] : undefined;
+		const curve = typeof jwk.crv === 'string' && Object.prototype.hasOwnProperty.call(curves, jwk.crv) ? curves[jwk.crv] : undefined;
 		if (!curve || decode(jwk.x).length !== curve.bytes || decode(jwk.y).length !== curve.bytes) {
 			throw new Error('Invalid or unsupported EC key');
 		}
@@ -81,7 +81,7 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 		log.warn('Unrecognized or incompatible JWK algorithm; omitting advisory algorithm metadata');
 	}
 	const key = createPublicKey({ key: publicJwk, format: 'jwk' });
-	if (jwk.kty === 'RSA' && key.asymmetricKeyDetails.modulusLength < 2048) {
+	if (jwk.kty === 'RSA' && (key.asymmetricKeyDetails?.modulusLength ?? 0) < 2048) {
 		throw new Error('RSA keys must have at least 2048 bits');
 	}
 	return { ...publicJwk, ...(compatibleAlgorithm ? { alg: jwk.alg } : {}) };

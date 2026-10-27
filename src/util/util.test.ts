@@ -165,11 +165,12 @@ describe('JOSE x5c certificate encoding', () => {
 			.toEqual([encoded, base64Der(secondCertificate)]);
 	});
 
-	it.each(['unexpected data\n', '-----BEGIN PRIVATE KEY-----\nYWJj\n-----END PRIVATE KEY-----\n'])
-		('rejects extraneous data surrounding a PEM chain', extra => {
+	it.each(['unexpected data\n', '-----BEGIN PRIVATE KEY-----\nYWJj\n-----END PRIVATE KEY-----\n'])(
+		'rejects extraneous data surrounding a PEM chain', extra => {
 			expect(() => getKeyAttestationCertificateChain(`${extra}${certificate}`)).toThrow();
 			expect(() => getKeyAttestationCertificateChain(`${certificate}\n${extra}`)).toThrow();
-		});
+		},
+	);
 });
 
 describe('PKCS8 private-key import', () => {

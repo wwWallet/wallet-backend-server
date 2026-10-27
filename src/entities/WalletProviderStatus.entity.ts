@@ -31,22 +31,22 @@ export enum WalletProviderStatusErr {
 @Entity({ name: "wallet_provider_status_owner" })
 export class WalletProviderStatusOwnerEntity {
 	@PrimaryColumn({ type: "varchar", length: 36 })
-	accountId: string;
+	accountId!: string;
 
 	@Column({ type: "boolean", default: false })
-	revoked: boolean;
+	revoked!: boolean;
 }
 
 @Entity({ name: "wallet_provider_status_cursor" })
 export class WalletProviderStatusCursorEntity {
 	@PrimaryColumn({ type: "varchar", length: 2 })
-	kind: StatusKind;
+	kind!: StatusKind;
 
 	@Column({ type: "varchar", length: 36 })
-	listId: string;
+	listId!: string;
 
 	@Column({ type: "int", unsigned: true, default: 0 })
-	allocatedCount: number;
+	allocatedCount!: number;
 }
 
 @Entity({ name: "wallet_provider_status_entry" })
@@ -54,30 +54,30 @@ export class WalletProviderStatusCursorEntity {
 @Index("status_owner", ["accountId"])
 export class WalletProviderStatusEntryEntity {
 	@PrimaryColumn({ type: "varchar", length: 36 })
-	id: string;
+	id!: string;
 
 	@Column({ type: "varchar", length: 36 })
-	accountId: string;
+	accountId!: string;
 
 	// Status evidence survives user deletion; this relation is to the status owner only.
 	@ManyToOne(() => WalletProviderStatusOwnerEntity, { nullable: false })
 	@JoinColumn({ name: "accountId", foreignKeyConstraintName: "status_owner_fk" })
-	owner: WalletProviderStatusOwnerEntity;
+	owner!: WalletProviderStatusOwnerEntity;
 
 	@Column({ type: "varchar", length: 2 })
-	kind: StatusKind;
+	kind!: StatusKind;
 
 	@Column({ type: "varchar", length: 36 })
-	listId: string;
+	listId!: string;
 
 	@Column({ type: "int", unsigned: true })
-	slot: number;
+	slot!: number;
 
 	@Column({ type: "int", unsigned: true })
-	maintenanceExp: number;
+	maintenanceExp!: number;
 
 	@Column({ type: "boolean", default: false })
-	revoked: boolean;
+	revoked!: boolean;
 }
 
 const walletProviderStatusEntryRepository: Repository<WalletProviderStatusEntryEntity> = AppDataSource.getRepository(WalletProviderStatusEntryEntity);
@@ -143,7 +143,7 @@ export async function allocateWalletProviderStatus(accountId: string, kind: Stat
 		}
 		// The locked cursor serializes allocation. Low occupancy keeps retries small.
 		let idx: number;
-		let occupied: WalletProviderStatusEntryEntity;
+		let occupied: WalletProviderStatusEntryEntity | null;
 		do {
 			idx = randomInt(LIST_ENTRIES);
 			occupied = await manager.findOne(WalletProviderStatusEntryEntity, {

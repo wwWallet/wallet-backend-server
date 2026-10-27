@@ -17,6 +17,9 @@ const walletProviderRouter = Router();
 const attestationProfile = loadWalletProviderAttestationProfile(config.walletProviderAttestationProfile);
 
 walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (req, res) => {
+	if (!req.user) {
+		return res.status(401).send();
+	}
 
 	let input: ReturnType<typeof parseKeyAttestationRequest>;
 	try {
@@ -67,6 +70,10 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 });
 
 walletProviderRouter.post('/wallet-attestation/generate', AuthMiddleware, async (req, res) => {
+	if (!req.user) {
+		return res.status(401).send();
+	}
+
 	let input: ReturnType<typeof parseWalletAttestationRequest>;
 	try {
 		input = parseWalletAttestationRequest(req.body);

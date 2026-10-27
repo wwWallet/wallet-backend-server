@@ -46,11 +46,10 @@ describe('buildKeyAttestationPayload', () => {
 		})).toEqual({ attested_keys: keys, key_storage: [value], user_authentication: [value] });
 	});
 
-	it('restricts both option types to non-empty arrays of OID4VCI resistance values', () => {
-		type ResistanceValues = [AttackPotentialResistance, ...AttackPotentialResistance[]] | undefined;
-		expectTypeOf<KeyAttestationOptions['key_storage']>().toEqualTypeOf<ResistanceValues>();
-		expectTypeOf<KeyAttestationOptions['user_authentication']>().toEqualTypeOf<ResistanceValues>();
-	});
+	// Both option types require non-empty arrays of OID4VCI resistance values.
+	type ResistanceValues = [AttackPotentialResistance, ...AttackPotentialResistance[]] | undefined;
+	expectTypeOf<KeyAttestationOptions['key_storage']>().toEqualTypeOf<ResistanceValues>();
+	expectTypeOf<KeyAttestationOptions['user_authentication']>().toEqualTypeOf<ResistanceValues>();
 
 	it('includes WEBUILD status together with base claims', () => {
 		const options: WeBuildKeyAttestationOptions = {
@@ -90,7 +89,7 @@ describe('validatePublicAttestationKey', () => {
 		{ ...publicKey, d: undefined }, { ...publicKey, x: 'x' }, { ...publicKey, x: publicKey.x + '=' },
 		{ ...publicKey, x: Buffer.alloc(32).toString('base64url'), y: Buffer.alloc(32).toString('base64url') },
 		{ ...publicKey, alg: 123 }, { ...publicKey, alg: 'ES256\n' }, { ...publicKey, use: 123 },
-		{ ...publicKey, crv: 'toString' },
+		{ ...publicKey, crv: 'toString' }, { ...publicKey, crv: undefined },
 	])('rejects invalid, private or incompatible key %#', (key) => {
 		expect(() => validatePublicAttestationKey(key)).toThrow();
 	});
