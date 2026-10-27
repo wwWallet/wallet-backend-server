@@ -62,6 +62,22 @@ Build the Docker image from `Dockerfile` (version tags publish it as `ghcr.io/ww
 - Mount the wallet-provider keys at `/app/keys` (or set `KEYS_DIR`).
 - Run the migrations before starting a new version: `yarn migration:run:prod` inside the container.
 
+## Formatting and checks
+
+```sh
+# Check ESLint rules
+yarn lint
+
+# Format files with Prettier
+yarn format
+
+# Check Prettier formatting without changing files
+yarn format:check
+
+# Check TypeScript types without generating output
+yarn typecheck
+```
+
 ## Pre-commit
 
 We use [pre-commit](https://pre-commit.com/) to enforce our `.editorconfig` before code is committed.

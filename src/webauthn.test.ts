@@ -13,8 +13,13 @@ let webauthn: typeof import('./webauthn');
 const encoder = new Encoder({ useRecords: false, variableMapSize: true });
 const attestation = (authData: Buffer) => encoder.encode({ fmt: 'packed', authData, attStmt: { sig: Buffer.from([1, 2]) } });
 const emptyFlags = {
-	userPresent: false, userVerified: false, backupEligibility: false, backupState: false,
-	attestedCredentialData: false, extensionData: false, rawFlagsByte: 0,
+	userPresent: false,
+	userVerified: false,
+	backupEligibility: false,
+	backupState: false,
+	attestedCredentialData: false,
+	extensionData: false,
+	rawFlagsByte: 0,
 };
 
 beforeAll(async () => {
@@ -35,14 +40,17 @@ describe('WebAuthn options', () => {
 		expect(webauthn.getRpId()).toBe('wallet.example');
 		for (const user of [undefined, { webauthnCredentials: [] }]) {
 			expect(webauthn.makeGetOptions({ challenge, user }).publicKey).toEqual({
-				rpId: 'wallet.example', challenge, allowCredentials: [], userVerification: 'required',
+				rpId: 'wallet.example',
+				challenge,
+				allowCredentials: [],
+				userVerification: 'required',
 			});
 		}
 	});
 });
 
 describe('attestation decoding', () => {
-	it.each([false, true])('strips attestation while preserving authenticator bytes (Uint8Array: %s)', typed => {
+	it.each([false, true])('strips attestation while preserving authenticator bytes (Uint8Array: %s)', (typed) => {
 		const authData = Buffer.from(Array.from({ length: 80 }, (_, i) => i));
 		const input = attestation(authData);
 		const stripped = webauthn.stripAttestationStatement(typed ? new Uint8Array(input) : input);
@@ -56,17 +64,27 @@ describe('attestation decoding', () => {
 		expect(() => webauthn.stripAttestationStatement(Buffer.from([0x58]))).toThrow();
 	});
 	it.each([
-		['userPresent', 0x01], ['userVerified', 0x04], ['backupEligibility', 0x08],
-		['backupState', 0x10], ['attestedCredentialData', 0x40], ['extensionData', 0x80],
+		['userPresent', 0x01],
+		['userVerified', 0x04],
+		['backupEligibility', 0x08],
+		['backupState', 0x10],
+		['attestedCredentialData', 0x40],
+		['extensionData', 0x80],
 	] as const)('decodes the %s flag independently', (name, flag) => {
 		const data = Buffer.alloc(37);
 		data[32] = flag;
-		expect(webauthn.parseAuthenticatorFlags(new Uint8Array(attestation(data))))
-			.toEqual({ ...emptyFlags, [name]: true, rawFlagsByte: flag });
+		expect(webauthn.parseAuthenticatorFlags(new Uint8Array(attestation(data)))).toEqual({
+			...emptyFlags,
+			[name]: true,
+			rawFlagsByte: flag,
+		});
 	});
-	it.each([Buffer.from([0xff]), encoder.encode({}), attestation(Buffer.alloc(36))])('returns safe flags for malformed or short data (%j)', input => {
-		expect(webauthn.parseAuthenticatorFlags(input)).toEqual(emptyFlags);
-	});
+	it.each([Buffer.from([0xff]), encoder.encode({}), attestation(Buffer.alloc(36))])(
+		'returns safe flags for malformed or short data (%j)',
+		(input) => {
+			expect(webauthn.parseAuthenticatorFlags(input)).toEqual(emptyFlags);
+		},
+	);
 	it('extracts the AAGUID only when attested credential data is present and complete', () => {
 		const data = Buffer.alloc(53);
 		data[32] = 0x40;

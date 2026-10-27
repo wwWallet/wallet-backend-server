@@ -1,12 +1,12 @@
-import { Router } from "express";
+import { Router } from 'express';
 import { readFile } from 'fs/promises';
-import path from "path";
-import { SignJWT } from "jose";
-import { importPrivateKeyPem, removeCertificateMarkers } from "../util/util";
-import { config } from "../../config";
-import { logger } from "../logger";
+import path from 'path';
+import { SignJWT } from 'jose';
+import { importPrivateKeyPem, removeCertificateMarkers } from '../util/util';
+import { config } from '../../config';
+import { logger } from '../logger';
 
-const log = logger.child({ module: "WalletProvider" });
+const log = logger.child({ module: 'WalletProvider' });
 
 const walletProviderRouter = Router();
 
@@ -18,33 +18,35 @@ const caCertificatePath = path.join(keysDir, 'ca.pem');
 Promise.all([
 	readFile(walletProviderPrivateKeyPath, 'utf-8'),
 	readFile(walletProviderCertificatePath, 'utf-8'),
-	readFile(caCertificatePath, 'utf-8')
-]).then(() =>
-	log.info("Test importing keys passed")
-).catch((err) => {
-	log.error({ err }, "Error importing wallet provider keys");
-});
+	readFile(caCertificatePath, 'utf-8'),
+])
+	.then(() => log.info('Test importing keys passed'))
+	.catch((err) => {
+		log.error({ err }, 'Error importing wallet provider keys');
+	});
 
 walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
-
-	log.debug({ body: req.body }, "Received key attestation request");
-	const { jwks, openid4vci: { nonce } } = req.body;
+	log.debug({ body: req.body }, 'Received key attestation request');
+	const {
+		jwks,
+		openid4vci: { nonce },
+	} = req.body;
 
 	if (!jwks || !Array.isArray(jwks) || jwks.length == 0) {
 		const errorResponse = {
-			error: "INVALID_JWKS",
+			error: 'INVALID_JWKS',
 			message: "'jwks' JSON body parameter is missing or not type of 'array' or array is empty",
 		};
-		log.error({ errorResponse }, "Invalid key attestation request");
+		log.error({ errorResponse }, 'Invalid key attestation request');
 		return res.status(400).send(errorResponse);
 	}
 
 	if (!nonce || typeof nonce !== 'string') {
 		const errorResponse = {
-			error: "INVALID_OPENID4VCI_NONCE_VALUE",
+			error: 'INVALID_OPENID4VCI_NONCE_VALUE',
 			message: "'openid4vci.nonce' JSON body parameter is missing or not type of 'string'",
 		};
-		log.error({ errorResponse }, "Invalid key attestation request");
+		log.error({ errorResponse }, 'Invalid key attestation request');
 		return res.status(400).send(errorResponse);
 	}
 
@@ -52,56 +54,47 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 	let walletProviderCertificate: string;
 
 	try {
-		[
-			pemPrivateKey,
-			walletProviderCertificate,
-		] = await Promise.all([
+		[pemPrivateKey, walletProviderCertificate] = await Promise.all([
 			readFile(walletProviderPrivateKeyPath, 'utf-8'),
 			readFile(walletProviderCertificatePath, 'utf-8'),
-			readFile(caCertificatePath, 'utf-8')
+			readFile(caCertificatePath, 'utf-8'),
 		]);
-	}
-	catch (err) {
+	} catch (err) {
 		const errorResponse = {
-			error: "UNSUPPORTED",
-			message: "key attestation generation is not supported",
+			error: 'UNSUPPORTED',
+			message: 'key attestation generation is not supported',
 		};
-		log.error({ err, errorResponse }, "Key attestation generation is not supported");
+		log.error({ err, errorResponse }, 'Key attestation generation is not supported');
 		return res.status(400).send(errorResponse);
 	}
-
 
 	try {
 		const privateKey = await importPrivateKeyPem(pemPrivateKey, 'ES256');
 		if (!privateKey) {
-			throw new Error("Failed to import wallet provider private key");
+			throw new Error('Failed to import wallet provider private key');
 		}
 
 		const keyAttestation = await new SignJWT({
 			attested_keys: jwks,
 			nonce: nonce,
-		}).setIssuedAt()
+		})
+			.setIssuedAt()
 			.setProtectedHeader({
 				alg: 'ES256',
 				typ: 'key-attestation+jwt',
-				x5c: [
-					removeCertificateMarkers(walletProviderCertificate)
-				],
+				x5c: [removeCertificateMarkers(walletProviderCertificate)],
 			})
-			.setExpirationTime("15s")
-			.sign(privateKey)
+			.setExpirationTime('15s')
+			.sign(privateKey);
 
 		return res.send({ key_attestation: keyAttestation });
-	}
-	catch (err) {
-		log.error({ err }, "Failed to sign key attestation");
+	} catch (err) {
+		log.error({ err }, 'Failed to sign key attestation');
 		return res.status(400).send({
-			error: "FAILED",
-			message: "key attestation signature generation failed",
+			error: 'FAILED',
+			message: 'key attestation signature generation failed',
 		});
 	}
 });
 
-export {
-	walletProviderRouter,
-}
+export { walletProviderRouter };

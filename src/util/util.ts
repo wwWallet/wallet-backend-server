@@ -1,30 +1,25 @@
 import * as crypto from 'crypto';
-import base64url from "base64url";
+import base64url from 'base64url';
 import { Err, Ok, Result } from 'ts-results';
-import { importPKCS8 } from "jose";
+import { importPKCS8 } from 'jose';
 import { logger } from '../logger';
 
 const log = logger.child({ module: 'Util' });
 
 export function isResult<T>(a: T | Result<T, unknown>): a is Result<T, unknown> {
-	return a instanceof Object && "val" in a && "ok" in a && "err" in a;
+	return a instanceof Object && 'val' in a && 'ok' in a && 'err' in a;
 }
 
 /**
-*
-* @param type is the 'type' attribute of a VC in JSON-LD format
-*/
+ *
+ * @param type is the 'type' attribute of a VC in JSON-LD format
+ */
 export function decideVerifiableCredentialType(type: string[]): 'Diploma' | 'Attestation' | 'Presentation' {
-
 	if (type.includes('VerifiablePresentation')) return 'Presentation';
-
 
 	for (const t of type) {
 		const lower = t.toLowerCase();
-		if (lower.includes('europass') ||
-			lower.includes('universitydegree') ||
-			lower.includes('diploma')) {
-
+		if (lower.includes('europass') || lower.includes('universitydegree') || lower.includes('diploma')) {
 			return 'Diploma';
 		}
 	}
@@ -42,7 +37,7 @@ export function jsonParseTaggedBinary(json: string): any {
 
 export function replacerBufferToTaggedBase64Url(this: Record<string, unknown>, key: string, value: any): any {
 	if (this[key] instanceof Buffer) {
-		return { '$b64u': base64url.encode(this[key]) };
+		return { $b64u: base64url.encode(this[key]) };
 	} else {
 		return value;
 	}
@@ -50,17 +45,16 @@ export function replacerBufferToTaggedBase64Url(this: Record<string, unknown>, k
 
 export function reviverTaggedBase64UrlToBuffer(key: string, value: any): any {
 	if (value?.$b64u !== undefined) {
-		return base64url.toBuffer(value["$b64u"]);
+		return base64url.toBuffer(value['$b64u']);
 	} else {
 		return value;
 	}
 }
 
-
 export type EtagUpdate<T> = {
-	expectTag: string,
-	newValue: T,
-}
+	expectTag: string;
+	newValue: T;
+};
 
 /**
  * Return `newValue` if and only if `comparator` returns a value strictly equal
@@ -69,18 +63,16 @@ export type EtagUpdate<T> = {
 export function checkedUpdate<T, U>(
 	expectTag: U,
 	tagFunc: (value: T) => U,
-	{ currentValue, newValue }: { currentValue: T, newValue: T },
+	{ currentValue, newValue }: { currentValue: T; newValue: T },
 ): Result<T, void> {
 	if (currentValue === newValue) {
 		// Change has already been applied (if T supports === equality)
 		return Ok(newValue);
-
 	} else {
-		const currentTag = tagFunc(currentValue)
+		const currentTag = tagFunc(currentValue);
 		if (currentTag === expectTag) {
 			// Expected change
 			return Ok(newValue);
-
 		} else {
 			if (currentTag === tagFunc(newValue)) {
 				// Change has already been applied (if T does not support === equality)
@@ -94,23 +86,18 @@ export function checkedUpdate<T, U>(
 export function isValidUri(uri: string): boolean {
 	try {
 		return Boolean(new URL(uri));
-	}
-	catch {
+	} catch {
 		return false;
 	}
 }
 
 export async function generateCodeChallengeFromVerifier(v: any) {
 	try {
-		const challenge = base64url.encode(crypto
-			.createHash("sha256")
-			.update(v)
-			.digest());
-		log.debug({ challenge }, "Generated code challenge");
+		const challenge = base64url.encode(crypto.createHash('sha256').update(v).digest());
+		log.debug({ challenge }, 'Generated code challenge');
 		return challenge;
-	}
-	catch (e) {
-		log.error({ err: e }, "Failed to generate code challenge");
+	} catch (e) {
+		log.error({ err: e }, 'Failed to generate code challenge');
 		return null;
 	}
 }
@@ -118,17 +105,16 @@ export async function generateCodeChallengeFromVerifier(v: any) {
 export function generateCodeVerifier() {
 	try {
 		const verifier = base64url.encode(crypto.randomBytes(32));
-		log.debug({ verifier }, "Generated code verifier");
+		log.debug({ verifier }, 'Generated code verifier');
 		return verifier;
-	}
-	catch (e) {
-		log.error({ err: e }, "Failed to generate code verifier");
+	} catch (e) {
+		log.error({ err: e }, 'Failed to generate code verifier');
 		return null;
 	}
 }
 
-
-export const verifiablePresentationSchemaURL = "https://api-pilot.ebsi.eu/trusted-schemas-registry/v2/schemas/zFj7VdCiHdG4GB6fezdAUKhDEuxFR2bri2ihKLkiZYpE9";
+export const verifiablePresentationSchemaURL =
+	'https://api-pilot.ebsi.eu/trusted-schemas-registry/v2/schemas/zFj7VdCiHdG4GB6fezdAUKhDEuxFR2bri2ihKLkiZYpE9';
 
 export function removeCertificateMarkers(certString: string) {
 	return certString

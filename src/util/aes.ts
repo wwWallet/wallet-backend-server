@@ -1,11 +1,9 @@
-
 import crypto from 'node:crypto';
 const algorithm = 'aes-256-cbc'; //Using AES encryption
 const key = crypto.randomBytes(32); // could be
 const iv = crypto.randomBytes(16);
 
 export class AES {
-
 	//Encrypting text
 	static encrypt(text: string) {
 		const cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);

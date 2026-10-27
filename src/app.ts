@@ -24,7 +24,6 @@ import { logger } from './logger';
 
 const log = logger.child({ module: 'App' });
 
-
 const app: Express = express();
 // __dirname is "/path/to/dist/src"
 
@@ -39,18 +38,18 @@ app.set('json replacer', replacerBufferToTaggedBase64Url);
 app.use(express.static('public'));
 // __dirname is "/path/to/dist/src"
 // public is located at "/path/to/dist/src"
-app.use(cors({
-	credentials: true,
-	origin: true,
-	allowedHeaders: ['Authorization', 'Content-Type', 'If-None-Match', 'X-Private-Data-If-Match', 'X-Private-Data-If-None-Match'],
-	exposedHeaders: ['X-Private-Data-ETag'],
-}));
-
+app.use(
+	cors({
+		credentials: true,
+		origin: true,
+		allowedHeaders: ['Authorization', 'Content-Type', 'If-None-Match', 'X-Private-Data-If-Match', 'X-Private-Data-If-None-Match'],
+		exposedHeaders: ['X-Private-Data-ETag'],
+	}),
+);
 
 // define routes and middleware here
 app.use('/status', statusRouter);
 app.use('/user', userController);
-
 
 app.use(AuthMiddleware);
 
@@ -62,11 +61,10 @@ app.use('/relay', ohttpRelayRouter);
 app.use('/verifier', verifierRouter);
 app.use('/wallet-provider', walletProviderRouter);
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === 'production') {
 	const unsafeEnvironmentVariables = getUnsafeEnvironmentVariables();
 	if (unsafeEnvironmentVariables.length > 0) {
-		const names = unsafeEnvironmentVariables
-			.join(', ');
+		const names = unsafeEnvironmentVariables.join(', ');
 
 		log.fatal(`Unsafe env flags found in production: ${names}`);
 

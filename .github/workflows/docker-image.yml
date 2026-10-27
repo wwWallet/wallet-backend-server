@@ -13,11 +13,10 @@ concurrency:
 
 jobs:
   build:
-
     # Permissions for GITHUB_TOKEN
     permissions:
-      contents: read  # To check out repo
-      packages: read  # To read NPM registry
+      contents: read # To check out repo
+      packages: read # To read NPM registry
 
     uses: wwwallet/wwwallet/.github/workflows/docker-build-push.yml@master
     secrets: inherit

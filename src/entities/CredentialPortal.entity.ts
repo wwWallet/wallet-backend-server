@@ -1,9 +1,9 @@
-import { Result, Ok, Err } from "ts-results";
-import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
-import AppDataSource from "../AppDataSource";
-import { logger } from "../logger";
+import { Result, Ok, Err } from 'ts-results';
+import { Column, Entity, PrimaryGeneratedColumn, Repository } from 'typeorm';
+import AppDataSource from '../AppDataSource';
+import { logger } from '../logger';
 
-const log = logger.child({ module: "CredentialPortal" });
+const log = logger.child({ module: 'CredentialPortal' });
 
 interface CredentialPortalDisplayLogo {
 	uri: string;
@@ -21,36 +21,31 @@ interface CredentialPortalDisplay {
 	[key: string]: unknown;
 }
 
-@Entity({ name: "credential_portal" })
+@Entity({ name: 'credential_portal' })
 class CredentialPortalEntity {
 	@PrimaryGeneratedColumn()
 	id: number = -1;
 
-	@Column({ type: "varchar", nullable: false })
-	url: string = "";
+	@Column({ type: 'varchar', nullable: false })
+	url: string = '';
 
-	@Column({ type: "json", nullable: true, default: () => "NULL" })
+	@Column({ type: 'json', nullable: true, default: () => 'NULL' })
 	display!: CredentialPortalDisplay[] | null;
 
-	@Column({ type: "tinyint", default: 1 })
+	@Column({ type: 'tinyint', default: 1 })
 	visible!: boolean;
 }
 
 const credentialPortalRepository: Repository<CredentialPortalEntity> = AppDataSource.getRepository(CredentialPortalEntity);
 
-async function getAllCredentialPortals(): Promise<Result<CredentialPortalEntity[], "DB_ERR">> {
+async function getAllCredentialPortals(): Promise<Result<CredentialPortalEntity[], 'DB_ERR'>> {
 	try {
-		const portals = await credentialPortalRepository.createQueryBuilder()
-			.getMany();
+		const portals = await credentialPortalRepository.createQueryBuilder().getMany();
 		return Ok(portals);
-	}
-	catch(e) {
-		log.error({ err: e }, "Failed to get credential portals");
-		return Err("DB_ERR");
+	} catch (e) {
+		log.error({ err: e }, 'Failed to get credential portals');
+		return Err('DB_ERR');
 	}
 }
 
-export {
-	CredentialPortalEntity,
-	getAllCredentialPortals,
-}
+export { CredentialPortalEntity, getAllCredentialPortals };

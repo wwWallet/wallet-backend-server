@@ -1,4 +1,4 @@
-import { injectable } from "inversify";
+import { injectable } from 'inversify';
 import 'reflect-metadata';
 
 type Verifier = {
@@ -9,7 +9,7 @@ type Verifier = {
 		name: string;
 		description: string;
 	}[];
-}
+};
 
 @injectable()
 export class VerifierRegistryService {
@@ -35,26 +35,24 @@ export class VerifierRegistryService {
 		// },
 		{
 			id: 1,
-			name: "ACME verifier",
-			url: "https://verifier.ediplomas.gr",
+			name: 'ACME verifier',
+			url: 'https://verifier.ediplomas.gr',
 			scopes: [
 				{
-					name: "vid",
-					description: "Present your Verifiable ID"
+					name: 'vid',
+					description: 'Present your Verifiable ID',
 				},
 				{
-					name: "diploma",
-					description: "Present your Diploma"
+					name: 'diploma',
+					description: 'Present your Diploma',
 				},
 				{
-					name: "ver:test",
-					description: "Test"
-				}
-			]
-		}
+					name: 'ver:test',
+					description: 'Test',
+				},
+			],
+		},
 	];
-
-
 
 	async getAllVerifiers() {
 		return this.verifierRegistry;
