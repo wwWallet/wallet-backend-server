@@ -18,7 +18,7 @@ type AppTokenPayload = {
 }
 
 export type AppTokenUser = {
-	username: string;
+	username: string | null;
 	id: UserId;
 	did: string;
 }
@@ -44,7 +44,7 @@ async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 			return payload as AppTokenPayload;
 		} else {
 			log.error({ expected: TOKEN_PAYLOAD_VERSION, got: payload?.v }, "Incorrect token version");
-			return null;
+			return false;
 		}
 	}
 	catch (err) {

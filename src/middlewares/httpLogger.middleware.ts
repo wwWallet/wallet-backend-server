@@ -7,7 +7,7 @@ export const HttpLoggerMiddleware = pinoHttp({
 
 	// prevent healthcheck spam
 	autoLogging: {
-		ignore: (req) => req.url === "/status" || req.url.startsWith("/status?"),
+		ignore: (req) => req.url === "/status" || req.url?.startsWith("/status?") === true,
 	},
 
 	customLogLevel: (_req, res, err) => {
@@ -19,7 +19,7 @@ export const HttpLoggerMiddleware = pinoHttp({
 	serializers: {
 		req: (req) => ({
 			method: req.method,
-			url: req.url.split("?")[0],
+			url: req.url?.split("?")[0],
 			query: req.query,
 			headers: req.headers,
 			remoteAddress: req.remoteAddress,

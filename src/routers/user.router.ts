@@ -37,8 +37,8 @@ noAuthUserController.use('/session', userController);
 async function initSession(user: UserEntity): Promise<{
 	uuid: UserId,
 	appToken: string,
-	username?: string,
-	displayName: string,
+	username: string | null,
+	displayName: string | null,
 	privateData: Buffer,
 	webauthnRpId: string,
 }> {
@@ -325,7 +325,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 
 
 userController.get('/account-info', async (req: Request, res: Response) => {
-	const userRes = await getUser(req.user.id);
+	const userRes = await getUser(req.user!.id);
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
@@ -365,7 +365,7 @@ userController.get('/account-info', async (req: Request, res: Response) => {
 })
 
 userController.post('/webauthn/register-begin', async (req: Request, res: Response) => {
-	const userRes = await getUser(req.user.id);
+	const userRes = await getUser(req.user!.id);
 
 	if (userRes.err) {
 		res.status(403).send({});
@@ -399,7 +399,7 @@ userController.post('/webauthn/register-begin', async (req: Request, res: Respon
 userController.post('/webauthn/register-finish', async (req: Request, res: Response) => {
 	log.debug({ body: req.body }, "webauthn register-finish");
 
-	const userRes = await getUser(req.user.id);
+	const userRes = await getUser(req.user!.id);
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
@@ -503,7 +503,7 @@ userController.post('/webauthn/register-finish', async (req: Request, res: Respo
 userController.post('/webauthn/credential/:id/rename', async (req: Request, res: Response) => {
 	log.debug({ credentialId: req.params.id }, "webauthn rename");
 
-	const updateRes = await updateWebauthnCredentialById(req.user.id, req.params.id, (credentialEntity, manager) => {
+	const updateRes = await updateWebauthnCredentialById(req.user!.id, req.params.id, (credentialEntity, manager) => {
 		credentialEntity.name = req.body.name || null;
 		return credentialEntity;
 	});
@@ -524,7 +524,7 @@ userController.post('/webauthn/credential/:id/rename', async (req: Request, res:
 userController.post('/webauthn/credential/:id/delete', async (req: Request, res: Response) => {
 	log.debug({ credentialId: req.params.id }, "webauthn delete");
 
-	const userRes = await getUser(req.user.id);
+	const userRes = await getUser(req.user!.id);
 	if (userRes.err) {
 		res.status(403).send({});
 		return;
@@ -559,7 +559,7 @@ userController.post('/webauthn/credential/:id/delete', async (req: Request, res:
 })
 
 userController.post('/private-data', async (req: Request, res: Response) => {
-	const updateUserRes = await updateUser(req.user.id, userEntity => {
+	const updateUserRes = await updateUser(req.user!.id, userEntity => {
 		const newPrivateData = checkedUpdate(
 			req.headers['x-private-data-if-match'],
 			privateDataEtag,
@@ -572,7 +572,7 @@ userController.post('/private-data', async (req: Request, res: Response) => {
 			userEntity.privateData = newPrivateData.val;
 			return Ok(userEntity);
 		} else {
-			return Err([UpdateUserErr.PRIVATE_DATA_CONFLICT, userEntity]);
+			return Err<[UpdateUserErr.PRIVATE_DATA_CONFLICT, UserEntity]>([UpdateUserErr.PRIVATE_DATA_CONFLICT, userEntity]);
 		}
 	});
 
@@ -584,7 +584,7 @@ userController.post('/private-data', async (req: Request, res: Response) => {
 		if (updateUserRes.val === UpdateUserErr.NOT_EXISTS) {
 			res.status(404).send();
 
-		} else if (updateUserRes.val[0] === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
+		} else if (Array.isArray(updateUserRes.val) && updateUserRes.val[0] === UpdateUserErr.PRIVATE_DATA_CONFLICT) {
 			res.status(412)
 				.header({ 'X-Private-Data-ETag': privateDataEtag(updateUserRes.val[1].privateData) })
 				.send();
@@ -596,7 +596,7 @@ userController.post('/private-data', async (req: Request, res: Response) => {
 });
 
 userController.get('/private-data', async (req: Request, res: Response) => {
-	const userRes = await getUser(req.user.id);
+	const userRes = await getUser(req.user!.id);
 	if (userRes.ok) {
 		const privateData = userRes.val.privateData;
 		const etag = privateDataEtag(privateData);
@@ -623,7 +623,7 @@ userController.delete('/', async (req: Request, res: Response) => {
 			// ts-results does not seem to provide an async-optimized version of Result.all(),
 			// and it turned out nontrivial to write one that preserves the Ok and Err types like Result.all() does.
 			return Result.all(
-				await deleteUser(req.user.id, { entityManager }),
+				await deleteUser(req.user!.id, { entityManager }),
 			);
 		});
 
@@ -639,7 +639,7 @@ userController.post('/settings', async (req: Request, res: Response) => {
 		const {
 			openidRefreshTokenMaxAgeInSeconds
 		} = req.body;
-		const userRes = await getUser(req.user.id);
+		const userRes = await getUser(req.user!.id);
 
 		if (userRes.ok) {
 			const user = userRes.unwrap();

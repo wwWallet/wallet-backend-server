@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import { AdditionalKeystoreParameters, RegistrationParams, WalletKeystore, WalletKeystoreErr, WalletKeystoreManager } from "./interfaces";
-import { Ok, Result } from "ts-results";
+import { Err, Ok, Result } from "ts-results";
 import 'reflect-metadata';
 import { TYPES } from "./types";
 import { UserId, WalletType } from "../entities/user.entity";
@@ -16,6 +16,9 @@ export class WalletKeystoreManagerService implements WalletKeystoreManager {
 	) { }
 
 	async initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>> {
+		if (registrationParams.privateData == null) {
+			return Err(WalletKeystoreErr.ADDITIONAL_PARAMS_NOT_FOUND);
+		}
 		return Ok({
 			keys: Buffer.from(""),
 			displayName: registrationParams.displayName,

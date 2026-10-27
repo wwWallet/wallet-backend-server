@@ -74,6 +74,11 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 
 
 	try {
+		const privateKey = await importPrivateKeyPem(pemPrivateKey, 'ES256');
+		if (!privateKey) {
+			throw new Error("Failed to import wallet provider private key");
+		}
+
 		const keyAttestation = await new SignJWT({
 			attested_keys: jwks,
 			nonce: nonce,
@@ -86,7 +91,7 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 				],
 			})
 			.setExpirationTime("15s")
-			.sign(await importPrivateKeyPem(pemPrivateKey, 'ES256'))
+			.sign(privateKey)
 
 		return res.send({ key_attestation: keyAttestation });
 	}
