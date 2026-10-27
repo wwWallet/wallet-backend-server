@@ -55,6 +55,7 @@
     "@types/node": "24.13.3",
     "@types/node-fetch": "^2.6.4",
     "@types/ws": "^8.18.1",
+    "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.13.0",
     "globals": "^17.13.0",
     "nodemon": "^2.0.19",
