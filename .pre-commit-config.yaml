@@ -13,3 +13,11 @@ repos:
         name: Check .editorconfig rules
         args: ["-no-color"]
         types_or: [text]
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: Check ESLint rules
+        entry: yarn lint
+        language: system
+        pass_filenames: false

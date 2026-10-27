@@ -31,3 +31,29 @@ jobs:
 
     - name: Check code formatting
       run: editorconfig-checker -no-color
+
+  eslint:
+    name: Check ESLint rules
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install dependencies
+        env:
+          YARN_NETWORK_CONCURRENCY: '1'
+        run: yarn install --frozen-lockfile
+
+      - name: Check ESLint rules
+        run: yarn lint

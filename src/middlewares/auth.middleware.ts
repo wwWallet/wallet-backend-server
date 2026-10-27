@@ -37,7 +37,7 @@ export async function createAppToken(user: UserEntity): Promise<string> {
 async function verifyApptoken(jwt: string): Promise<AppTokenPayload | false> {
 	const secret = new TextEncoder().encode(config.appSecret);
 	try {
-		const { payload, protectedHeader } = await jwtVerify(jwt, secret);
+		const { payload } = await jwtVerify(jwt, secret);
 		if (payload?.v === TOKEN_PAYLOAD_VERSION) {
 			// The combination of a valid signature and the correct version
 			// guarantees that this type assertion is sound
@@ -61,7 +61,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		return;
 	}
 
-	let token: string = authorizationHeader.substring(7);
+	const token: string = authorizationHeader.substring(7);
 
 	verifyApptoken(token).then(async (payload) => {
 		if (!payload) {
@@ -84,7 +84,7 @@ export function AuthMiddleware(req: Request, res: Response, next: NextFunction) 
 		res.status(401).send(); // Unauthorized
 		return;
 	})
-		.catch(e => {
+		.catch(() => {
 			log.error("Unauthorized access");
 			res.status(401).send(); // Unauthorized
 			return;

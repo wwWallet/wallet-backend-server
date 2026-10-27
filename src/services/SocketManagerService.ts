@@ -65,7 +65,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 		if (!ws) {
 			return Err(ExpectingSocketMessageErr.FAILED_TO_RECEIVE);
 		}
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve) => {
 			ws.onmessage = event => {
 				try {
 					const clientMessage = JSON.parse(event.data.toString()) as ClientSocketMessage;
@@ -78,7 +78,7 @@ export class SocketManagerService implements SocketManagerServiceInterface {
 					}
 					return resolve(Ok({ message: clientMessage }));
 				}
-				catch (e) {
+				catch {
 					resolve(Err(ExpectingSocketMessageErr.FAILED_TO_RECEIVE));
 				}
 			}

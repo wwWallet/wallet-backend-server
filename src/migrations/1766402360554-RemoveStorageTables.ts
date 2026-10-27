@@ -7,5 +7,5 @@ export class RemoveStorageTables1766402360554 implements MigrationInterface {
 		await queryRunner.query(`DROP TABLE verifiable_presentation`);
 	}
 
-	public async down(queryRunner: QueryRunner): Promise<void> { }
+	public async down(_queryRunner: QueryRunner): Promise<void> { }
 }

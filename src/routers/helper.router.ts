@@ -29,7 +29,7 @@ helperRouter.post('/get-cert', async (req, res) => {
 			log.info("parsing cert...");
 			log.info({ subject: certificate.subject, issuer: certificate.issuer }, 'Fetched certificate');
 			let cert = certificate;
-			let certChainPEM = [];
+			const certChainPEM = [];
 			const x5c = [];
 			while (cert) {
 				const pemCert = `-----BEGIN CERTIFICATE-----\n${cert.raw.toString('base64').match(/.{1,64}/g).join('\n')}\n-----END CERTIFICATE-----\n`;
