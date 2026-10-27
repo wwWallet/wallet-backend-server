@@ -20,8 +20,8 @@ export function makeCreateOptions({
 	prfSalt?: Buffer,
 	user: {
 		uuid: UserId,
-		name: string,
-		displayName: string,
+		name: string | null,
+		displayName: string | null,
 		webauthnCredentials?: WebauthnCredentialEntity[],
 	},
 }) {

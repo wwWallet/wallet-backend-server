@@ -37,8 +37,8 @@ noAuthUserController.use('/session', userController);
 async function initSession(user: UserEntity): Promise<{
 	uuid: UserId,
 	appToken: string,
-	username?: string,
-	displayName: string,
+	username: string | null,
+	displayName: string | null,
 	privateData: Buffer,
 	webauthnRpId: string,
 }> {

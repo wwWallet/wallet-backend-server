@@ -16,12 +16,12 @@ class CredentialIssuerEntity {
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, type: "varchar", default: () => "NULL" })
-	clientId?: string;
+	clientId!: string | null;
 
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
 	@Column({ nullable: true, type: "tinyint", default: () => "NULL" })
-	visible!: boolean;
+	visible!: boolean | null;
 }
 
 enum GetLegalPersonErr {

@@ -87,19 +87,19 @@ class UserEntity {
 	uuid!: UserId;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ unique: true, nullable: true, default: () => "NULL" })
-	username!: string;
+	@Column({ type: "varchar", unique: true, nullable: true, default: () => "NULL" })
+	username!: string | null;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ unique: false, nullable: true, default: () => "NULL" })
-	displayName!: string;
+	@Column({ type: "varchar", unique: false, nullable: true, default: () => "NULL" })
+	displayName!: string | null;
 
 	@Column({ unique: true, nullable: false })
 	did!: string;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ nullable: true, default: () => "NULL" })
-	passwordHash!: string;
+	@Column({ type: "varchar", nullable: true, default: () => "NULL" })
+	passwordHash!: string | null;
 
 
 	@Column({ type: 'blob', nullable: false })
@@ -144,8 +144,8 @@ class WebauthnCredentialEntity {
 	_userHandle?: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ nullable: true, default: () => "NULL" })
-	name!: string;
+	@Column({ type: "varchar", nullable: true, default: () => "NULL" })
+	name!: string | null;
 
 	@Column({ type: "datetime", nullable: false, update: false })
 	createTime!: Date;

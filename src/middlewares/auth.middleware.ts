@@ -18,7 +18,7 @@ type AppTokenPayload = {
 }
 
 export type AppTokenUser = {
-	username: string;
+	username: string | null;
 	id: UserId;
 	did: string;
 }

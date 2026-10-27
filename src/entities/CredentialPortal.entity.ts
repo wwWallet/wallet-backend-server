@@ -30,7 +30,7 @@ class CredentialPortalEntity {
 	url: string = "";
 
 	@Column({ type: "json", nullable: true, default: () => "NULL" })
-	display?: CredentialPortalDisplay[];
+	display!: CredentialPortalDisplay[] | null;
 
 	@Column({ type: "tinyint", default: 1 })
 	visible!: boolean;
