@@ -7,7 +7,7 @@ import { logger } from "../logger";
 
 const log = logger.child({ module: "WalletProviderStatus" });
 
-export type StatusKind = 'wia' | 'ka';
+export type StatusKind = 'wa' | 'ka';
 
 export type WalletProviderStatusReference = {
 	id: string;
@@ -39,7 +39,7 @@ export class WalletProviderStatusOwnerEntity {
 
 @Entity({ name: "wallet_provider_status_cursor" })
 export class WalletProviderStatusCursorEntity {
-	@PrimaryColumn({ type: "varchar", length: 3 })
+	@PrimaryColumn({ type: "varchar", length: 2 })
 	kind: StatusKind;
 
 	@Column({ type: "varchar", length: 36 })
@@ -64,7 +64,7 @@ export class WalletProviderStatusEntryEntity {
 	@JoinColumn({ name: "accountId", foreignKeyConstraintName: "status_owner_fk" })
 	owner: WalletProviderStatusOwnerEntity;
 
-	@Column({ type: "varchar", length: 3 })
+	@Column({ type: "varchar", length: 2 })
 	kind: StatusKind;
 
 	@Column({ type: "varchar", length: 36 })
@@ -173,11 +173,16 @@ export async function allocateWalletProviderStatus(accountId: string, kind: Stat
 
 export async function revokeWalletProviderStatus(accountId: string): Promise<Result<void, WalletProviderStatusErr>> {
 	return runStatusTransaction(async (manager) => {
-		await lockStatusOwner(manager, accountId);
-		await manager.update(WalletProviderStatusOwnerEntity, { accountId }, { revoked: true });
-		await manager.update(WalletProviderStatusEntryEntity, { accountId }, { revoked: true });
+		await revokeWalletProviderStatusInTransaction(manager, accountId);
 		return Ok(undefined);
 	});
+}
+
+/** Use the caller's transaction so deletion and revocation commit or roll back together. */
+export async function revokeWalletProviderStatusInTransaction(manager: EntityManager, accountId: string): Promise<void> {
+	await lockStatusOwner(manager, accountId);
+	await manager.update(WalletProviderStatusOwnerEntity, { accountId }, { revoked: true });
+	await manager.update(WalletProviderStatusEntryEntity, { accountId }, { revoked: true });
 }
 
 export async function getWalletProviderStatusList(listId: string): Promise<Result<{ bits: number; lst: string }, WalletProviderStatusErr>> {
