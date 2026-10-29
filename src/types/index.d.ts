@@ -1,7 +1,7 @@
-import { AppTokenUser } from "../middlewares/auth.middleware";
+import { AppTokenUser } from '../middlewares/auth.middleware';
 
 // to make the file a module and avoid the TypeScript error
-export {}
+export {};
 
 declare global {
 	namespace Express {

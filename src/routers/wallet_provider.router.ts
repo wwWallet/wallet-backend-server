@@ -36,10 +36,10 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 	}
 	catch (err) {
 		const errorResponse = {
-			error: "UNSUPPORTED",
-			message: "key attestation generation is not supported",
+			error: 'UNSUPPORTED',
+			message: 'key attestation generation is not supported',
 		};
-		log.error({ err, errorResponse }, "Key attestation generation is not supported");
+		log.error({ err, errorResponse }, 'Key attestation generation is not supported');
 		return res.status(400).send(errorResponse);
 	}
 

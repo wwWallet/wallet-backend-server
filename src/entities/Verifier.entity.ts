@@ -1,43 +1,36 @@
-import { Err, Ok, Result } from "ts-results";
-import { Column, Entity, PrimaryGeneratedColumn, Repository } from "typeorm";
-import AppDataSource from "../AppDataSource";
-import { logger } from "../logger";
+import { Err, Ok, Result } from 'ts-results';
+import { Column, Entity, PrimaryGeneratedColumn, Repository } from 'typeorm';
+import AppDataSource from '../AppDataSource';
+import { logger } from '../logger';
 
-const log = logger.child({ module: "Verifier" });
+const log = logger.child({ module: 'Verifier' });
 
-
-@Entity({ name: "verifier" })
+@Entity({ name: 'verifier' })
 class VerifierEntity {
 	@PrimaryGeneratedColumn()
 	id: number = -1;
 
-	@Column({ type: "varchar", nullable: false })
-	name: string = "";
+	@Column({ type: 'varchar', nullable: false })
+	name: string = '';
 
-	@Column({ type: "varchar", nullable: false })
-	url: string = "";
+	@Column({ type: 'varchar', nullable: false })
+	url: string = '';
 }
 
 export enum GetVerifierErr {
-	DB_ERR
+	DB_ERR,
 }
 
 const verifierRepository: Repository<VerifierEntity> = AppDataSource.getRepository(VerifierEntity);
 
-
 async function getAllVerifiers(): Promise<Result<VerifierEntity[], GetVerifierErr>> {
 	try {
-		const issuers = await verifierRepository.createQueryBuilder()
-			.getMany();
+		const issuers = await verifierRepository.createQueryBuilder().getMany();
 		return Ok(issuers);
-	}
-	catch(e) {
-		log.error({ err: e }, "Failed to get verifiers");
+	} catch (e) {
+		log.error({ err: e }, 'Failed to get verifiers');
 		return Err(GetVerifierErr.DB_ERR);
 	}
 }
 
-export {
-	VerifierEntity,
-	getAllVerifiers,
-}
+export { VerifierEntity, getAllVerifiers };

@@ -6,7 +6,6 @@ import { logger } from './logger';
 
 const log = logger.child({ module: 'WebAuthn' });
 
-
 export function getRpId(): string {
 	return config.webauthn.rp.id;
 }
@@ -16,14 +15,14 @@ export function makeCreateOptions({
 	prfSalt,
 	user,
 }: {
-	challenge: Buffer,
-	prfSalt?: Buffer,
+	challenge: Buffer;
+	prfSalt?: Buffer;
 	user: {
-		uuid: UserId,
-		name: string,
-		displayName: string,
-		webauthnCredentials?: WebauthnCredentialEntity[],
-	},
+		uuid: UserId;
+		name: string | null;
+		displayName: string | null;
+		webauthnCredentials?: WebauthnCredentialEntity[];
+	};
 }) {
 	return {
 		publicKey: {
@@ -35,23 +34,21 @@ export function makeCreateOptions({
 			},
 			challenge: challenge,
 			pubKeyCredParams: [
-				{ type: "public-key", alg: -7 },
-				{ type: "public-key", alg: -8 },
-				{ type: "public-key", alg: -257 },
+				{ type: 'public-key', alg: -7 },
+				{ type: 'public-key', alg: -8 },
+				{ type: 'public-key', alg: -257 },
 			],
-			excludeCredentials: (user.webauthnCredentials || []).map(cred => cred.getCredentialDescriptor()),
+			excludeCredentials: (user.webauthnCredentials || []).map((cred) => cred.getCredentialDescriptor()),
 			authenticatorSelection: {
 				requireResidentKey: true,
-				residentKey: "required",
-				userVerification: "required",
+				residentKey: 'required',
+				userVerification: 'required',
 			},
 			attestation: config.webauthn.attestation,
 			extensions: {
 				credProps: true,
 				prf: {
-					eval: prfSalt
-						? { first: prfSalt }
-						: undefined,
+					eval: prfSalt ? { first: prfSalt } : undefined,
 				},
 			},
 		},
@@ -62,17 +59,17 @@ export function makeGetOptions({
 	challenge,
 	user,
 }: {
-	challenge: Buffer,
+	challenge: Buffer;
 	user?: {
-		webauthnCredentials: WebauthnCredentialEntity[],
-	},
+		webauthnCredentials: WebauthnCredentialEntity[];
+	};
 }) {
 	return {
 		publicKey: {
 			rpId: getRpId(),
 			challenge: challenge,
-			allowCredentials: (user?.webauthnCredentials || []).map(cred => cred.getCredentialDescriptor()),
-			userVerification: "required",
+			allowCredentials: (user?.webauthnCredentials || []).map((cred) => cred.getCredentialDescriptor()),
+			userVerification: 'required',
 		},
 	};
 }
@@ -85,7 +82,7 @@ export function stripAttestationStatement(attObj: Buffer | Uint8Array): Buffer {
 	const originalAttestationObject = cbor.decode(attObj);
 	const encoder = new cbor.Encoder({ useRecords: false, variableMapSize: true });
 	const enc = encoder.encode({
-		fmt: "none",
+		fmt: 'none',
 		authData: originalAttestationObject.authData,
 		attStmt: {},
 	});
@@ -93,12 +90,12 @@ export function stripAttestationStatement(attObj: Buffer | Uint8Array): Buffer {
 }
 
 type AuthenticatorFlags = {
-	userPresent: boolean;              // UP
-	userVerified: boolean;             // UV
-	backupEligibility: boolean;        // BE
-	backupState: boolean;              // BS
-	attestedCredentialData: boolean;   // AT
-	extensionData: boolean;            // ED
+	userPresent: boolean; // UP
+	userVerified: boolean; // UV
+	backupEligibility: boolean; // BE
+	backupState: boolean; // BS
+	attestedCredentialData: boolean; // AT
+	extensionData: boolean; // ED
 	rawFlagsByte: number;
 };
 
@@ -110,7 +107,7 @@ const defaultAuthenticatorFlags: AuthenticatorFlags = {
 	attestedCredentialData: false,
 	extensionData: false,
 	rawFlagsByte: 0,
-}
+};
 
 function toUint8Array(value: Buffer | Uint8Array | ArrayBuffer): Uint8Array {
 	if (value instanceof Uint8Array) {
@@ -129,12 +126,12 @@ function parseAuthenticatorFlagsFromAuthenticatorData(authenticatorData: Buffer 
 	const flags = data[32];
 
 	return {
-		userPresent: Boolean(flags & 0x01),             // bit 0 - UP
-		userVerified: Boolean(flags & 0x04),            // bit 2 - UV
-		backupEligibility: Boolean(flags & 0x08),       // bit 3 - BE
-		backupState: Boolean(flags & 0x10),             // bit 4 - BS
-		attestedCredentialData: Boolean(flags & 0x40),  // bit 6 - AT
-		extensionData: Boolean(flags & 0x80),           // bit 7 - ED
+		userPresent: Boolean(flags & 0x01), // bit 0 - UP
+		userVerified: Boolean(flags & 0x04), // bit 2 - UV
+		backupEligibility: Boolean(flags & 0x08), // bit 3 - BE
+		backupState: Boolean(flags & 0x10), // bit 4 - BS
+		attestedCredentialData: Boolean(flags & 0x40), // bit 6 - AT
+		extensionData: Boolean(flags & 0x80), // bit 7 - ED
 		rawFlagsByte: flags,
 	};
 }
@@ -149,17 +146,12 @@ export function parseAuthenticatorFlags(input: Buffer | Uint8Array): Authenticat
 
 		return parseAuthenticatorFlagsFromAuthenticatorData(decoded.authData);
 	} catch (error) {
-
-		log.error({ err: error }, "Cbor decode error");
+		log.error({ err: error }, 'Cbor decode error');
 		return defaultAuthenticatorFlags;
-	};
+	}
 }
 
-
-
-export function getAaguidFromAttestationObject(
-	attestationObject: Buffer | Uint8Array,
-): string | undefined {
+export function getAaguidFromAttestationObject(attestationObject: Buffer | Uint8Array): string | undefined {
 	let authData: Uint8Array;
 	let aaguidstring: string;
 	try {
@@ -173,9 +165,8 @@ export function getAaguidFromAttestationObject(
 
 		aaguidstring = convertAAGUIDToString(authData.slice(37, 53));
 		return aaguidstring;
-
 	} catch (error) {
-		log.error({ err: error }, "Failed to decode attestation object");
+		log.error({ err: error }, 'Failed to decode attestation object');
 		return undefined;
 	}
 }

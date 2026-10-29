@@ -19,11 +19,23 @@ describe('tagged binary JSON', () => {
 	});
 
 	it('preserves nested buffers, arrays, nulls and ordinary JSON values', () => {
-		const value = { privateData: Buffer.from([255]), nested: [Buffer.alloc(0), { bytes: Buffer.from([0]) }],
-			name: 'Wallet', count: 3, enabled: false, optional: null };
+		const value = {
+			privateData: Buffer.from([255]),
+			nested: [Buffer.alloc(0), { bytes: Buffer.from([0]) }],
+			name: 'Wallet',
+			count: 3,
+			enabled: false,
+			optional: null,
+		};
 		const json = jsonStringifyTaggedBinary(value);
-		expect(JSON.parse(json)).toEqual({ privateData: { $b64u: '_w' }, nested: [{ $b64u: '' }, { bytes: { $b64u: 'AA' } }],
-			name: 'Wallet', count: 3, enabled: false, optional: null });
+		expect(JSON.parse(json)).toEqual({
+			privateData: { $b64u: '_w' },
+			nested: [{ $b64u: '' }, { bytes: { $b64u: 'AA' } }],
+			name: 'Wallet',
+			count: 3,
+			enabled: false,
+			optional: null,
+		});
 		expect(jsonParseTaggedBinary(json)).toEqual(value);
 	});
 
@@ -49,7 +61,7 @@ describe('checkedUpdate', () => {
 		expect(current).toEqual(Buffer.from([0, 255]));
 	});
 
-	it.each(['stale', undefined])('rejects a changed value with expected tag %s without mutating either buffer', expected => {
+	it.each(['stale', undefined])('rejects a changed value with expected tag %s without mutating either buffer', (expected) => {
 		const currentValue = Buffer.from(current);
 		const newValue = Buffer.from(next);
 		expect(checkedUpdate(expected, tag, { currentValue, newValue }).err).toBe(true);
@@ -65,23 +77,30 @@ describe('checkedUpdate', () => {
 	});
 
 	it('accepts an identical reference without evaluating a tag', () => {
-		const result = checkedUpdate('stale', () => { throw new Error('An identical reference needs no tag'); },
-			{ currentValue: current, newValue: current });
+		const result = checkedUpdate(
+			'stale',
+			() => {
+				throw new Error('An identical reference needs no tag');
+			},
+			{ currentValue: current, newValue: current },
+		);
 		expect(result.ok).toBe(true);
 		expect(result.val).toBe(current);
 	});
 
 	it('uses strict equality for expected tags', () => {
-		expect(checkedUpdate<string, string | number>('1', value => value === 'old' ? 1 : 2,
-			{ currentValue: 'old', newValue: 'new' }).err).toBe(true);
+		expect(
+			checkedUpdate<string, string | number>('1', (value) => (value === 'old' ? 1 : 2), { currentValue: 'old', newValue: 'new' }).err,
+		).toBe(true);
 	});
 });
 
 describe('PKCE', () => {
 	it('matches the RFC 7636 Appendix B S256 vector', async () => {
 		// https://www.rfc-editor.org/rfc/rfc7636.html#appendix-B
-		expect(await generateCodeChallengeFromVerifier('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'))
-			.toBe('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+		expect(await generateCodeChallengeFromVerifier('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk')).toBe(
+			'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+		);
 	});
 
 	it('generates independent 32-byte verifiers using the unpadded URL-safe alphabet', () => {
@@ -99,7 +118,7 @@ describe('credential type classification', () => {
 		expect(decideVerifiableCredentialType(['UniversityDegreeCredential', 'VerifiablePresentation'])).toBe('Presentation');
 	});
 
-	it.each(['UniversityDegreeCredential', 'EUROPASSCredential', 'diploma'])('recognizes diploma type %s', type => {
+	it.each(['UniversityDegreeCredential', 'EUROPASSCredential', 'diploma'])('recognizes diploma type %s', (type) => {
 		expect(decideVerifiableCredentialType(['VerifiableCredential', type])).toBe('Diploma');
 	});
 
@@ -109,11 +128,14 @@ describe('credential type classification', () => {
 });
 
 describe('URI validation', () => {
-	it.each(['https://wallet.example/path?query=1#fragment', 'http://localhost:8002', 'openid4vp://authorize'])('accepts absolute URI %s', uri => {
-		expect(isValidUri(uri)).toBe(true);
-	});
+	it.each(['https://wallet.example/path?query=1#fragment', 'http://localhost:8002', 'openid4vp://authorize'])(
+		'accepts absolute URI %s',
+		(uri) => {
+			expect(isValidUri(uri)).toBe(true);
+		},
+	);
 
-	it.each(['', '/relative/path', 'wallet.example', 'http://', 'https://example.com:99999'])('rejects invalid or relative URI %j', uri => {
+	it.each(['', '/relative/path', 'wallet.example', 'http://', 'https://example.com:99999'])('rejects invalid or relative URI %j', (uri) => {
 		expect(isValidUri(uri)).toBe(false);
 	});
 });
@@ -124,7 +146,7 @@ describe('small utility boundaries', () => {
 		expect(isResult(Err('failure'))).toBe(true);
 	});
 
-	it.each([null, undefined, false, 0, 'value', {}, { val: 1 }])('does not treat ordinary value %j as a Result', value => {
+	it.each([null, undefined, false, 0, 'value', {}, { val: 1 }])('does not treat ordinary value %j as a Result', (value) => {
 		expect(isResult<unknown>(value)).toBe(false);
 	});
 });

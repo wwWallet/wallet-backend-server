@@ -1,79 +1,101 @@
-import { JWK } from "jose";
-import { Result } from "ts-results";
+import { JWK } from 'jose';
+import { Result } from 'ts-results';
 import http from 'http';
-import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from "./shared.types";
-import { UserId, WalletType } from "../entities/user.entity";
+import { WalletKeystoreRequest, ServerSocketMessage, SignatureAction, ClientSocketMessage } from './shared.types';
+import { UserId, WalletType } from '../entities/user.entity';
 
 export interface OpenidCredentialReceiving {
-
-	generateAuthorizationRequestURL(userId: UserId, credentialOfferURL?: string, legalPersonIdentifier?: string): Promise<{ redirect_to?: string, preauth?: boolean, ask_for_pin?: boolean }>;
+	generateAuthorizationRequestURL(
+		userId: UserId,
+		credentialOfferURL?: string,
+		legalPersonIdentifier?: string,
+	): Promise<{ redirect_to?: string; preauth?: boolean; ask_for_pin?: boolean }>;
 
 	handleAuthorizationResponse(userId: UserId, authorizationResponseURL: string): Promise<Result<void, IssuanceErr | WalletKeystoreRequest>>;
-	requestCredentialsWithPreAuthorizedGrant(userId: UserId, user_pin: string): Promise<{error?: string}>;
+	requestCredentialsWithPreAuthorizedGrant(userId: UserId, user_pin: string): Promise<{ error?: string }>;
 }
 
 export enum IssuanceErr {
-	STATE_NOT_FOUND = "STATE_NOT_FOUND",
+	STATE_NOT_FOUND = 'STATE_NOT_FOUND',
 }
 
 export enum HandleOutboundRequestError {
-	INSUFFICIENT_CREDENTIALS = "INSUFFICIENT_CREDENTIALS",
+	INSUFFICIENT_CREDENTIALS = 'INSUFFICIENT_CREDENTIALS',
 }
 
 export enum SendResponseError {
-	SEND_RESPONSE_ERROR = "SEND_RESPONSE_ERROR",
+	SEND_RESPONSE_ERROR = 'SEND_RESPONSE_ERROR',
 }
 
-
-export type AdditionalKeystoreParameters = {
-
-}
+export type AdditionalKeystoreParameters = {};
 
 export type RegistrationParams = {
 	keys?: any;
 	privateData?: Buffer;
 	displayName: string;
-}
-
+};
 
 export interface WalletKeystoreManager {
-	initializeWallet(registrationParams: RegistrationParams): Promise<Result<{ keys: Buffer, displayName: string, privateData: Buffer, walletType: WalletType }, WalletKeystoreErr>>;
+	initializeWallet(
+		registrationParams: RegistrationParams,
+	): Promise<Result<{ keys: Buffer; displayName: string; privateData: Buffer; walletType: WalletType }, WalletKeystoreErr>>;
 
-	signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
-	generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
+	signJwtPresentation(
+		userId: UserId,
+		nonce: string,
+		audience: string,
+		verifiableCredentials: any[],
+		additionalParameters?: AdditionalKeystoreParameters,
+	): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
+	generateOpenid4vciProof(
+		userId: UserId,
+		audience: string,
+		nonce: string,
+		additionalParameters?: AdditionalKeystoreParameters,
+	): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
 }
 
 export interface WalletKeystore {
-
-	signJwtPresentation(userId: UserId, nonce: string, audience: string, verifiableCredentials: any[], additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
-	generateOpenid4vciProof(userId: UserId, audience: string, nonce: string, additionalParameters?: AdditionalKeystoreParameters): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
+	signJwtPresentation(
+		userId: UserId,
+		nonce: string,
+		audience: string,
+		verifiableCredentials: any[],
+		additionalParameters?: AdditionalKeystoreParameters,
+	): Promise<Result<{ vpjwt: string }, WalletKeystoreErr>>;
+	generateOpenid4vciProof(
+		userId: UserId,
+		audience: string,
+		nonce: string,
+		additionalParameters?: AdditionalKeystoreParameters,
+	): Promise<Result<{ proof_jwt: string }, WalletKeystoreErr>>;
 }
 
 export enum WalletKeystoreErr {
-	ADDITIONAL_PARAMS_NOT_FOUND = "additional-params-not-found",
-	FAILED_TO_GENERATE_KEYS = "keys-failed-to-generate",
-	KEYS_UNAVAILABLE = "keys-unavailable",
-	REMOTE_SIGNING_FAILED = "remote-signing-failed"
+	ADDITIONAL_PARAMS_NOT_FOUND = 'additional-params-not-found',
+	FAILED_TO_GENERATE_KEYS = 'keys-failed-to-generate',
+	KEYS_UNAVAILABLE = 'keys-unavailable',
+	REMOTE_SIGNING_FAILED = 'remote-signing-failed',
 }
-
 
 export interface DidKeyUtilityService {
 	getPublicKeyJwk(did: string): Promise<JWK>;
-	generateKeyPair(): Promise<{ did: string, key: any }>
+	generateKeyPair(): Promise<{ did: string; key: any }>;
 }
-
-
-
 
 export enum ExpectingSocketMessageErr {
 	WRONG_MESSAGE_ID = 'wrong-message-id',
 	WRONG_ACTION = 'wrong-action',
-	FAILED_TO_RECEIVE = 'failed-to-receive'
+	FAILED_TO_RECEIVE = 'failed-to-receive',
 }
 
 export interface SocketManagerServiceInterface {
-	register(server: http.Server);
+	register(server: http.Server): void;
 
 	send(userId: UserId, message: ServerSocketMessage): Promise<Result<void, void>>;
-	expect(userId: UserId, message_id: string, action: SignatureAction): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;
+	expect(
+		userId: UserId,
+		message_id: string,
+		action: SignatureAction,
+	): Promise<Result<{ message: ClientSocketMessage }, ExpectingSocketMessageErr>>;
 }

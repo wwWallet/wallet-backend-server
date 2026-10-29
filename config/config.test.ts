@@ -60,15 +60,15 @@ describe('config', () => {
 			port: 3306,
 			username: 'unit-test',
 			password: 'synthetic-password',
-			dbname: 'unit-test'
+			dbname: 'unit-test',
 		});
 		expect(config.webauthn).toEqual({
 			attestation: 'direct',
 			origin: ['https://wallet.example'],
 			rp: {
 				id: 'wallet.example',
-				name: 'wwWallet demo'
-			}
+				name: 'wwWallet demo',
+			},
 		});
 	});
 
@@ -104,7 +104,7 @@ describe('config', () => {
 		expect(config.metadata).toEqual({
 			fidoUrl: 'https://fido.invalid',
 			communityAaguidUrl: 'https://community.invalid',
-			refreshIntervalMs: 1234
+			refreshIntervalMs: 1234,
 		});
 	});
 
@@ -113,7 +113,7 @@ describe('config', () => {
 		expect((await importConfig()).webauthn.origin).toEqual(['https://one.example', 'https://two.example']);
 	});
 
-	it.each(['true', 'TRUE', 'TrUe'])('enables flags for case-insensitive true (%s)', async value => {
+	it.each(['true', 'TRUE', 'TrUe'])('enables flags for case-insensitive true (%s)', async (value) => {
 		process.env.REGISTRATION_DISABLED = value;
 		process.env.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS = value;
 		const config = await importConfig();
@@ -129,18 +129,28 @@ describe('config', () => {
 		expect(config.debugAcceptUnauthorizedHttps).toBe(false);
 	});
 
-	it.each(['PORT', 'APP_SECRET', 'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME', 'WEBAUTHN_ORIGIN', 'WEBAUTHN_RP_ID'])
-		('rejects missing required setting %s', async name => {
-			delete process.env[name];
-			await expect(importConfig()).rejects.toThrow(`- ${name} is required`);
-		});
+	const requiredSettings = [
+		'PORT',
+		'APP_SECRET',
+		'DB_HOST',
+		'DB_PORT',
+		'DB_USER',
+		'DB_PASSWORD',
+		'DB_NAME',
+		'WEBAUTHN_ORIGIN',
+		'WEBAUTHN_RP_ID',
+	];
+	it.each(requiredSettings)('rejects missing required setting %s', async (name) => {
+		delete process.env[name];
+		await expect(importConfig()).rejects.toThrow(`- ${name} is required`);
+	});
 
 	it('treats an empty required value as unset', async () => {
 		process.env.APP_SECRET = '';
 		await expect(importConfig()).rejects.toThrow('- APP_SECRET is required');
 	});
 
-	it.each(['0', '65536', '-1', '8002suffix', '1.5'])('rejects invalid port %j', async value => {
+	it.each(['0', '65536', '-1', '8002suffix', '1.5'])('rejects invalid port %j', async (value) => {
 		process.env.PORT = value;
 		process.env.DB_PORT = value;
 		await expect(importConfig()).rejects.toThrow('- PORT must be a port number');
@@ -155,7 +165,7 @@ describe('config', () => {
 		expect(config.db.port).toBe(65535);
 	});
 
-	it.each(['0', '-1', 'invalid', ''])('uses the metadata refresh default for %j', async value => {
+	it.each(['0', '-1', 'invalid', ''])('uses the metadata refresh default for %j', async (value) => {
 		process.env.METADATA_REFRESH_INTERVAL_MS = value;
 		expect((await importConfig()).metadata.refreshIntervalMs).toBe(604800000);
 	});
@@ -202,22 +212,17 @@ describe('config', () => {
 			DEBUG_TLS: 'false',
 			DEV_FEATURE: '',
 			UNSAFE_MODE: '0',
-			INSECURE_HTTP: 'true'
+			INSECURE_HTTP: 'true',
 		});
 		const { getUnsafeEnvironmentVariables } = await import('../src/configValidation');
-		expect(getUnsafeEnvironmentVariables().sort()).toEqual([
-			'DEBUG_TLS',
-			'DEV_FEATURE',
-			'INSECURE_HTTP',
-			'UNSAFE_MODE'
-		]);
+		expect(getUnsafeEnvironmentVariables().sort()).toEqual(['DEBUG_TLS', 'DEV_FEATURE', 'INSECURE_HTTP', 'UNSAFE_MODE']);
 	});
 
 	it('does not match safe names that merely contain an unsafe word', async () => {
 		Object.assign(process.env, {
 			LOG_DEBUG: 'true',
 			DEVELOPMENT: 'true',
-			NODE_ENV: 'development'
+			NODE_ENV: 'development',
 		});
 		const { getUnsafeEnvironmentVariables } = await import('../src/configValidation');
 		expect(getUnsafeEnvironmentVariables()).toEqual([]);
