@@ -52,6 +52,7 @@ The server refuses to start if a required variable is missing or invalid. Empty 
 | `REGISTRATION_DISABLED` | Set to `true` to disable new user registration (`/user/register`, `/user/register-webauthn-begin`, `/user/register-webauthn-finish`). | Default: `false`. Passkey management for existing users keeps working. |
 | `LOG_LEVEL` | Minimum log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `silent`. | Default: `info`. Logs are JSON on stdout when `NODE_ENV=production`, pretty-printed otherwise. |
 | `LOG_HTTP` | Set to `true` to log every HTTP request (method, path, status, response time). | Default: `false`. The `Authorization` and `Cookie` headers and all query values are redacted. |
+| `WALLET_PROVIDER_ATTESTATION_PROFILE` | Selects wallet and key attestation behavior. | Default: `OID4VCI`. Supported values: `OID4VCI`, `WEBUILD`; unknown values prevent startup. |
 | `DEBUG_ACCEPT_UNAUTHORIZED_HTTPS` | Set to `true` to accept invalid TLS certificates in `/proxy` and `/helper/get-cert`. | **Development only.** With `NODE_ENV=production`, the server refuses to start if any `DEBUG_*` variable is set. |
 
 ## Production

@@ -51,6 +51,9 @@ app.use(
 app.use('/status', statusRouter);
 app.use('/user', userController);
 
+// Some wallet provider endpoints are public, others are guarded in the Router
+app.use('/wallet-provider', walletProviderRouter);
+
 app.use(AuthMiddleware);
 
 // all the following endpoints are guarded by the AuthMiddleware
@@ -59,7 +62,6 @@ app.use('/proxy', proxyRouter);
 app.use('/helper', helperRouter);
 app.use('/relay', ohttpRelayRouter);
 app.use('/verifier', verifierRouter);
-app.use('/wallet-provider', walletProviderRouter);
 
 if (process.env.NODE_ENV === 'production') {
 	const unsafeEnvironmentVariables = getUnsafeEnvironmentVariables();

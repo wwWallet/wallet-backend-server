@@ -116,11 +116,36 @@ export function generateCodeVerifier() {
 export const verifiablePresentationSchemaURL =
 	'https://api-pilot.ebsi.eu/trusted-schemas-registry/v2/schemas/zFj7VdCiHdG4GB6fezdAUKhDEuxFR2bri2ihKLkiZYpE9';
 
-export function removeCertificateMarkers(certString: string) {
-	return certString
-		.replace(/-----BEGIN CERTIFICATE-----/g, '')
-		.replace(/-----END CERTIFICATE-----/g, '')
-		.trim();
+/** Parse one PEM or Base64 DER certificate and emit canonical JOSE x5c encoding. */
+export function canonicalizeCertificateForJosex5c(certificate: string): string {
+	const trimmed = certificate.trim();
+	if (trimmed.startsWith('-----BEGIN CERTIFICATE-----')) {
+		if (!/^-----BEGIN CERTIFICATE-----[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----$/.test(trimmed)) {
+			throw new Error('Expected a single PEM certificate');
+		}
+		return new crypto.X509Certificate(trimmed).raw.toString('base64');
+	}
+	const base64 = trimmed.replace(/\s+/g, '');
+	if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+		throw new Error('Expected a PEM or Base64 DER certificate');
+	}
+	return new crypto.X509Certificate(Buffer.from(base64, 'base64')).raw.toString('base64');
+}
+
+/**
+ * Canonicalize one certificate or a PEM bundle for JOSE x5c.
+ * Preserve the supplied order (signing certificate first); this does not validate trust.
+ */
+export function getKeyAttestationCertificateChain(walletProviderCertificate: string): string[] {
+	const pemPattern = /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g;
+	const certificates = walletProviderCertificate.match(pemPattern);
+	if (!certificates) {
+		return [canonicalizeCertificateForJosex5c(walletProviderCertificate)];
+	}
+	if (walletProviderCertificate.replace(pemPattern, '').trim()) {
+		throw new Error('Unexpected data in PEM certificate chain');
+	}
+	return certificates.map(canonicalizeCertificateForJosex5c);
 }
 
 export async function importPrivateKeyPem(privateKeyPEM: string, algorithm: string) {
