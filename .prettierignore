@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+*.json
+README.md
+
+# Upstream authenticator metadata kept as fallback snapshots.
+resources/metadata/

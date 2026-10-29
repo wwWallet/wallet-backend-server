@@ -7,28 +7,27 @@ import { logger } from '../logger';
 
 const log = logger.child({ module: 'MetadataService' });
 
-const FidoMetadataSchema = z.object({
-	no: z.number().optional()
-}).catchall(
-	z.object({
-		friendlyNames: z.record(z.string(), z.string()).optional()
+const FidoMetadataSchema = z
+	.object({
+		no: z.number().optional(),
 	})
-).refine(
-	data => Object.keys(data).some(key => key !== 'no'),
-	{ message: 'Metadata must contain at least one authenticator entry' }
-);
+	.catchall(
+		z.object({
+			friendlyNames: z.record(z.string(), z.string()).optional(),
+		}),
+	)
+	.refine((data) => Object.keys(data).some((key) => key !== 'no'), { message: 'Metadata must contain at least one authenticator entry' });
 
-const CommunityMetadataSchema = z.record(
-	z.string(),
-	z.object({
-		name: z.string(),
-		icon_light: z.string().optional(),
-		icon_dark: z.string().optional()
-	})
-).refine(
-	data => Object.keys(data).length > 0,
-	{ message: 'Metadata must contain at least one authenticator entry' }
-);
+const CommunityMetadataSchema = z
+	.record(
+		z.string(),
+		z.object({
+			name: z.string(),
+			icon_light: z.string().optional(),
+			icon_dark: z.string().optional(),
+		}),
+	)
+	.refine((data) => Object.keys(data).length > 0, { message: 'Metadata must contain at least one authenticator entry' });
 
 type FidoMetadata = z.infer<typeof FidoMetadataSchema>;
 type CommunityMetadata = z.infer<typeof CommunityMetadataSchema>;
@@ -93,7 +92,7 @@ async function refreshCache<T>(
 	url: string,
 	sourceName: string,
 	fallbackFilePath: string,
-	schema: z.Schema<T>
+	schema: z.Schema<T>,
 ): Promise<void> {
 	if (!isStale(cache)) return;
 	if (cache.inFlight) return cache.inFlight;
@@ -123,10 +122,9 @@ async function refreshCache<T>(
 			networkSuccess = true;
 
 			log.info(`Background refresh: Successfully downloaded new data for ${sourceName}.`);
-
 		} catch (error) {
 			if (!cache.tillNextFetch || cache.tillNextFetch < Date.now()) {
-				cache.tillNextFetch = Date.now() + 24*60*60*1000;
+				cache.tillNextFetch = Date.now() + 24 * 60 * 60 * 1000;
 			}
 			log.error({ err: error }, `Could not load (or validate) ${sourceName} from network`);
 		}
@@ -160,7 +158,13 @@ export function fetchFido(): Promise<void> {
 
 export function fetchCommunity(): Promise<void> {
 	const fallbackPath = path.join(process.cwd(), 'resources/metadata/aaguid.json');
-	return refreshCache(communityMetadata, config.metadata.communityAaguidUrl, 'Community Passkey MDS', fallbackPath, CommunityMetadataSchema);
+	return refreshCache(
+		communityMetadata,
+		config.metadata.communityAaguidUrl,
+		'Community Passkey MDS',
+		fallbackPath,
+		CommunityMetadataSchema,
+	);
 }
 
 let loggedInit = false;
@@ -182,7 +186,7 @@ export function initializeMetadataService(): Promise<void> {
 			} else if (fidoSuccess || communitySuccess) {
 				log.warn(
 					`Partially initialized. Total known authenticators: ${totalAuthenticators}. ` +
-					`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`
+						`(FIDO: ${fidoSuccess ? 'Success' : 'Failed'}, Community: ${communitySuccess ? 'Success' : 'Failed'})`,
 				);
 				loggedInit = true;
 			} else {
@@ -196,9 +200,7 @@ export function initializeMetadataService(): Promise<void> {
 	return initialization;
 }
 
-export async function getAuthenticatorFriendlyName(
-	aaguid: string | undefined
-): Promise<string | undefined> {
+export async function getAuthenticatorFriendlyName(aaguid: string | undefined): Promise<string | undefined> {
 	if (!aaguid) {
 		return undefined;
 	}

@@ -1,6 +1,7 @@
 import eslint from '@eslint/js';
 import vitest from '@vitest/eslint-plugin';
 import { defineConfig } from 'eslint/config';
+import prettierConfig from 'eslint-config-prettier/flat';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -18,7 +19,6 @@ export default defineConfig(
 			globals: globals.node,
 		},
 		rules: {
-			// Preserve existing type contracts while adopting the recommended presets.
 			'@typescript-eslint/no-explicit-any': 'off',
 			'@typescript-eslint/no-empty-object-type': 'off',
 			'@typescript-eslint/no-unused-vars': [
@@ -33,5 +33,11 @@ export default defineConfig(
 	{
 		...vitest.configs.recommended,
 		files: ['{src,config}/**/*.test.ts'],
+	},
+	prettierConfig,
+	{
+		rules: {
+			'no-unexpected-multiline': 'error',
+		},
 	},
 );

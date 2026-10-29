@@ -7,9 +7,7 @@ import express, { Request, Response, Router } from 'express';
 const statusRouter: Router = express.Router();
 
 statusRouter.get('/', (_req: Request, res: Response) => {
-	res.status(200).send({status: 'ok'});
+	res.status(200).send({ status: 'ok' });
 });
 
-export {
-	statusRouter
-}
+export { statusRouter };

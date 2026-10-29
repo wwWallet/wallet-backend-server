@@ -9,16 +9,16 @@ const log = logger.child({ module: 'Proxy' });
 const proxyRouter: Router = express.Router();
 
 const agent = new https.Agent({
-	rejectUnauthorized: !config.debugAcceptUnauthorizedHttps
+	rejectUnauthorized: !config.debugAcceptUnauthorizedHttps,
 });
 
-const plainHeaders = (headers: unknown) => headers instanceof AxiosHeaders ? headers.toJSON() : headers;
+const plainHeaders = (headers: unknown) => (headers instanceof AxiosHeaders ? headers.toJSON() : headers);
 
 proxyRouter.post('/', async (req, res) => {
 	const { headers, method, url, data } = req.body;
 	try {
 		const isBinaryRequest = /\.(png|jpe?g|gif|webp|bmp|tiff?|ico)(\?.*)?(#.*)?$/i.test(url);
-		log.debug({ url: typeof url === "string" ? url.split(/[?#]/)[0] : url }, "Proxying request");
+		log.debug({ url: typeof url === 'string' ? url.split(/[?#]/)[0] : url }, 'Proxying request');
 		const response = await axios({
 			url: url,
 			// no compression by default: binary responses forward the upstream content-length, which would not match the decompressed body
@@ -49,24 +49,24 @@ proxyRouter.post('/', async (req, res) => {
 			headers: plainHeaders(response.headers),
 			data: response.data,
 		});
-	}
-	catch (err) {
+	} catch (err) {
 		const response = axios.isAxiosError(err) ? err.response : undefined;
 		if (response && response.data) {
-			log.error({
-				status: response.status,
-				error: response.data?.error,
-				error_description: response.data?.error_description,
-			}, "Upstream error response");
+			log.error(
+				{
+					status: response.status,
+					error: response.data?.error,
+					error_description: response.data?.error_description,
+				},
+				'Upstream error response',
+			);
 		}
 		if (response && response.status == 302) {
-			return res.status(200).send({ status: response.status, headers: plainHeaders(response.headers), data: {} })
+			return res.status(200).send({ status: response.status, headers: plainHeaders(response.headers), data: {} });
 		}
 		const status = response?.status ?? 500;
 		return res.status(status).send({ status, data: response?.data, headers: plainHeaders(response?.headers) });
 	}
-})
+});
 
-export {
-	proxyRouter
-}
+export { proxyRouter };

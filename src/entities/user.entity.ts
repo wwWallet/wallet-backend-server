@@ -1,22 +1,32 @@
-import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Repository, EntityManager, DeepPartial, Generated, Equal } from "typeorm"
-import crypto from "node:crypto";
-import base64url from "base64url";
+import { Err, Ok, Result } from 'ts-results';
+import {
+	Entity,
+	PrimaryGeneratedColumn,
+	Column,
+	ManyToOne,
+	OneToMany,
+	Repository,
+	EntityManager,
+	DeepPartial,
+	Generated,
+	Equal,
+} from 'typeorm';
+import crypto from 'node:crypto';
+import base64url from 'base64url';
 import * as uuid from 'uuid';
 
-import AppDataSource from "../AppDataSource";
-import * as scrypt from "../scrypt";
-import { checkedUpdate, EtagUpdate, isResult } from "../util/util";
-import { runTransaction } from "./common.entity";
-import { logger } from "../logger";
+import AppDataSource from '../AppDataSource';
+import * as scrypt from '../scrypt';
+import { checkedUpdate, EtagUpdate, isResult } from '../util/util';
+import { runTransaction } from './common.entity';
+import { logger } from '../logger';
 
-const log = logger.child({ module: "UserEntity" });
+const log = logger.child({ module: 'UserEntity' });
 
 export enum WalletType {
 	DB,
-	CLIENT
+	CLIENT,
 }
-
 
 /**
  * Compute a value suitable to use as an ETag-style HTTP header for the private data field.
@@ -25,7 +35,6 @@ export function privateDataEtag(privateData: Buffer): string {
 	const etag = base64url.toBase64(base64url.encode(crypto.createHash('sha256').update(privateData).digest()));
 	return `"${etag}"`;
 }
-
 
 // Duplicated in wallet-frontend
 export class UserId {
@@ -55,12 +64,11 @@ export class UserId {
 	}
 
 	public asUserHandle(): Buffer {
-		return Buffer.from(this.id, "utf8");
+		return Buffer.from(this.id, 'utf8');
 	}
 }
 
-
-@Entity({ name: "user" })
+@Entity({ name: 'user' })
 class UserEntity {
 	/**
 	 * This was obsoleted by PR (TBD).
@@ -68,7 +76,7 @@ class UserEntity {
 	 * It still needs to be the primary ID in order for table relations to continue working.
 	 */
 	@Column({ primary: true, unique: true, nullable: false, update: false })
-	@Generated("increment")
+	@Generated('increment')
 	private id!: number;
 
 	/**
@@ -79,55 +87,56 @@ class UserEntity {
 		unique: true,
 		nullable: false,
 		update: false,
-		name: "webauthnUserHandle",
-		type: "varchar",
+		name: 'webauthnUserHandle',
+		type: 'varchar',
 		length: 36,
 		transformer: { from: UserId.fromId, to: (userId: UserId) => userId.id },
 	})
 	uuid!: UserId;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "varchar", unique: true, nullable: true, default: () => "NULL" })
+	@Column({ type: 'varchar', unique: true, nullable: true, default: () => 'NULL' })
 	username!: string | null;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "varchar", unique: false, nullable: true, default: () => "NULL" })
+	@Column({ type: 'varchar', unique: false, nullable: true, default: () => 'NULL' })
 	displayName!: string | null;
 
 	@Column({ unique: true, nullable: false })
 	did!: string;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "varchar", nullable: true, default: () => "NULL" })
+	@Column({ type: 'varchar', nullable: true, default: () => 'NULL' })
 	passwordHash!: string | null;
-
 
 	@Column({ type: 'blob', nullable: false })
 	keys!: Buffer;
 
-
-	@Column({ type: "bool", default: false })
+	@Column({ type: 'bool', default: false })
 	isAdmin: boolean = false;
 
-	@Column({ type: "mediumblob", nullable: false })
+	@Column({ type: 'mediumblob', nullable: false })
 	privateData!: Buffer;
 
-
-	@Column({ type: "enum" ,enum: WalletType, default: WalletType.DB })
+	@Column({ type: 'enum', enum: WalletType, default: WalletType.DB })
 	walletType!: WalletType;
 
-	@OneToMany(
-		() => WebauthnCredentialEntity, (credential) => credential.user,
-		{ cascade: true, onDelete: "CASCADE", orphanedRowAction: "delete", eager: true, nullable: false })
+	@OneToMany(() => WebauthnCredentialEntity, (credential) => credential.user, {
+		cascade: true,
+		onDelete: 'CASCADE',
+		orphanedRowAction: 'delete',
+		eager: true,
+		nullable: false,
+	})
 	webauthnCredentials!: WebauthnCredentialEntity[];
 
 	@Column({ nullable: false, default: 0 })
 	openidRefreshTokenMaxAgeInSeconds!: number;
 }
 
-@Entity({ name: "webauthn_credential" })
+@Entity({ name: 'webauthn_credential' })
 class WebauthnCredentialEntity {
-	@PrimaryGeneratedColumn("uuid")
+	@PrimaryGeneratedColumn('uuid')
 	id!: string;
 
 	@ManyToOne(() => UserEntity, (user) => user.webauthnCredentials, { nullable: false })
@@ -140,17 +149,17 @@ class WebauthnCredentialEntity {
 	 * This was obsoleted by PR (TBD).
 	 * We keep the table column for forward- and backwards compatibility between application and schema versions.
 	 */
-	@Column({ name: "userHandle", nullable: false, select: false, update: false })
+	@Column({ name: 'userHandle', nullable: false, select: false, update: false })
 	_userHandle?: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "varchar", nullable: true, default: () => "NULL" })
+	@Column({ type: 'varchar', nullable: true, default: () => 'NULL' })
 	name!: string | null;
 
-	@Column({ type: "datetime", nullable: false, update: false })
+	@Column({ type: 'datetime', nullable: false, update: false })
 	createTime!: Date;
 
-	@Column({ type: "datetime", nullable: false })
+	@Column({ type: 'datetime', nullable: false })
 	lastUseTime!: Date;
 
 	@Column({ nullable: false, update: false })
@@ -159,7 +168,7 @@ class WebauthnCredentialEntity {
 	@Column({ nullable: false })
 	signatureCount: number = 0;
 
-	@Column("simple-json", { nullable: false })
+	@Column('simple-json', { nullable: false })
 	transports!: string[];
 
 	@Column({ nullable: false, update: false })
@@ -173,66 +182,65 @@ class WebauthnCredentialEntity {
 
 	getCredentialDescriptor() {
 		return {
-			type: "public-key",
+			type: 'public-key',
 			id: this.credentialId,
 			transports: this.transports || [],
 		};
 	}
 }
 
-
-type CreateUser = {
-	username: string;
-	displayName: string,
-	passwordHash: string;
-	privateData: Buffer;
-} | {
-	uuid: UserId;
-	displayName: string,
-	keys: Buffer;
-	privateData: Buffer;
-	webauthnCredentials: WebauthnCredentialEntity[];
-}
-
+type CreateUser =
+	| {
+			username: string;
+			displayName: string;
+			passwordHash: string;
+			privateData: Buffer;
+	  }
+	| {
+			uuid: UserId;
+			displayName: string;
+			keys: Buffer;
+			privateData: Buffer;
+			webauthnCredentials: WebauthnCredentialEntity[];
+	  };
 
 enum CreateUserErr {
-	ALREADY_EXISTS = "ALREADY_EXISTS"
+	ALREADY_EXISTS = 'ALREADY_EXISTS',
 }
 
 enum GetUserErr {
-	NOT_EXISTS = "NOT_EXISTS",
-	DB_ERR = "DB_ERR"
+	NOT_EXISTS = 'NOT_EXISTS',
+	DB_ERR = 'DB_ERR',
 }
 
 enum UpdateUserErr {
-	NOT_EXISTS = "NOT_EXISTS",
-	DB_ERR = "DB_ERR",
-	LAST_WEBAUTHN_CREDENTIAL = "LAST_WEBAUTHN_CREDENTIAL",
-	PRIVATE_DATA_CONFLICT = "PRIVATE_DATA_CONFLICT",
+	NOT_EXISTS = 'NOT_EXISTS',
+	DB_ERR = 'DB_ERR',
+	LAST_WEBAUTHN_CREDENTIAL = 'LAST_WEBAUTHN_CREDENTIAL',
+	PRIVATE_DATA_CONFLICT = 'PRIVATE_DATA_CONFLICT',
 }
 
 enum DeleteUserErr {
-	FAILED_TO_DELETE = "FAILED_TO_DELETE"
+	FAILED_TO_DELETE = 'FAILED_TO_DELETE',
 }
-
 
 const userRepository: Repository<UserEntity> = AppDataSource.getRepository(UserEntity);
 const webauthnCredentialRepository: Repository<WebauthnCredentialEntity> = AppDataSource.getRepository(WebauthnCredentialEntity);
 
-
 async function createUser(createUser: CreateUser, isAdmin: boolean = false): Promise<Result<UserEntity, CreateUserErr>> {
 	try {
-		const uuid = "uuid" in createUser ? createUser.uuid : UserId.generate();
-		const user = await userRepository.save(userRepository.create({
-			...createUser,
-			uuid,
-			did: uuid.id,
-			isAdmin,
-		}));
+		const uuid = 'uuid' in createUser ? createUser.uuid : UserId.generate();
+		const user = await userRepository.save(
+			userRepository.create({
+				...createUser,
+				uuid,
+				did: uuid.id,
+				isAdmin,
+			}),
+		);
 		return Ok(user);
-	}
-	catch (e) {
-		log.error({ err: e }, "Failed to create user");
+	} catch (e) {
+		log.error({ err: e }, 'Failed to create user');
 		return Err(CreateUserErr.ALREADY_EXISTS);
 	}
 }
@@ -244,9 +252,8 @@ async function getUser(id: UserId): Promise<Result<UserEntity, GetUserErr>> {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
 		return Ok(res);
-	}
-	catch (e) {
-		log.error({ err: e }, "getUser failed");
+	} catch (e) {
+		log.error({ err: e }, 'getUser failed');
 		return Err(GetUserErr.NOT_EXISTS);
 	}
 }
@@ -254,14 +261,13 @@ async function getUser(id: UserId): Promise<Result<UserEntity, GetUserErr>> {
 async function deleteUser(id: UserId, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteUserErr>> {
 	try {
 		return await (options?.entityManager || userRepository.manager).transaction(async (manager) => {
-			const user = await manager.findOne(UserEntity, { where: { uuid: Equal(id) }});
+			const user = await manager.findOne(UserEntity, { where: { uuid: Equal(id) } });
 			await manager.delete(WebauthnCredentialEntity, { user });
 			await manager.delete(UserEntity, { uuid: id });
-			return Ok({})
+			return Ok({});
 		});
-	}
-	catch (e) {
-		log.error({ err: e }, "deleteUser failed");
+	} catch (e) {
+		log.error({ err: e }, 'deleteUser failed');
 		return Err(DeleteUserErr.FAILED_TO_DELETE);
 	}
 }
@@ -278,7 +284,6 @@ async function getUserByCredentials(username: string, password: string): Promise
 					} else {
 						return Err(GetUserErr.NOT_EXISTS);
 					}
-
 				} else {
 					// User isn't migrated to scrypt yet - fall back to sha256
 					const sha256Hash = crypto.createHash('sha256').update(password).digest('base64');
@@ -293,7 +298,6 @@ async function getUserByCredentials(username: string, password: string): Promise
 						return Err(GetUserErr.NOT_EXISTS);
 					}
 				}
-
 			} else {
 				// Compute a throwaway hash anyway so we don't leak timing information
 				await scrypt.createHash(password);
@@ -301,22 +305,25 @@ async function getUserByCredentials(username: string, password: string): Promise
 			}
 		});
 	} catch (e) {
-		log.error({ err: e }, "getUserByCredentials failed");
-		return Err(GetUserErr.DB_ERR)
+		log.error({ err: e }, 'getUserByCredentials failed');
+		return Err(GetUserErr.DB_ERR);
 	}
 }
 
-
-async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
+async function getUserByWebauthnCredential(
+	userId: UserId,
+	credentialId: Buffer,
+): Promise<Result<[UserEntity, WebauthnCredentialEntity], GetUserErr>> {
 	try {
-		log.debug({ userId, credentialId: base64url.encode(credentialId) }, "getUserByWebauthnCredential");
-		const q = userRepository.createQueryBuilder("user")
-			.leftJoinAndSelect("user.webauthnCredentials", "credential")
-			.where("user.uuid = :uuid", { uuid: userId.id })
-			.andWhere("credential.credentialId = :credentialId", { credentialId });
-		log.debug({ sql: q.getSql() }, "getUserByWebauthnCredential query");
+		log.debug({ userId, credentialId: base64url.encode(credentialId) }, 'getUserByWebauthnCredential');
+		const q = userRepository
+			.createQueryBuilder('user')
+			.leftJoinAndSelect('user.webauthnCredentials', 'credential')
+			.where('user.uuid = :uuid', { uuid: userId.id })
+			.andWhere('credential.credentialId = :credentialId', { credentialId });
+		log.debug({ sql: q.getSql() }, 'getUserByWebauthnCredential query');
 		const userRes = await q.getOne();
-		log.debug({ userRes }, "getUserByWebauthnCredential result");
+		log.debug({ userRes }, 'getUserByWebauthnCredential result');
 		if (!userRes) {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
@@ -325,40 +332,35 @@ async function getUserByWebauthnCredential(userId: UserId, credentialId: Buffer)
 		} else {
 			return Ok([userRes, userRes.webauthnCredentials[0]]);
 		}
-	}
-	catch (e) {
-		log.error({ err: e }, "getUserByWebauthnCredential failed");
+	} catch (e) {
+		log.error({ err: e }, 'getUserByWebauthnCredential failed');
 		return Err(GetUserErr.DB_ERR);
 	}
 }
 
 async function hasWebauthnCredentialId(credentialId: Buffer): Promise<Result<boolean, GetUserErr>> {
 	try {
-		const count = await webauthnCredentialRepository.createQueryBuilder("credential")
-			.where("credential.credentialId = :credentialId", { credentialId })
+		const count = await webauthnCredentialRepository
+			.createQueryBuilder('credential')
+			.where('credential.credentialId = :credentialId', { credentialId })
 			.getCount();
 		return Ok(count > 0);
-	}
-	catch (e) {
-		log.error({ err: e }, "hasWebauthnCredentialId failed");
+	} catch (e) {
+		log.error({ err: e }, 'hasWebauthnCredentialId failed');
 		return Err(GetUserErr.DB_ERR);
 	}
 }
 
 async function getAllUsers(): Promise<Result<UserEntity[], GetUserErr>> {
 	try {
-
-		const res = await AppDataSource.getRepository(UserEntity)
-			.createQueryBuilder("user")
-			.getMany();
+		const res = await AppDataSource.getRepository(UserEntity).createQueryBuilder('user').getMany();
 		if (!res) {
 			return Err(GetUserErr.NOT_EXISTS);
 		}
 		return Ok(res);
-	}
-	catch (e) {
-		log.error({ err: e }, "getAllUsers failed");
-		return Err(GetUserErr.DB_ERR)
+	} catch (e) {
+		log.error({ err: e }, 'getAllUsers failed');
+		return Err(GetUserErr.DB_ERR);
 	}
 }
 
@@ -369,7 +371,10 @@ function newWebauthnCredentialEntity(data: DeepPartial<WebauthnCredentialEntity>
 	return entity;
 }
 
-async function updateUser<E = never>(id: UserId, update: (user: UserEntity, entityManager: EntityManager) => UserEntity | Result<UserEntity, E>): Promise<Result<UserEntity, UpdateUserErr | E>> {
+async function updateUser<E = never>(
+	id: UserId,
+	update: (user: UserEntity, entityManager: EntityManager) => UserEntity | Result<UserEntity, E>,
+): Promise<Result<UserEntity, UpdateUserErr | E>> {
 	try {
 		return await userRepository.manager.transaction(async (manager) => {
 			const res = await manager.findOne(UserEntity, { where: { uuid: Equal(id) } });
@@ -394,7 +399,7 @@ async function updateUser<E = never>(id: UserId, update: (user: UserEntity, enti
 		if (isResult(e) && e.err) {
 			return e as Result<UserEntity, UpdateUserErr | E>;
 		}
-		log.error({ err: e }, "updateUser failed");
+		log.error({ err: e }, 'updateUser failed');
 		return Err(UpdateUserErr.DB_ERR);
 	}
 }
@@ -409,7 +414,7 @@ async function updateWebauthnCredentialWithManager(
 		const res = await manager.save(updated);
 		return Ok(res);
 	} catch (e) {
-		log.error({ err: e }, "updateWebauthnCredentialWithManager failed");
+		log.error({ err: e }, 'updateWebauthnCredentialWithManager failed');
 		return Err(UpdateUserErr.DB_ERR);
 	}
 }
@@ -423,16 +428,21 @@ async function updateWebauthnCredential(
 	});
 }
 
-async function updateWebauthnCredentialById(userId: UserId, credentialUuid: string, update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
-	log.debug({ userId, credentialUuid }, "updateWebauthnCredentialById");
+async function updateWebauthnCredentialById(
+	userId: UserId,
+	credentialUuid: string,
+	update: (credential: WebauthnCredentialEntity, manager: EntityManager) => WebauthnCredentialEntity,
+): Promise<Result<WebauthnCredentialEntity, UpdateUserErr>> {
+	log.debug({ userId, credentialUuid }, 'updateWebauthnCredentialById');
 	return await webauthnCredentialRepository.manager.transaction(async (manager) => {
-		const q = userRepository.createQueryBuilder("user")
-			.leftJoinAndSelect("user.webauthnCredentials", "credential")
-			.where("user.uuid = :uuid", { uuid: userId.id })
-			.andWhere("credential.id = :credentialUuid", { credentialUuid });
-		log.debug({ query: q.getQueryAndParameters() }, "updateWebauthnCredentialById query");
+		const q = userRepository
+			.createQueryBuilder('user')
+			.leftJoinAndSelect('user.webauthnCredentials', 'credential')
+			.where('user.uuid = :uuid', { uuid: userId.id })
+			.andWhere('credential.id = :credentialUuid', { credentialUuid });
+		log.debug({ query: q.getQueryAndParameters() }, 'updateWebauthnCredentialById query');
 		const userRes = await q.getOne();
-		log.debug({ userRes }, "updateWebauthnCredentialById result");
+		log.debug({ userRes }, 'updateWebauthnCredentialById result');
 
 		const credential = userRes?.webauthnCredentials[0];
 		if (!credential) {
@@ -442,53 +452,57 @@ async function updateWebauthnCredentialById(userId: UserId, credentialUuid: stri
 	});
 }
 
-async function deleteWebauthnCredential(user: UserEntity, credentialUuid: string, updatePrivateData: EtagUpdate<Buffer>): Promise<Result<void, UpdateUserErr>> {
+async function deleteWebauthnCredential(
+	user: UserEntity,
+	credentialUuid: string,
+	updatePrivateData: EtagUpdate<Buffer>,
+): Promise<Result<void, UpdateUserErr>> {
 	try {
-		return Ok(await runTransaction(async (manager) => {
-			const userRes = await manager.findOne(UserEntity, { where: { uuid: Equal(user.uuid) }});
-			if (!userRes) {
-				return Err(UpdateUserErr.NOT_EXISTS);
-			}
+		return Ok(
+			await runTransaction(async (manager) => {
+				const userRes = await manager.findOne(UserEntity, { where: { uuid: Equal(user.uuid) } });
+				if (!userRes) {
+					return Err(UpdateUserErr.NOT_EXISTS);
+				}
 
-			const numCredentials = await manager.createQueryBuilder()
-				.select()
-				.from(WebauthnCredentialEntity, "cred")
-				.where({ user })
-				.getCount();
-			if (numCredentials < 2) {
-				return Err(UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL);
-			}
+				const numCredentials = await manager
+					.createQueryBuilder()
+					.select()
+					.from(WebauthnCredentialEntity, 'cred')
+					.where({ user })
+					.getCount();
+				if (numCredentials < 2) {
+					return Err(UpdateUserErr.LAST_WEBAUTHN_CREDENTIAL);
+				}
 
-			const res = await manager.createQueryBuilder()
-				.delete()
-				.from(WebauthnCredentialEntity)
-				.where({ user, id: credentialUuid })
-				.execute();
-			if (res.affected == null) {
-				return Err(UpdateUserErr.DB_ERR);
-			}
-			if (res.affected > 0) {
-				const newPrivateData = checkedUpdate(
-					updatePrivateData.expectTag,
-					privateDataEtag,
-					{
+				const res = await manager
+					.createQueryBuilder()
+					.delete()
+					.from(WebauthnCredentialEntity)
+					.where({ user, id: credentialUuid })
+					.execute();
+				if (res.affected == null) {
+					return Err(UpdateUserErr.DB_ERR);
+				}
+				if (res.affected > 0) {
+					const newPrivateData = checkedUpdate(updatePrivateData.expectTag, privateDataEtag, {
 						currentValue: userRes.privateData,
 						newValue: updatePrivateData.newValue,
 					});
-				if (newPrivateData.ok) {
-					await manager.update(UserEntity, { uuid: user.uuid }, { privateData: newPrivateData.val });
-					return Ok.EMPTY;
-				} else {
-					return Err(UpdateUserErr.PRIVATE_DATA_CONFLICT);
+					if (newPrivateData.ok) {
+						await manager.update(UserEntity, { uuid: user.uuid }, { privateData: newPrivateData.val });
+						return Ok.EMPTY;
+					} else {
+						return Err(UpdateUserErr.PRIVATE_DATA_CONFLICT);
+					}
+				} else if (res.affected === 0) {
+					return Err(UpdateUserErr.NOT_EXISTS);
 				}
-			} else if (res.affected === 0) {
-				return Err(UpdateUserErr.NOT_EXISTS);
-			}
-		}));
-
+			}),
+		);
 	} catch (e) {
 		log.error({ err: e }, 'Failed to delete WebAuthn credential');
-		const error = Object.values(UpdateUserErr).find(value => value === e);
+		const error = Object.values(UpdateUserErr).find((value) => value === e);
 		return Err(error ?? UpdateUserErr.DB_ERR);
 	}
 }
@@ -511,4 +525,4 @@ export {
 	updateWebauthnCredential,
 	updateWebauthnCredentialById,
 	deleteUser,
-}
+};

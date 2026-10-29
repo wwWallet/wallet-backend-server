@@ -3,8 +3,8 @@ import { readFile } from 'fs/promises';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('node-fetch', async importOriginal => ({
-	...await importOriginal<typeof import('node-fetch')>(),
+vi.mock('node-fetch', async (importOriginal) => ({
+	...(await importOriginal<typeof import('node-fetch')>()),
 	default: vi.fn(),
 }));
 vi.mock('fs/promises', () => ({ readFile: vi.fn() }));
@@ -43,7 +43,7 @@ beforeEach(async () => {
 		[sharedAaguid.toUpperCase()]: { name: 'Community name' },
 		[communityOnlyAaguid]: { name: 'Community-only name' },
 	};
-	vi.mocked(fetch).mockImplementation(async url => {
+	vi.mocked(fetch).mockImplementation(async (url) => {
 		if (url === 'https://fido.invalid/metadata') {
 			return new Response(JSON.stringify(fidoBody), { headers: { ETag: '"fido-v1"' } });
 		}
@@ -114,12 +114,15 @@ describe('metadata caching and failures', () => {
 		vi.mocked(fetch).mockClear();
 		vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 304 }));
 		expect(await metadata.getAuthenticatorFriendlyName(sharedAaguid)).toBe('Community name');
-		for (const [source, etag] of [['fido', 'fido-v1'], ['community', 'community-v1']]) {
+		for (const [source, etag] of [
+			['fido', 'fido-v1'],
+			['community', 'community-v1'],
+		]) {
 			expect(fetch).toHaveBeenCalledWith(
 				`https://${source}.invalid/metadata`,
 				expect.objectContaining({
 					headers: { 'If-None-Match': `"${etag}"` },
-				})
+				}),
 			);
 		}
 		await metadata.initializeMetadataService();
@@ -135,30 +138,30 @@ describe('metadata caching and failures', () => {
 		expect(await metadata.getAuthenticatorFriendlyName(sharedAaguid)).toBe('FIDO name');
 	});
 
-	it.each(['HTTP failure', 'invalid payload', 'connection failure'])(
-		'loads validated fallback data after %s', async failure => {
-			if (failure === 'connection failure') {
-				vi.mocked(fetch).mockRejectedValue(new Error('Connection refused'));
-			} else {
-				vi.mocked(fetch).mockImplementation(async () => failure === 'HTTP failure'
+	it.each(['HTTP failure', 'invalid payload', 'connection failure'])('loads validated fallback data after %s', async (failure) => {
+		if (failure === 'connection failure') {
+			vi.mocked(fetch).mockRejectedValue(new Error('Connection refused'));
+		} else {
+			vi.mocked(fetch).mockImplementation(async () =>
+				failure === 'HTTP failure'
 					? new Response(null, { status: 503 })
-					: new Response(JSON.stringify({ invalid: { friendlyNames: 123, name: 123 } })));
-			}
-			vi.mocked(readFile).mockImplementation(async file => {
-				if (file === path.join(process.cwd(), 'resources/metadata/convenience-metadata.json')) {
-					return JSON.stringify({ [fidoOnlyAaguid]: { friendlyNames: { 'en-US': 'Fallback FIDO' } } });
-				}
-				if (file === path.join(process.cwd(), 'resources/metadata/aaguid.json')) {
-					return JSON.stringify({ [communityOnlyAaguid]: { name: 'Fallback community' } });
-				}
-				throw new Error(`Unexpected fallback path: ${file}`);
-			});
-			expect(await metadata.getAuthenticatorFriendlyName(fidoOnlyAaguid)).toBe('Fallback FIDO');
-			expect(await metadata.getAuthenticatorFriendlyName(communityOnlyAaguid)).toBe('Fallback community');
-			expect(fetch).toHaveBeenCalledTimes(2);
-			expect(readFile).toHaveBeenCalledTimes(2);
+					: new Response(JSON.stringify({ invalid: { friendlyNames: 123, name: 123 } })),
+			);
 		}
-	);
+		vi.mocked(readFile).mockImplementation(async (file) => {
+			if (file === path.join(process.cwd(), 'resources/metadata/convenience-metadata.json')) {
+				return JSON.stringify({ [fidoOnlyAaguid]: { friendlyNames: { 'en-US': 'Fallback FIDO' } } });
+			}
+			if (file === path.join(process.cwd(), 'resources/metadata/aaguid.json')) {
+				return JSON.stringify({ [communityOnlyAaguid]: { name: 'Fallback community' } });
+			}
+			throw new Error(`Unexpected fallback path: ${file}`);
+		});
+		expect(await metadata.getAuthenticatorFriendlyName(fidoOnlyAaguid)).toBe('Fallback FIDO');
+		expect(await metadata.getAuthenticatorFriendlyName(communityOnlyAaguid)).toBe('Fallback community');
+		expect(fetch).toHaveBeenCalledTimes(2);
+		expect(readFile).toHaveBeenCalledTimes(2);
+	});
 
 	it('retains cached data after refresh failure and retries only after backoff expires', async () => {
 		await metadata.initializeMetadataService();
@@ -175,7 +178,7 @@ describe('metadata caching and failures', () => {
 		expect(readFile).not.toHaveBeenCalled();
 	});
 
-	it.each(['missing', 'malformed JSON', 'invalid schema'])('returns no name when both sources and %s fallbacks fail', async fallback => {
+	it.each(['missing', 'malformed JSON', 'invalid schema'])('returns no name when both sources and %s fallbacks fail', async (fallback) => {
 		vi.mocked(fetch).mockRejectedValue(new Error('Connection refused'));
 		if (fallback !== 'missing') {
 			vi.mocked(readFile).mockResolvedValue(fallback === 'malformed JSON' ? '{' : '{}');
@@ -188,8 +191,6 @@ describe('metadata caching and failures', () => {
 		communityBody = {};
 		expect(await metadata.getAuthenticatorFriendlyName(sharedAaguid)).toBe('FIDO name');
 		expect(readFile).toHaveBeenCalledTimes(1);
-		expect(readFile).toHaveBeenCalledWith(
-			path.join(process.cwd(), 'resources/metadata/aaguid.json'), 'utf-8'
-		);
+		expect(readFile).toHaveBeenCalledWith(path.join(process.cwd(), 'resources/metadata/aaguid.json'), 'utf-8');
 	});
 });

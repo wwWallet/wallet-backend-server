@@ -28,13 +28,15 @@ export const logger = pino({
 		censor: CENSOR,
 	},
 
-	transport: process.env.NODE_ENV !== 'production' ?
-		{
-			target: 'pino-pretty',
-			options: {
-				colorize: true,
-				messageFormat: '{if module}[{module}] {end}{msg}',
-				ignore: 'pid,hostname,module',
-			},
-		} : undefined,
+	transport:
+		process.env.NODE_ENV !== 'production'
+			? {
+					target: 'pino-pretty',
+					options: {
+						colorize: true,
+						messageFormat: '{if module}[{module}] {end}{msg}',
+						ignore: 'pid,hostname,module',
+					},
+				}
+			: undefined,
 });

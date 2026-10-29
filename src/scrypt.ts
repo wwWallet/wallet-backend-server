@@ -1,10 +1,9 @@
-import crypto from "node:crypto";
-import base64url from "base64url";
-import { Err, Ok, Result } from "ts-results";
-import { logger } from "./logger";
+import crypto from 'node:crypto';
+import base64url from 'base64url';
+import { Err, Ok, Result } from 'ts-results';
+import { logger } from './logger';
 
-const log = logger.child({ module: "Scrypt" });
-
+const log = logger.child({ module: 'Scrypt' });
 
 // Settings for new password hashes
 // Best practice guidelines from https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#scrypt
@@ -13,10 +12,9 @@ const cost: number = 131072; // 2^17
 const blockSize: number = 8;
 const maxmem: number = 128 * cost * blockSize * 2;
 
-
-function parseParams(passwordHash: string): Result<{ salt: Buffer, keyLen: number, cost: number, blockSize: number }, void> {
+function parseParams(passwordHash: string): Result<{ salt: Buffer; keyLen: number; cost: number; blockSize: number }, void> {
 	try {
-		if (!passwordHash.startsWith("$")) {
+		if (!passwordHash.startsWith('$')) {
 			return Err.EMPTY;
 		}
 
@@ -26,7 +24,6 @@ function parseParams(passwordHash: string): Result<{ salt: Buffer, keyLen: numbe
 		const blockSize = parseInt(splits[3], 10);
 		const salt = base64url.toBuffer(splits[4]);
 		return Ok({ salt, keyLen, cost, blockSize });
-
 	} catch {
 		return Err.EMPTY;
 	}
@@ -34,21 +31,15 @@ function parseParams(passwordHash: string): Result<{ salt: Buffer, keyLen: numbe
 
 async function computeScrypt(password: string, salt: Buffer, keyLen: number, cost: number, blockSize: number): Promise<string> {
 	return new Promise((resolve, reject) => {
-		crypto.scrypt(
-			Buffer.from(password, "utf8"),
-			salt,
-			keyLen,
-			{ cost, blockSize, maxmem },
-			(err, derivedKey) => {
-				if (err) {
-					log.error({ err }, "Failed to compute scrypt hash");
-					reject(err);
-				} else {
-					const result = "$" + [keyLen, cost, blockSize, base64url.encode(salt), base64url.encode(derivedKey)].join("$");
-					resolve(result);
-				}
-			},
-		);
+		crypto.scrypt(Buffer.from(password, 'utf8'), salt, keyLen, { cost, blockSize, maxmem }, (err, derivedKey) => {
+			if (err) {
+				log.error({ err }, 'Failed to compute scrypt hash');
+				reject(err);
+			} else {
+				const result = '$' + [keyLen, cost, blockSize, base64url.encode(salt), base64url.encode(derivedKey)].join('$');
+				resolve(result);
+			}
+		});
 	});
 }
 

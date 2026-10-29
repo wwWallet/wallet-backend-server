@@ -1,17 +1,17 @@
-import { Err, Ok, Result } from "ts-results";
-import { Entity, PrimaryColumn, Column, Repository} from "typeorm"
-import AppDataSource from "../AppDataSource";
-import crypto from "node:crypto";
-import { UserId } from "./user.entity";
-import { logger } from "../logger";
+import { Err, Ok, Result } from 'ts-results';
+import { Entity, PrimaryColumn, Column, Repository } from 'typeorm';
+import AppDataSource from '../AppDataSource';
+import crypto from 'node:crypto';
+import { UserId } from './user.entity';
+import { logger } from '../logger';
 
-const log = logger.child({ module: "WebauthnChallenge" });
-@Entity({ name: "webauthn_challenge" })
+const log = logger.child({ module: 'WebauthnChallenge' });
+@Entity({ name: 'webauthn_challenge' })
 class WebauthnChallengeEntity {
 	@PrimaryColumn()
 	id!: string;
 
-	@Column({ nullable: false})
+	@Column({ nullable: false })
 	type!: string;
 
 	/**
@@ -19,12 +19,12 @@ class WebauthnChallengeEntity {
 	 * We keep the old database column name for forward- and backwards compatibility between application and schema versions.
 	 */
 	@Column({
-		name: "userHandle",
-		type: "varchar",
+		name: 'userHandle',
+		type: 'varchar',
 		length: 255,
 		nullable: true,
 		// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-		default: () => "NULL",
+		default: () => 'NULL',
 		transformer: { from: (id) => id && UserId.fromId(id), to: (userId: UserId) => userId?.id },
 	})
 	userId!: UserId | null;
@@ -33,10 +33,10 @@ class WebauthnChallengeEntity {
 	challenge!: Buffer;
 
 	// Explicit default to workaround a bug in typeorm: https://github.com/typeorm/typeorm/issues/3076#issuecomment-703128687
-	@Column({ type: "blob", nullable: true, default: () => "NULL" })
+	@Column({ type: 'blob', nullable: true, default: () => 'NULL' })
 	prfSalt!: Buffer | null;
 
-	@Column({ type: "datetime", nullable: false })
+	@Column({ type: 'datetime', nullable: false })
 	createTime!: Date;
 }
 
@@ -47,18 +47,17 @@ type CreatedChallenge = {
 	userId?: UserId;
 	challenge: Buffer;
 	prfSalt?: Buffer;
-}
+};
 
 enum ChallengeErr {
-	NOT_EXISTS = "NOT_EXISTS",
-	DB_ERR = "DB_ERR",
-	EXPIRED = "EXPIRED",
+	NOT_EXISTS = 'NOT_EXISTS',
+	DB_ERR = 'DB_ERR',
+	EXPIRED = 'EXPIRED',
 }
 
 const challengeRepository: Repository<WebauthnChallengeEntity> = AppDataSource.getRepository(WebauthnChallengeEntity);
 
-
-async function createChallenge(type: "create" | "get", userId?: UserId, prfSalt?: Buffer): Promise<Result<CreatedChallenge, ChallengeErr>> {
+async function createChallenge(type: 'create' | 'get', userId?: UserId, prfSalt?: Buffer): Promise<Result<CreatedChallenge, ChallengeErr>> {
 	try {
 		const returnData = {
 			userId,
@@ -75,9 +74,8 @@ async function createChallenge(type: "create" | "get", userId?: UserId, prfSalt?
 		await challengeRepository.save(entity);
 
 		return Ok(returnData);
-	}
-	catch (e) {
-		log.error({ err: e }, "Failed to create challenge");
+	} catch (e) {
+		log.error({ err: e }, 'Failed to create challenge');
 		return Err(ChallengeErr.DB_ERR);
 	}
 }
@@ -96,27 +94,20 @@ async function popChallenge(id: string): Promise<Result<WebauthnChallengeEntity,
 			if (res.createTime.getTime() > timeoutThreshold) {
 				await manager.delete(WebauthnChallengeEntity, { id });
 				return Ok(res);
-
 			} else {
 				await manager
 					.createQueryBuilder()
 					.delete()
 					.from(WebauthnChallengeEntity)
-					.where("createTime <= :timeoutThreshold", { timeoutThreshold })
+					.where('createTime <= :timeoutThreshold', { timeoutThreshold })
 					.execute();
 				return Err(ChallengeErr.EXPIRED);
 			}
-		}
-		catch (e) {
-			log.error({ err: e }, "Failed to pop challenge");
+		} catch (e) {
+			log.error({ err: e }, 'Failed to pop challenge');
 			return Err(ChallengeErr.DB_ERR);
 		}
 	});
 }
 
-export {
-	WebauthnChallengeEntity,
-	ChallengeErr,
-	createChallenge,
-	popChallenge,
-}
+export { WebauthnChallengeEntity, ChallengeErr, createChallenge, popChallenge };
