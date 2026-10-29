@@ -21,8 +21,10 @@ describe('user deletion revocation', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		const insert = {
-			insert: vi.fn().mockReturnThis(), into: vi.fn().mockReturnThis(),
-			values: vi.fn().mockReturnThis(), orUpdate: vi.fn().mockReturnThis(),
+			insert: vi.fn().mockReturnThis(),
+			into: vi.fn().mockReturnThis(),
+			values: vi.fn().mockReturnThis(),
+			orUpdate: vi.fn().mockReturnThis(),
 			execute: vi.fn().mockResolvedValue({}),
 		};
 		update = vi.fn().mockResolvedValue({});
@@ -32,7 +34,8 @@ describe('user deletion revocation', () => {
 			createQueryBuilder: () => insert,
 			findOneOrFail: ownerLookup,
 			findOne: vi.fn().mockResolvedValue({ uuid: UserId.fromId(accountId) }),
-			update, delete: remove,
+			update,
+			delete: remove,
 		} as unknown as EntityManager;
 		mocks.transaction.mockImplementation(async (operation) => operation(manager));
 	});
@@ -41,7 +44,8 @@ describe('user deletion revocation', () => {
 		const result = await deleteUser(UserId.fromId(accountId));
 		expect(result.ok).toBe(true);
 		expect(ownerLookup).toHaveBeenCalledWith(WalletProviderStatusOwnerEntity, {
-			where: { accountId }, lock: { mode: 'pessimistic_write' },
+			where: { accountId },
+			lock: { mode: 'pessimistic_write' },
 		});
 		expect(update.mock.calls).toEqual([
 			[WalletProviderStatusOwnerEntity, { accountId }, { revoked: true }],
@@ -49,7 +53,9 @@ describe('user deletion revocation', () => {
 		]);
 		expect(update.mock.invocationCallOrder[1]).toBeLessThan(remove.mock.invocationCallOrder[0]);
 		expect(remove).toHaveBeenCalledWith(UserEntity, { uuid: UserId.fromId(accountId) });
-		expect(remove.mock.calls.some(([entity]) => entity === WalletProviderStatusOwnerEntity || entity === WalletProviderStatusEntryEntity)).toBe(false);
+		expect(
+			remove.mock.calls.some(([entity]) => entity === WalletProviderStatusOwnerEntity || entity === WalletProviderStatusEntryEntity),
+		).toBe(false);
 	});
 
 	it('aborts the deletion transaction if revocation fails', async () => {

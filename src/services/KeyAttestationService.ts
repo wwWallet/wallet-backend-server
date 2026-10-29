@@ -60,9 +60,13 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 		if (modulus.length > 1024 || exponent.length > 4) {
 			log.warn('RSA key exceeds the usual modulus or exponent size');
 		}
-		if (modulus[0] === 0 || exponent[0] === 0
-			|| !(modulus[modulus.length - 1] & 1) || !(exponent[exponent.length - 1] & 1)
-			|| (exponent.length === 1 && exponent[0] < 3)) {
+		if (
+			modulus[0] === 0 ||
+			exponent[0] === 0 ||
+			!(modulus[modulus.length - 1] & 1) ||
+			!(exponent[exponent.length - 1] & 1) ||
+			(exponent.length === 1 && exponent[0] < 3)
+		) {
 			throw new Error('Invalid RSA public key');
 		}
 		publicJwk = { kty: jwk.kty, n: jwk.n, e: jwk.e };
@@ -94,8 +98,6 @@ export function validatePublicAttestationKey(value: unknown): JWK {
 	};
 }
 
-
-
 /** iat and exp (required for JWT proofs) are added by the attestation signer. */
 export function buildKeyAttestationPayload<T extends KeyAttestationOptions = KeyAttestationOptions>(
 	keys: JWK[],
@@ -122,20 +124,26 @@ export class AttestationRequestValidationError extends Error {
 export function parseKeyAttestationRequest(body: unknown): { keys: JWK[]; nonce: string } {
 	const { jwks, openid4vci } = (body ?? {}) as { jwks?: unknown; openid4vci?: { nonce?: unknown } };
 	if (!Array.isArray(jwks) || jwks.length === 0) {
-		throw new AttestationRequestValidationError({ error: 'INVALID_JWKS',
-			message: "'jwks' JSON body parameter is missing or not type of 'array' or array is empty" });
+		throw new AttestationRequestValidationError({
+			error: 'INVALID_JWKS',
+			message: "'jwks' JSON body parameter is missing or not type of 'array' or array is empty",
+		});
 	}
 	const nonce = openid4vci?.nonce;
 	if (typeof nonce !== 'string' || !nonce) {
-		throw new AttestationRequestValidationError({ error: 'INVALID_OPENID4VCI_NONCE_VALUE',
-			message: "'openid4vci.nonce' JSON body parameter is missing or not type of 'string'" });
+		throw new AttestationRequestValidationError({
+			error: 'INVALID_OPENID4VCI_NONCE_VALUE',
+			message: "'openid4vci.nonce' JSON body parameter is missing or not type of 'string'",
+		});
 	}
 	try {
 		return { keys: jwks.map(validatePublicAttestationKey), nonce };
 	} catch (err) {
 		const validationError = new Error(err instanceof Error ? err.message : 'Unknown key validation error');
 		log.warn({ err: validationError }, 'Invalid key attestation request');
-		throw new AttestationRequestValidationError({ error: 'INVALID_JWKS',
-			message: 'Every key must be a valid supported public signing JWK' });
+		throw new AttestationRequestValidationError({
+			error: 'INVALID_JWKS',
+			message: 'Every key must be a valid supported public signing JWK',
+		});
 	}
 }

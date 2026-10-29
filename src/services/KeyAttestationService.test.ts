@@ -3,7 +3,12 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 const log = vi.hoisted(() => ({ warn: vi.fn() }));
 vi.mock('../logger', () => ({ logger: { child: () => log } }));
-import { AttestationRequestValidationError, buildKeyAttestationPayload, parseKeyAttestationRequest, validatePublicAttestationKey } from './KeyAttestationService';
+import {
+	AttestationRequestValidationError,
+	buildKeyAttestationPayload,
+	parseKeyAttestationRequest,
+	validatePublicAttestationKey,
+} from './KeyAttestationService';
 import type { AttackPotentialResistance, KeyAttestationOptions } from './walletProviderAttestation/types';
 import type { WeBuildKeyAttestationOptions } from './walletProviderAttestation/WeBuildProfile';
 
@@ -18,7 +23,8 @@ describe('buildKeyAttestationPayload', () => {
 
 	it('includes the issuer nonce when supplied', () => {
 		expect(buildKeyAttestationPayload(keys, 'issuer-nonce')).toEqual({
-			attested_keys: keys, nonce: 'issuer-nonce',
+			attested_keys: keys,
+			nonce: 'issuer-nonce',
 		});
 	});
 
@@ -30,21 +36,23 @@ describe('buildKeyAttestationPayload', () => {
 			status: { status_list: { idx: 1, uri: 'https://example.org/status' } },
 		};
 		expect(buildKeyAttestationPayload(keys, 'nonce', options)).toEqual({
-			attested_keys: keys, nonce: 'nonce', ...options,
+			attested_keys: keys,
+			nonce: 'nonce',
+			...options,
 		});
 	});
 
-	it.each<AttackPotentialResistance>([
-		'iso_18045_high',
-		'iso_18045_moderate',
-		'iso_18045_enhanced-basic',
-		'iso_18045_basic',
-	])('preserves the configured resistance value %s for both claims', (value) => {
-		expect(buildKeyAttestationPayload(keys, undefined, {
-			key_storage: [value],
-			user_authentication: [value],
-		})).toEqual({ attested_keys: keys, key_storage: [value], user_authentication: [value] });
-	});
+	it.each<AttackPotentialResistance>(['iso_18045_high', 'iso_18045_moderate', 'iso_18045_enhanced-basic', 'iso_18045_basic'])(
+		'preserves the configured resistance value %s for both claims',
+		(value) => {
+			expect(
+				buildKeyAttestationPayload(keys, undefined, {
+					key_storage: [value],
+					user_authentication: [value],
+				}),
+			).toEqual({ attested_keys: keys, key_storage: [value], user_authentication: [value] });
+		},
+	);
 
 	// Both option types require non-empty arrays of OID4VCI resistance values.
 	type ResistanceValues = [AttackPotentialResistance, ...AttackPotentialResistance[]] | undefined;
@@ -60,7 +68,9 @@ describe('buildKeyAttestationPayload', () => {
 			},
 		};
 		expect(buildKeyAttestationPayload(keys, 'nonce', options)).toEqual({
-			attested_keys: keys, nonce: 'nonce', ...options,
+			attested_keys: keys,
+			nonce: 'nonce',
+			...options,
 		});
 	});
 
@@ -80,8 +90,10 @@ describe('validatePublicAttestationKey', () => {
 		expect(() => validatePublicAttestationKey({ ...publicKey, ext })).toThrow('Invalid JWK ext');
 	});
 	it('accepts a valid public EC key and strips unverified metadata', () => {
-		expect(validatePublicAttestationKey({ ...publicKey, alg: 'ES256', certification: 'fake', kid: 'client-key' }))
-			.toEqual({ ...publicKey, alg: 'ES256' });
+		expect(validatePublicAttestationKey({ ...publicKey, alg: 'ES256', certification: 'fake', kid: 'client-key' })).toEqual({
+			...publicKey,
+			alg: 'ES256',
+		});
 	});
 	it.each(['P-384', 'P-521', 'secp256k1'])('accepts supported EC curve %s', (namedCurve) => {
 		const key = generateKeyPairSync('ec', { namedCurve }).publicKey.export({ format: 'jwk' });
@@ -94,11 +106,21 @@ describe('validatePublicAttestationKey', () => {
 		expect(validatePublicAttestationKey(ed)).toEqual(ed);
 	});
 	it.each([
-		null, [], 'key', {}, { kty: 'oct', k: 'secret' }, ec.privateKey.export({ format: 'jwk' }),
-		{ ...publicKey, d: undefined }, { ...publicKey, x: 'x' }, { ...publicKey, x: publicKey.x + '=' },
+		null,
+		[],
+		'key',
+		{},
+		{ kty: 'oct', k: 'secret' },
+		ec.privateKey.export({ format: 'jwk' }),
+		{ ...publicKey, d: undefined },
+		{ ...publicKey, x: 'x' },
+		{ ...publicKey, x: publicKey.x + '=' },
 		{ ...publicKey, x: Buffer.alloc(32).toString('base64url'), y: Buffer.alloc(32).toString('base64url') },
-		{ ...publicKey, alg: 123 }, { ...publicKey, alg: 'ES256\n' }, { ...publicKey, use: 123 },
-		{ ...publicKey, crv: 'toString' }, { ...publicKey, crv: undefined },
+		{ ...publicKey, alg: 123 },
+		{ ...publicKey, alg: 'ES256\n' },
+		{ ...publicKey, use: 123 },
+		{ ...publicKey, crv: 'toString' },
+		{ ...publicKey, crv: undefined },
 	])('rejects invalid, private or incompatible key %#', (key) => {
 		expect(() => validatePublicAttestationKey(key)).toThrow();
 	});
@@ -116,8 +138,10 @@ describe('parseKeyAttestationRequest', () => {
 		expect(() => parseKeyAttestationRequest({ jwks: [publicKey] })).toThrow('openid4vci.nonce');
 	});
 	it('returns sanitized keys and the nonce', () => {
-		expect(parseKeyAttestationRequest({ jwks: [{ ...publicKey, certification: 'fake' }], openid4vci: { nonce: 'nonce' } }))
-			.toEqual({ keys: [publicKey], nonce: 'nonce' });
+		expect(parseKeyAttestationRequest({ jwks: [{ ...publicKey, certification: 'fake' }], openid4vci: { nonce: 'nonce' } })).toEqual({
+			keys: [publicKey],
+			nonce: 'nonce',
+		});
 	});
 	it('preserves extractability through request parsing and payload construction', () => {
 		const key = { ...publicKey, ext: true };
@@ -126,39 +150,38 @@ describe('parseKeyAttestationRequest', () => {
 	});
 });
 
-
 describe('key validation logging', () => {
 	it('logs the validation reason without submitted keys or nonce', () => {
 		log.warn.mockClear();
-		expect(() => parseKeyAttestationRequest({
-			jwks: [{ ...publicKey, d: 'private-key-secret' }], openid4vci: { nonce: 'nonce-secret' },
-		})).toThrow(AttestationRequestValidationError);
-		expect(log.warn).toHaveBeenCalledExactlyOnceWith(
-			{ err: expect.any(Error) }, 'Invalid key attestation request',
-		);
+		expect(() =>
+			parseKeyAttestationRequest({
+				jwks: [{ ...publicKey, d: 'private-key-secret' }],
+				openid4vci: { nonce: 'nonce-secret' },
+			}),
+		).toThrow(AttestationRequestValidationError);
+		expect(log.warn).toHaveBeenCalledExactlyOnceWith({ err: expect.any(Error) }, 'Invalid key attestation request');
 		const error = log.warn.mock.calls[0][0].err;
 		expect(error.message).toBe('Private or symmetric key material is forbidden');
-		expect(JSON.stringify({ ...error, message: error.message, stack: error.stack }))
-			.not.toMatch(/private-key-secret|nonce-secret/);
+		expect(JSON.stringify({ ...error, message: error.message, stack: error.stack })).not.toMatch(/private-key-secret|nonce-secret/);
 	});
 
 	it('does not forward arbitrary properties on caught errors', () => {
 		log.warn.mockClear();
-		const key = { get kty() { throw Object.assign(new Error('Invalid key'), { key: 'secret' }); } };
-		expect(() => parseKeyAttestationRequest({ jwks: [key], openid4vci: { nonce: 'nonce' } }))
-			.toThrow(AttestationRequestValidationError);
+		const key = {
+			get kty() {
+				throw Object.assign(new Error('Invalid key'), { key: 'secret' });
+			},
+		};
+		expect(() => parseKeyAttestationRequest({ jwks: [key], openid4vci: { nonce: 'nonce' } })).toThrow(AttestationRequestValidationError);
 		expect(log.warn.mock.calls[0][0].err).not.toHaveProperty('key');
 	});
 });
-
 
 describe('key_ops warnings', () => {
 	it.each([['sign'], [], ['verify', 'sign'], 'verify', null])('warns without rejecting an otherwise valid key (%j)', (key_ops) => {
 		log.warn.mockClear();
 		expect(validatePublicAttestationKey({ ...publicKey, key_ops })).toEqual(publicKey);
-		expect(log.warn).toHaveBeenCalledExactlyOnceWith(
-			'Expected public signature verification operations in JWK key_ops',
-		);
+		expect(log.warn).toHaveBeenCalledExactlyOnceWith('Expected public signature verification operations in JWK key_ops');
 	});
 
 	it.each([undefined, ['verify']])('does not warn for omitted or verification-only operations (%j)', (key_ops) => {
@@ -167,7 +190,6 @@ describe('key_ops warnings', () => {
 		expect(log.warn).not.toHaveBeenCalled();
 	});
 });
-
 
 describe('advisory JWK metadata', () => {
 	it.each(['enc', 'https://example.org/custom-use'])('warns and strips non-signing use %s', (use) => {
@@ -179,9 +201,7 @@ describe('advisory JWK metadata', () => {
 	it.each(['HS256', 'ES384', 'https://example.org/custom-alg'])('warns and strips unrecognized or incompatible alg %s', (alg) => {
 		log.warn.mockClear();
 		expect(validatePublicAttestationKey({ ...publicKey, alg })).toEqual(publicKey);
-		expect(log.warn).toHaveBeenCalledExactlyOnceWith(
-			'Unrecognized or incompatible JWK algorithm; omitting advisory algorithm metadata',
-		);
+		expect(log.warn).toHaveBeenCalledExactlyOnceWith('Unrecognized or incompatible JWK algorithm; omitting advisory algorithm metadata');
 	});
 
 	it('accepts Ed448 public signing keys', () => {
@@ -192,15 +212,15 @@ describe('advisory JWK metadata', () => {
 
 	it.each([
 		{ n: Buffer.concat([Buffer.from([1]), Buffer.alloc(1023), Buffer.from([1])]).toString('base64url'), e: 'AQAB' },
-		{ n: Buffer.concat([Buffer.from([128]), Buffer.alloc(254), Buffer.from([1])]).toString('base64url'),
-			e: Buffer.from([1, 0, 0, 0, 1]).toString('base64url') },
+		{
+			n: Buffer.concat([Buffer.from([128]), Buffer.alloc(254), Buffer.from([1])]).toString('base64url'),
+			e: Buffer.from([1, 0, 0, 0, 1]).toString('base64url'),
+		},
 	])('warns for RSA sizes outside the previous implementation limits (%#)', (parameters) => {
 		log.warn.mockClear();
 		const key = { kty: 'RSA', ...parameters };
 		expect(validatePublicAttestationKey(key)).toEqual(key);
-		expect(log.warn).toHaveBeenCalledExactlyOnceWith(
-			'RSA key exceeds the usual modulus or exponent size',
-		);
+		expect(log.warn).toHaveBeenCalledExactlyOnceWith('RSA key exceeds the usual modulus or exponent size');
 	});
 
 	it.each(['AAE', 'Ag', 'AQ'])('still rejects invalid RSA exponents %s', (e) => {

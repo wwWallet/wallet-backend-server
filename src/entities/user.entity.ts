@@ -15,12 +15,12 @@ import crypto from 'node:crypto';
 import base64url from 'base64url';
 import * as uuid from 'uuid';
 
-import AppDataSource from "../AppDataSource";
-import * as scrypt from "../scrypt";
-import { checkedUpdate, EtagUpdate, isResult } from "../util/util";
-import { runTransaction } from "./common.entity";
-import { logger } from "../logger";
-import { revokeWalletProviderStatusInTransaction } from "./WalletProviderStatus.entity";
+import AppDataSource from '../AppDataSource';
+import * as scrypt from '../scrypt';
+import { checkedUpdate, EtagUpdate, isResult } from '../util/util';
+import { runTransaction } from './common.entity';
+import { logger } from '../logger';
+import { revokeWalletProviderStatusInTransaction } from './WalletProviderStatus.entity';
 
 const log = logger.child({ module: 'UserEntity' });
 

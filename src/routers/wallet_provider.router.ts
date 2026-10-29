@@ -1,16 +1,27 @@
-import { Router } from "express";
-import { SignJWT } from "jose";
-import { config } from "../../config";
-import type { WalletProviderSigningMaterial } from "../services/WalletProviderService";
-import { allocateWalletProviderStatus, revokeWalletProviderStatus, getWalletProviderStatusList, WalletProviderStatusErr, STATUS_TOKEN_SECONDS } from "../entities/WalletProviderStatus.entity";
-import { AuthMiddleware } from "../middlewares/auth.middleware";
-import { buildWalletProviderStatusClaim, loadWalletProviderSigningMaterial, signWalletProviderAttestation, signWalletProviderStatus } from "../services/WalletProviderService";
-import { logger } from "../logger";
-import { loadWalletProviderAttestationProfile } from "../services/walletProviderAttestation";
-import { AttestationRequestValidationError, parseKeyAttestationRequest } from "../services/KeyAttestationService";
-import { parseWalletAttestationRequest } from "../services/WalletAttestationService";
+import { Router } from 'express';
+import { SignJWT } from 'jose';
+import { config } from '../../config';
+import type { WalletProviderSigningMaterial } from '../services/WalletProviderService';
+import {
+	allocateWalletProviderStatus,
+	revokeWalletProviderStatus,
+	getWalletProviderStatusList,
+	WalletProviderStatusErr,
+	STATUS_TOKEN_SECONDS,
+} from '../entities/WalletProviderStatus.entity';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+import {
+	buildWalletProviderStatusClaim,
+	loadWalletProviderSigningMaterial,
+	signWalletProviderAttestation,
+	signWalletProviderStatus,
+} from '../services/WalletProviderService';
+import { logger } from '../logger';
+import { loadWalletProviderAttestationProfile } from '../services/walletProviderAttestation';
+import { AttestationRequestValidationError, parseKeyAttestationRequest } from '../services/KeyAttestationService';
+import { parseWalletAttestationRequest } from '../services/WalletAttestationService';
 
-const log = logger.child({ module: "WalletProviderRouter" });
+const log = logger.child({ module: 'WalletProviderRouter' });
 
 const walletProviderUrl = `${config.url.replace(/\/+$/, '')}/wallet-provider`;
 const walletProviderRouter = Router();
@@ -33,8 +44,7 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 
 	try {
 		signingMaterial = await loadWalletProviderSigningMaterial(true);
-	}
-	catch (err) {
+	} catch (err) {
 		const errorResponse = {
 			error: 'UNSUPPORTED',
 			message: 'key attestation generation is not supported',
@@ -53,18 +63,20 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 		}
 		const keyAttestation = await signWalletProviderAttestation(
 			attestationProfile.buildKeyAttestationPayload({
-				...input, issuer: walletProviderUrl,
+				...input,
+				issuer: walletProviderUrl,
 				keyStorageStatus: buildWalletProviderStatusClaim(allocation.val),
 			}),
-			'key-attestation+jwt', signingMaterial);
+			'key-attestation+jwt',
+			signingMaterial,
+		);
 
 		return res.send({ key_attestation: keyAttestation });
-	}
-	catch (err) {
-		log.error({ err }, "Failed to sign key attestation");
+	} catch (err) {
+		log.error({ err }, 'Failed to sign key attestation');
 		return res.status(503).send({
-			error: "FAILED",
-			message: "key attestation signature generation failed",
+			error: 'FAILED',
+			message: 'key attestation signature generation failed',
 		});
 	}
 });
@@ -86,12 +98,11 @@ walletProviderRouter.post('/wallet-attestation/generate', AuthMiddleware, async 
 
 	try {
 		signingMaterial = await loadWalletProviderSigningMaterial();
-	}
-	catch (err) {
-		log.error({ err }, "Wallet instance attestation generation is not supported");
+	} catch (err) {
+		log.error({ err }, 'Wallet instance attestation generation is not supported');
 		return res.status(400).send({
-			error: "UNSUPPORTED",
-			message: "Wallet Instance Attestation generation is not supported",
+			error: 'UNSUPPORTED',
+			message: 'Wallet Instance Attestation generation is not supported',
 		});
 	}
 
@@ -105,19 +116,23 @@ walletProviderRouter.post('/wallet-attestation/generate', AuthMiddleware, async 
 		}
 		const walletInstanceAttestation = await signWalletProviderAttestation(
 			attestationProfile.buildWalletAttestationPayload({
-				key: input.key, clientId: input.clientId, issuer: walletProviderUrl,
-				authorizationServer: input.authorizationServer, attestationId: allocation.val.id,
+				key: input.key,
+				clientId: input.clientId,
+				issuer: walletProviderUrl,
+				authorizationServer: input.authorizationServer,
+				attestationId: allocation.val.id,
 				clientStatus: buildWalletProviderStatusClaim(allocation.val),
 			}),
-			'oauth-client-attestation+jwt', signingMaterial);
+			'oauth-client-attestation+jwt',
+			signingMaterial,
+		);
 
 		return res.send({ wallet_instance_attestation: walletInstanceAttestation });
-	}
-	catch (err) {
-		log.error({ err }, "Wallet instance attestation signature generation failed");
+	} catch (err) {
+		log.error({ err }, 'Wallet instance attestation signature generation failed');
 		return res.status(503).send({
-			error: "FAILED",
-			message: "Wallet Instance Attestation signature generation failed",
+			error: 'FAILED',
+			message: 'Wallet Instance Attestation signature generation failed',
 		});
 	}
 });
@@ -140,18 +155,16 @@ walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
 			}
 			return res.status(503).json({ error: 'STATUS_LIST_UNAVAILABLE' });
 		}
-		const token = await signWalletProviderStatus(new SignJWT({
-			sub: `${walletProviderUrl}/status-lists/${req.params.statusListId}`,
-			ttl: STATUS_TOKEN_SECONDS,
-			status_list: list.val,
-		})
-			.setIssuedAt()
-			.setExpirationTime(`${STATUS_TOKEN_SECONDS}s`));
-		return res
-			.status(200)
-			.set('Cache-Control', 'no-store')
-			.type('application/statuslist+jwt')
-			.send(token);
+		const token = await signWalletProviderStatus(
+			new SignJWT({
+				sub: `${walletProviderUrl}/status-lists/${req.params.statusListId}`,
+				ttl: STATUS_TOKEN_SECONDS,
+				status_list: list.val,
+			})
+				.setIssuedAt()
+				.setExpirationTime(`${STATUS_TOKEN_SECONDS}s`),
+		);
+		return res.status(200).set('Cache-Control', 'no-store').type('application/statuslist+jwt').send(token);
 	} catch {
 		return res.status(503).json({ error: 'STATUS_LIST_UNAVAILABLE' });
 	}
@@ -180,6 +193,4 @@ walletProviderRouter.get('/certification', (_req, res) => {
 	return res.type('html').send(page);
 });
 
-export {
-	walletProviderRouter,
-}
+export { walletProviderRouter };

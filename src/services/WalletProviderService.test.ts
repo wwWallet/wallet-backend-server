@@ -20,8 +20,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('wallet provider signing key validation', () => {
 	it.each(types)('rejects an unsuccessful private key import for %s', async (type) => {
 		mocks.importKey.mockResolvedValue(undefined);
-		await expect(signWalletProviderAttestation({}, type, material))
-			.rejects.toThrow('Failed to import wallet provider private key');
+		await expect(signWalletProviderAttestation({}, type, material)).rejects.toThrow('Failed to import wallet provider private key');
 		expect(mocks.importKey).toHaveBeenCalledExactlyOnceWith('private-key', 'ES256');
 	});
 

@@ -57,8 +57,9 @@ export const weBuildProfile: WalletProviderAttestationProfile = {
 		});
 		return buildWalletAttestationPayload(key, clientId, options);
 	},
-	getCertificationPage: () => '<!doctype html><html lang="en"><meta charset="utf-8">'
-		+ '<title>WE BUILD mock wallet certification</title><h1>WE BUILD mock wallet certification</h1>'
-		+ '<p>Key storage type: keystore. No WSCD certification is asserted.</p>'
-		+ '<p>No WSCD or keystore certification is asserted. This page is a WE BUILD integration fixture.</p></html>',
+	getCertificationPage: () =>
+		'<!doctype html><html lang="en"><meta charset="utf-8">' +
+		'<title>WE BUILD mock wallet certification</title><h1>WE BUILD mock wallet certification</h1>' +
+		'<p>Key storage type: keystore. No WSCD certification is asserted.</p>' +
+		'<p>No WSCD or keystore certification is asserted. This page is a WE BUILD integration fixture.</p></html>',
 };

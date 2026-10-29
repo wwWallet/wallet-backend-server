@@ -4,9 +4,17 @@ import { SignJWT, jwtVerify } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { Err, Ok } from 'ts-results';
 import {
-	checkedUpdate, decideVerifiableCredentialType, generateCodeChallengeFromVerifier,
-	generateCodeVerifier, isResult, isValidUri, jsonParseTaggedBinary, jsonStringifyTaggedBinary,
-	importPrivateKeyPem, canonicalizeCertificateForJosex5c, getKeyAttestationCertificateChain,
+	checkedUpdate,
+	decideVerifiableCredentialType,
+	generateCodeChallengeFromVerifier,
+	generateCodeVerifier,
+	isResult,
+	isValidUri,
+	jsonParseTaggedBinary,
+	jsonStringifyTaggedBinary,
+	importPrivateKeyPem,
+	canonicalizeCertificateForJosex5c,
+	getKeyAttestationCertificateChain,
 } from '../../src/util/util';
 
 describe('tagged binary JSON', () => {
@@ -154,10 +162,8 @@ describe('small utility boundaries', () => {
 describe('JOSE x5c certificate encoding', () => {
 	// Use public certificates bundled with Node, independent of local signing material.
 	const [certificate, secondCertificate] = rootCertificates;
-	const base64Der = (pem: string) => pem
-		.replace('-----BEGIN CERTIFICATE-----', '')
-		.replace('-----END CERTIFICATE-----', '')
-		.replace(/\s+/g, '');
+	const base64Der = (pem: string) =>
+		pem.replace('-----BEGIN CERTIFICATE-----', '').replace('-----END CERTIFICATE-----', '').replace(/\s+/g, '');
 	const encoded = base64Der(certificate);
 
 	it('canonicalizes a PEM certificate to unwrapped Base64 DER', () => {
@@ -168,27 +174,31 @@ describe('JOSE x5c certificate encoding', () => {
 		expect(canonicalizeCertificateForJosex5c(` \n${encoded.slice(0, 64)}\n${encoded.slice(64)}\n `)).toBe(encoded);
 	});
 
-	it.each(['', 'not a certificate!', 'YWJj',
-		'-----BEGIN CERTIFICATE-----\nYWJj\n-----END CERTIFICATE-----',
-	])('rejects invalid certificate input %j', input => {
-		expect(() => canonicalizeCertificateForJosex5c(input)).toThrow();
-	});
+	it.each(['', 'not a certificate!', 'YWJj', '-----BEGIN CERTIFICATE-----\nYWJj\n-----END CERTIFICATE-----'])(
+		'rejects invalid certificate input %j',
+		(input) => {
+			expect(() => canonicalizeCertificateForJosex5c(input)).toThrow();
+		},
+	);
 
 	it('rejects a PEM bundle where a single certificate is expected', () => {
 		expect(() => canonicalizeCertificateForJosex5c(`${certificate}\n${secondCertificate}`)).toThrow();
 	});
 
-	it.each([certificate, encoded])('encodes a single certificate as a one-entry chain', input => {
+	it.each([certificate, encoded])('encodes a single certificate as a one-entry chain', (input) => {
 		expect(getKeyAttestationCertificateChain(input)).toEqual([encoded]);
 	});
 
 	it('preserves the supplied certificate order in a PEM bundle', () => {
-		expect(getKeyAttestationCertificateChain(` \n${certificate}\n${secondCertificate}\n `))
-			.toEqual([encoded, base64Der(secondCertificate)]);
+		expect(getKeyAttestationCertificateChain(` \n${certificate}\n${secondCertificate}\n `)).toEqual([
+			encoded,
+			base64Der(secondCertificate),
+		]);
 	});
 
 	it.each(['unexpected data\n', '-----BEGIN PRIVATE KEY-----\nYWJj\n-----END PRIVATE KEY-----\n'])(
-		'rejects extraneous data surrounding a PEM chain', extra => {
+		'rejects extraneous data surrounding a PEM chain',
+		(extra) => {
 			expect(() => getKeyAttestationCertificateChain(`${extra}${certificate}`)).toThrow();
 			expect(() => getKeyAttestationCertificateChain(`${certificate}\n${extra}`)).toThrow();
 		},

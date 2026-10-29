@@ -1,13 +1,13 @@
 import { readFile } from 'fs/promises';
-import path from "path";
-import { SignJWT } from "jose";
-import type { JWTPayload } from "jose";
-import type { WalletProviderStatusReference } from "../entities/WalletProviderStatus.entity";
-import { importPrivateKeyPem, getKeyAttestationCertificateChain } from "../util/util";
-import { config } from "../../config";
-import { logger } from "../logger";
+import path from 'path';
+import { SignJWT } from 'jose';
+import type { JWTPayload } from 'jose';
+import type { WalletProviderStatusReference } from '../entities/WalletProviderStatus.entity';
+import { importPrivateKeyPem, getKeyAttestationCertificateChain } from '../util/util';
+import { config } from '../../config';
+import { logger } from '../logger';
 
-const log = logger.child({ module: "WalletProviderService" });
+const log = logger.child({ module: 'WalletProviderService' });
 
 const keysDir = config.keysDir;
 const walletProviderPrivateKeyPath = path.join(keysDir, 'wallet-provider.key');
@@ -31,11 +31,11 @@ export async function loadWalletProviderSigningMaterial(requireCa = false): Prom
 	return { privateKey, certificate };
 }
 
-loadWalletProviderSigningMaterial(true).then(() =>
-	log.info("Test importing keys passed")
-).catch((err) => {
-	log.error({ err }, "Error importing wallet provider keys");
-});
+loadWalletProviderSigningMaterial(true)
+	.then(() => log.info('Test importing keys passed'))
+	.catch((err) => {
+		log.error({ err }, 'Error importing wallet provider keys');
+	});
 
 /** The maintenance expiry is independent of the short-lived attestation JWT. */
 export function buildWalletProviderStatusClaim(entry: WalletProviderStatusReference) {
@@ -57,13 +57,15 @@ async function signWalletProviderToken(
 ): Promise<string> {
 	const privateKey = await importPrivateKeyPem(material.privateKey, 'ES256');
 	if (!privateKey) {
-		throw new Error("Failed to import wallet provider private key");
+		throw new Error('Failed to import wallet provider private key');
 	}
-	return token.setProtectedHeader({
-		alg: 'ES256',
-		typ: type,
-		x5c: getKeyAttestationCertificateChain(material.certificate),
-	}).sign(privateKey);
+	return token
+		.setProtectedHeader({
+			alg: 'ES256',
+			typ: type,
+			x5c: getKeyAttestationCertificateChain(material.certificate),
+		})
+		.sign(privateKey);
 }
 
 export function signWalletProviderAttestation(
@@ -71,13 +73,7 @@ export function signWalletProviderAttestation(
 	type: WalletProviderAttestationType,
 	material: WalletProviderSigningMaterial,
 ): Promise<string> {
-	return signWalletProviderToken(
-		new SignJWT(payload)
-			.setIssuedAt()
-			.setExpirationTime('15s'),
-			type,
-			material
-		);
+	return signWalletProviderToken(new SignJWT(payload).setIssuedAt().setExpirationTime('15s'), type, material);
 }
 
 /** Signs status lists without changing the caller's issued-at or expiry. */

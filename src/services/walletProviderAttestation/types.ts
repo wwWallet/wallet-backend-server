@@ -15,9 +15,10 @@ export type AttackPotentialResistance = z.infer<typeof attackPotentialResistance
 export const oid4vciKeyAttestationClaimsSchema = z.object({
 	iat: z.number().int().optional(),
 	exp: z.number().int().optional(),
-	attested_keys: z.array(z.custom<JWK>((value) =>
-		typeof value === 'object' && value !== null && typeof value.kty === 'string'
-	)).nonempty().optional(),
+	attested_keys: z
+		.array(z.custom<JWK>((value) => typeof value === 'object' && value !== null && typeof value.kty === 'string'))
+		.nonempty()
+		.optional(),
 	key_storage: z.array(attackPotentialResistanceSchema).nonempty().optional(),
 	user_authentication: z.array(attackPotentialResistanceSchema).nonempty().optional(),
 	certification: z.string().url().optional(),
