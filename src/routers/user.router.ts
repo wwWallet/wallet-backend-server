@@ -1,6 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import crypto from 'node:crypto';
 import * as SimpleWebauthn from '@simplewebauthn/server';
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import base64url from 'base64url';
 import { EntityManager } from 'typeorm';
 
@@ -313,7 +314,7 @@ noAuthUserController.post('/login-webauthn-finish', async (req: Request, res: Re
 				id: base64url.encode(credentialRecord.credentialId),
 				publicKey: new Uint8Array(credentialRecord.publicKeyCose),
 				counter: credentialRecord.signatureCount,
-				transports: (credentialRecord.transports || []) as AuthenticatorTransport[],
+				transports: (credentialRecord.transports || []) as AuthenticatorTransportFuture[],
 			},
 		});
 	} catch (e) {
