@@ -1,9 +1,10 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
-import { Column, Entity, EntityManager, Index, JoinColumn, ManyToOne, PrimaryColumn, QueryFailedError, Repository } from 'typeorm';
+import { Column, Entity, EntityManager, Index, PrimaryColumn, QueryFailedError, Repository } from 'typeorm';
 import { Result, Ok, Err } from 'ts-results';
 import AppDataSource from '../AppDataSource';
 import { logger } from '../logger';
+import { UserEntity, UserId } from './user.entity';
 
 const log = logger.child({ module: 'WalletProviderStatus' });
 
@@ -28,15 +29,6 @@ export enum WalletProviderStatusErr {
 	DB_ERR = 'DB_ERR',
 }
 
-@Entity({ name: 'wallet_provider_status_owner' })
-export class WalletProviderStatusOwnerEntity {
-	@PrimaryColumn({ type: 'varchar', length: 36 })
-	accountId!: string;
-
-	@Column({ type: 'boolean', default: false })
-	revoked!: boolean;
-}
-
 @Entity({ name: 'wallet_provider_status_cursor' })
 export class WalletProviderStatusCursorEntity {
 	@PrimaryColumn({ type: 'varchar', length: 2 })
@@ -51,18 +43,13 @@ export class WalletProviderStatusCursorEntity {
 
 @Entity({ name: 'wallet_provider_status_entry' })
 @Index('status_slot', ['listId', 'slot'], { unique: true })
-@Index('status_owner', ['accountId'])
+@Index('status_account', ['accountId'])
 export class WalletProviderStatusEntryEntity {
 	@PrimaryColumn({ type: 'varchar', length: 36 })
 	id!: string;
 
 	@Column({ type: 'varchar', length: 36 })
 	accountId!: string;
-
-	// Status evidence survives user deletion; this relation is to the status owner only.
-	@ManyToOne(() => WalletProviderStatusOwnerEntity, { nullable: false })
-	@JoinColumn({ name: 'accountId', foreignKeyConstraintName: 'status_owner_fk' })
-	owner!: WalletProviderStatusOwnerEntity;
 
 	@Column({ type: 'varchar', length: 2 })
 	kind!: StatusKind;
@@ -112,20 +99,14 @@ async function runStatusTransaction<T>(
 	}
 }
 
-async function lockStatusOwner(manager: EntityManager, accountId: string): Promise<boolean> {
-	// Updating only the identifier must never clear an existing revocation flag.
-	await manager
-		.createQueryBuilder()
-		.insert()
-		.into(WalletProviderStatusOwnerEntity)
-		.values({ accountId })
-		.orUpdate(['accountId'], ['accountId'])
-		.execute();
-	const owner = await manager.findOneOrFail(WalletProviderStatusOwnerEntity, {
-		where: { accountId },
+async function lockUserRevocation(manager: EntityManager, accountId: string): Promise<boolean> {
+	const user = await manager.findOne(UserEntity, {
+		select: { uuid: true, isRevoked: true },
+		where: { uuid: UserId.fromId(accountId) },
+		loadEagerRelations: false,
 		lock: { mode: 'pessimistic_write' },
 	});
-	return owner.revoked;
+	return !user || user.isRevoked;
 }
 
 export async function allocateWalletProviderStatus(
@@ -133,7 +114,7 @@ export async function allocateWalletProviderStatus(
 	kind: StatusKind,
 ): Promise<Result<WalletProviderStatusReference, WalletProviderStatusErr>> {
 	return runStatusTransaction(async (manager) => {
-		if (await lockStatusOwner(manager, accountId)) {
+		if (await lockUserRevocation(manager, accountId)) {
 			return Err(WalletProviderStatusErr.WALLET_REVOKED);
 		}
 		const cursor = await manager.findOne(WalletProviderStatusCursorEntity, {
@@ -190,17 +171,23 @@ export async function revokeWalletProviderStatus(accountId: string): Promise<Res
 
 /** Use the caller's transaction so deletion and revocation commit or roll back together. */
 export async function revokeWalletProviderStatusInTransaction(manager: EntityManager, accountId: string): Promise<void> {
-	await lockStatusOwner(manager, accountId);
-	await manager.update(WalletProviderStatusOwnerEntity, { accountId }, { revoked: true });
+	await lockUserRevocation(manager, accountId);
+	await manager.update(UserEntity, { uuid: UserId.fromId(accountId) }, { isRevoked: true });
 	await manager.update(WalletProviderStatusEntryEntity, { accountId }, { revoked: true });
 }
 
 export async function getWalletProviderStatusList(listId: string): Promise<Result<{ bits: number; lst: string }, WalletProviderStatusErr>> {
 	try {
-		const entries = await walletProviderStatusEntryRepository.find({
-			where: { listId },
-			select: { slot: true, revoked: true, maintenanceExp: true },
-		});
+		// A single joined read keeps user revocation and entry state consistent.
+		const entries = await walletProviderStatusEntryRepository
+			.createQueryBuilder('entry')
+			.leftJoin(UserEntity, 'account', 'account.uuid = entry.accountId')
+			.select('entry.slot', 'slot')
+			.addSelect('entry.revoked', 'revoked')
+			.addSelect('entry.maintenanceExp', 'maintenanceExp')
+			.addSelect('account.isRevoked', 'userRevoked')
+			.where('entry.listId = :listId', { listId })
+			.getRawMany<{ slot: number; revoked: number; maintenanceExp: number; userRevoked: number | null }>();
 		if (entries.length === 0) {
 			return Err(WalletProviderStatusErr.NOT_EXISTS);
 		}
@@ -208,7 +195,7 @@ export async function getWalletProviderStatusList(listId: string): Promise<Resul
 		const bytes = Buffer.alloc(LIST_ENTRIES / 8, 0xff);
 		const now = Math.floor(Date.now() / 1000);
 		for (const entry of entries) {
-			if (!entry.revoked && entry.maintenanceExp > now) {
+			if (entry.userRevoked === 0 && entry.revoked === 0 && entry.maintenanceExp > now) {
 				bytes[Math.floor(entry.slot / 8)] &= ~(1 << (entry.slot % 8));
 			}
 		}

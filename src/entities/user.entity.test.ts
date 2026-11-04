@@ -9,53 +9,44 @@ vi.mock('../AppDataSource', () => ({
 vi.mock('../logger', () => ({ logger: { child: () => ({ error: vi.fn() }) } }));
 
 import { deleteUser, UserEntity, UserId } from './user.entity';
-import { WalletProviderStatusEntryEntity, WalletProviderStatusOwnerEntity } from './WalletProviderStatus.entity';
+import { WalletProviderStatusEntryEntity } from './WalletProviderStatus.entity';
 
 describe('user deletion revocation', () => {
 	const accountId = 'deleted-account';
 	let manager: EntityManager;
 	let update: ReturnType<typeof vi.fn>;
 	let remove: ReturnType<typeof vi.fn>;
-	let ownerLookup: ReturnType<typeof vi.fn>;
+	let userLookup: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		const insert = {
-			insert: vi.fn().mockReturnThis(),
-			into: vi.fn().mockReturnThis(),
-			values: vi.fn().mockReturnThis(),
-			orUpdate: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue({}),
-		};
 		update = vi.fn().mockResolvedValue({});
 		remove = vi.fn().mockResolvedValue({});
-		ownerLookup = vi.fn().mockResolvedValue({ accountId, revoked: false });
+		userLookup = vi.fn().mockResolvedValue({ uuid: UserId.fromId(accountId), isRevoked: false });
 		manager = {
-			createQueryBuilder: () => insert,
-			findOneOrFail: ownerLookup,
-			findOne: vi.fn().mockResolvedValue({ uuid: UserId.fromId(accountId) }),
+			findOne: userLookup,
 			update,
 			delete: remove,
 		} as unknown as EntityManager;
 		mocks.transaction.mockImplementation(async (operation) => operation(manager));
 	});
 
-	it('revokes the owner and all entries before deleting user data in the same transaction', async () => {
+	it('revokes the user and all entries before deleting user data in the same transaction', async () => {
 		const result = await deleteUser(UserId.fromId(accountId));
 		expect(result.ok).toBe(true);
-		expect(ownerLookup).toHaveBeenCalledWith(WalletProviderStatusOwnerEntity, {
-			where: { accountId },
+		expect(userLookup).toHaveBeenCalledWith(UserEntity, {
+			where: { uuid: UserId.fromId(accountId) },
+			select: { uuid: true, isRevoked: true },
+			loadEagerRelations: false,
 			lock: { mode: 'pessimistic_write' },
 		});
 		expect(update.mock.calls).toEqual([
-			[WalletProviderStatusOwnerEntity, { accountId }, { revoked: true }],
+			[UserEntity, { uuid: UserId.fromId(accountId) }, { isRevoked: true }],
 			[WalletProviderStatusEntryEntity, { accountId }, { revoked: true }],
 		]);
 		expect(update.mock.invocationCallOrder[1]).toBeLessThan(remove.mock.invocationCallOrder[0]);
 		expect(remove).toHaveBeenCalledWith(UserEntity, { uuid: UserId.fromId(accountId) });
-		expect(
-			remove.mock.calls.some(([entity]) => entity === WalletProviderStatusOwnerEntity || entity === WalletProviderStatusEntryEntity),
-		).toBe(false);
+		expect(remove.mock.calls.some(([entity]) => entity === WalletProviderStatusEntryEntity)).toBe(false);
 	});
 
 	it('aborts the deletion transaction if revocation fails', async () => {
