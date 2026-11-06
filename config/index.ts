@@ -57,6 +57,7 @@ const schema = z.object({
 		.transform((value) => positiveInteger(value, 604800000)),
 	REGISTRATION_DISABLED: flag,
 	LOG_HTTP: flag,
+	WALLET_PROVIDER_ATTESTATION_PROFILE: z.enum(['OID4VCI', 'WEBUILD']).default('OID4VCI'),
 	DEBUG_ACCEPT_UNAUTHORIZED_HTTPS: flag,
 });
 
@@ -96,4 +97,5 @@ export const config = {
 	registerDisabled: vars.REGISTRATION_DISABLED,
 	logHttp: vars.LOG_HTTP,
 	debugAcceptUnauthorizedHttps: vars.DEBUG_ACCEPT_UNAUTHORIZED_HTTPS,
+	walletProviderAttestationProfile: vars.WALLET_PROVIDER_ATTESTATION_PROFILE,
 };
