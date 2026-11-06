@@ -9,7 +9,7 @@ vi.mock('../AppDataSource', () => ({
 vi.mock('../logger', () => ({ logger: { child: () => ({ error: vi.fn() }) } }));
 
 import { deleteUser, UserEntity, UserId } from './user.entity';
-import { WalletProviderStatusEntryEntity } from './WalletProviderStatus.entity';
+import { WalletProviderStatusListEntryEntity } from './WalletProviderStatus.entity';
 
 describe('user deletion revocation', () => {
 	const accountId = 'deleted-account';
@@ -42,11 +42,11 @@ describe('user deletion revocation', () => {
 		});
 		expect(update.mock.calls).toEqual([
 			[UserEntity, { uuid: UserId.fromId(accountId) }, { isRevoked: true }],
-			[WalletProviderStatusEntryEntity, { accountId }, { revoked: true }],
+			[WalletProviderStatusListEntryEntity, { accountId }, { revoked: true }],
 		]);
 		expect(update.mock.invocationCallOrder[1]).toBeLessThan(remove.mock.invocationCallOrder[0]);
 		expect(remove).toHaveBeenCalledWith(UserEntity, { uuid: UserId.fromId(accountId) });
-		expect(remove.mock.calls.some(([entity]) => entity === WalletProviderStatusEntryEntity)).toBe(false);
+		expect(remove.mock.calls.some(([entity]) => entity === WalletProviderStatusListEntryEntity)).toBe(false);
 	});
 
 	it('aborts the deletion transaction if revocation fails', async () => {
@@ -74,6 +74,6 @@ describe('user deletion revocation', () => {
 		expect(result.ok).toBe(true);
 		expect(transaction).toHaveBeenCalledOnce();
 		expect(mocks.transaction).not.toHaveBeenCalled();
-		expect(update).toHaveBeenCalledWith(WalletProviderStatusEntryEntity, { accountId }, { revoked: true });
+		expect(update).toHaveBeenCalledWith(WalletProviderStatusListEntryEntity, { accountId }, { revoked: true });
 	});
 });

@@ -46,7 +46,7 @@ export function buildWalletProviderStatusClaim(entry: WalletProviderStatusRefere
 				uri: `${config.url.replace(/\/+$/, '')}/wallet-provider/status-lists/${entry.listId}`,
 			},
 		},
-		exp: entry.exp,
+		exp: entry.maintenanceExpiresAt,
 	};
 }
 
@@ -77,6 +77,6 @@ export function signWalletProviderAttestation(
 }
 
 /** Signs status lists without changing the caller's issued-at or expiry. */
-export async function signWalletProviderStatus(token: SignJWT): Promise<string> {
+export async function signWalletProviderStatusList(token: SignJWT): Promise<string> {
 	return signWalletProviderToken(token, 'statuslist+jwt', await loadWalletProviderSigningMaterial());
 }

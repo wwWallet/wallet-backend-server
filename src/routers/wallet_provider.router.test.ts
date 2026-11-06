@@ -2,7 +2,14 @@ import { generateKeyPairSync } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ allocate: vi.fn(), load: vi.fn(), sign: vi.fn(), profile: 'OID4VCI' }));
+const mocks = vi.hoisted(() => ({
+	allocate: vi.fn(),
+	load: vi.fn(),
+	sign: vi.fn(),
+	status: vi.fn(),
+	signStatus: vi.fn(),
+	profile: 'OID4VCI',
+}));
 vi.mock('../../config', () => ({
 	config: {
 		url: 'https://provider.example/',
@@ -15,16 +22,16 @@ vi.mock('../middlewares/auth.middleware', () => ({ AuthMiddleware: vi.fn() }));
 vi.mock('../logger', () => ({ logger: { child: () => ({ error: vi.fn(), warn: vi.fn() }) } }));
 vi.mock('../entities/WalletProviderStatus.entity', () => ({
 	allocateWalletProviderStatus: mocks.allocate,
-	revokeWalletProviderStatus: vi.fn(),
-	getWalletProviderStatusList: vi.fn(),
-	WalletProviderStatusErr: {},
-	STATUS_TOKEN_SECONDS: 300,
+	revokeWalletProviderStatusesForAccount: vi.fn(),
+	getWalletProviderStatusList: mocks.status,
+	WalletProviderStatusErr: { NOT_EXISTS: 'NOT_EXISTS' },
+	STATUS_TOKEN_SECONDS: 60,
 }));
 vi.mock('../services/WalletProviderService', () => ({
 	loadWalletProviderSigningMaterial: mocks.load,
 	signWalletProviderAttestation: mocks.sign,
 	buildWalletProviderStatusClaim: () => ({ status: { status_list: { idx: 1, uri: 'https://provider.example/status' } }, exp: 2000000000 }),
-	signWalletProviderStatus: vi.fn(),
+	signWalletProviderStatusList: mocks.signStatus,
 }));
 
 const publicKey = generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey.export({ format: 'jwk' });
@@ -125,5 +132,50 @@ describe('WEBUILD lifecycle payloads', () => {
 						client_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
 					};
 		expect(payload).toMatchObject(expectedPayload);
+	});
+});
+
+describe('weekly status list URLs', () => {
+	async function fetchStatus(id: string) {
+		const { walletProviderRouter } = await import('./wallet_provider.router');
+		const route = walletProviderRouter.stack.find((layer) => layer.route?.path === '/status-lists/:statusListId')?.route;
+		if (!route) throw new Error('Missing status route');
+		const res = {
+			status: vi.fn().mockReturnThis(),
+			json: vi.fn().mockReturnThis(),
+			set: vi.fn().mockReturnThis(),
+			type: vi.fn().mockReturnThis(),
+			send: vi.fn().mockReturnThis(),
+		};
+		await route.stack[0].handle(
+			{ params: { statusListId: id }, query: {}, accepts: () => true } as unknown as Request,
+			res as unknown as Response,
+			vi.fn(),
+		);
+		return res;
+	}
+
+	it('publishes the new hash ID with its exact subject and freshness', async () => {
+		const id = '-IvkJWcUf6xBjy8wBMe5E0YwbbSBOtKB7R1-wX-s3b0';
+		mocks.status.mockResolvedValue({ ok: true, val: { bits: 1, lst: 'compressed' } });
+		mocks.signStatus.mockResolvedValue('signed-status');
+		const res = await fetchStatus(id);
+		expect(res.status).toHaveBeenCalledWith(200);
+		expect(res.send).toHaveBeenCalledWith('signed-status');
+		expect(mocks.status).toHaveBeenCalledWith(id);
+		const jwt = mocks.signStatus.mock.calls[0][0];
+		expect(jwt._payload).toMatchObject({ sub: `https://provider.example/wallet-provider/status-lists/${id}`, ttl: 60 });
+		expect(jwt._payload.exp - jwt._payload.iat).toBe(60);
+	});
+
+	it.each(['v2_' + 'a'.repeat(43), 'v1_short', '00000000-0000-4000-8000-000000000000'])('rejects unsupported ID %s', async (id) => {
+		const res = await fetchStatus(id);
+		expect(res.status).toHaveBeenCalledWith(404);
+		expect(mocks.status).not.toHaveBeenCalled();
+	});
+
+	it('returns 404 for an unknown hash', async () => {
+		mocks.status.mockResolvedValue({ ok: false, val: 'NOT_EXISTS' });
+		expect((await fetchStatus('a'.repeat(43))).status).toHaveBeenCalledWith(404);
 	});
 });

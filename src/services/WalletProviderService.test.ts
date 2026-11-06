@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ importKey: vi.fn() }));
 vi.mock('fs/promises', () => ({ readFile: vi.fn().mockResolvedValue('fixture') }));
-vi.mock('../../config', () => ({ config: { keysDir: '/keys' } }));
+vi.mock('../../config', () => ({ config: { keysDir: '/keys', url: 'https://provider.example/' } }));
 vi.mock('../logger', () => ({ logger: { child: () => ({ info: vi.fn(), error: vi.fn() }) } }));
 vi.mock('../util/util', () => ({
 	importPrivateKeyPem: mocks.importKey,
 	getKeyAttestationCertificateChain: () => ['certificate'],
 }));
-import { signWalletProviderAttestation } from './WalletProviderService';
+import { buildWalletProviderStatusClaim, signWalletProviderAttestation } from './WalletProviderService';
 
 const material = { privateKey: 'private-key', certificate: 'certificate' };
 const types = ['key-attestation+jwt', 'oauth-client-attestation+jwt'] as const;
@@ -31,5 +31,12 @@ describe('wallet provider signing key validation', () => {
 		const { payload, protectedHeader } = await jwtVerify(token, pair.publicKey);
 		expect(payload).toMatchObject({ nonce: 'nonce', iat: expect.any(Number), exp: expect.any(Number) });
 		expect(protectedHeader).toEqual({ alg: 'ES256', typ: type, x5c: ['certificate'] });
+	});
+});
+
+it('maps the maintenance expiry to the status claim expiry', () => {
+	expect(buildWalletProviderStatusClaim({ id: 'entry', idx: 7, listId: 'list', maintenanceExpiresAt: 2000000000 })).toEqual({
+		status: { status_list: { idx: 7, uri: 'https://provider.example/wallet-provider/status-lists/list' } },
+		exp: 2000000000,
 	});
 });

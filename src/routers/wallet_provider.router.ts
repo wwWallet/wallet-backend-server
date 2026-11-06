@@ -1,10 +1,11 @@
+import { isSupportedStatusListId } from '../status/allocator';
 import { Router } from 'express';
 import { SignJWT } from 'jose';
 import { config } from '../../config';
 import type { WalletProviderSigningMaterial } from '../services/WalletProviderService';
 import {
 	allocateWalletProviderStatus,
-	revokeWalletProviderStatus,
+	revokeWalletProviderStatusesForAccount,
 	getWalletProviderStatusList,
 	WalletProviderStatusErr,
 	STATUS_TOKEN_SECONDS,
@@ -14,7 +15,7 @@ import {
 	buildWalletProviderStatusClaim,
 	loadWalletProviderSigningMaterial,
 	signWalletProviderAttestation,
-	signWalletProviderStatus,
+	signWalletProviderStatusList,
 } from '../services/WalletProviderService';
 import { logger } from '../logger';
 import { loadWalletProviderAttestationProfile } from '../services/walletProviderAttestation';
@@ -138,7 +139,7 @@ walletProviderRouter.post('/wallet-attestation/generate', AuthMiddleware, async 
 });
 
 walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
-	if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.statusListId)) {
+	if (!isSupportedStatusListId(req.params.statusListId)) {
 		return res.status(404).json({ error: 'NOT_FOUND' });
 	}
 	if (req.query.time !== undefined) {
@@ -155,7 +156,7 @@ walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
 			}
 			return res.status(503).json({ error: 'STATUS_LIST_UNAVAILABLE' });
 		}
-		const token = await signWalletProviderStatus(
+		const token = await signWalletProviderStatusList(
 			new SignJWT({
 				sub: `${walletProviderUrl}/status-lists/${req.params.statusListId}`,
 				ttl: STATUS_TOKEN_SECONDS,
@@ -175,7 +176,7 @@ walletProviderRouter.post('/status-lists/revoke', AuthMiddleware, async (req, re
 		return res.status(401).send();
 	}
 	try {
-		const revoked = await revokeWalletProviderStatus(req.user.id.id);
+		const revoked = await revokeWalletProviderStatusesForAccount(req.user.id.id);
 		if (revoked.err) {
 			return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
 		}
