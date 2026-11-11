@@ -16,7 +16,7 @@ import { credentialIssuerRouter } from './routers/credential_issuer.router';
 import { proxyRouter } from './routers/proxy.router';
 import { helperRouter } from './routers/helper.router';
 import { verifierRouter } from './routers/verifier.router';
-import { walletProviderRouter } from './routers/wallet_provider.router';
+import { walletProviderPublicRouter, walletProviderRouter } from './routers/wallet_provider.router';
 import { ohttpRelayRouter } from './routers/ohttp_relay.router';
 import { getUnsafeEnvironmentVariables } from './configValidation';
 import { initializeMetadataService } from './services/metadata';
@@ -50,9 +50,7 @@ app.use(
 // define routes and middleware here
 app.use('/status', statusRouter);
 app.use('/user', userController);
-
-// Some wallet provider endpoints are public, others are guarded in the Router
-app.use('/wallet-provider', walletProviderRouter);
+app.use('/wallet-provider/api', walletProviderPublicRouter);
 
 app.use(AuthMiddleware);
 
@@ -62,6 +60,7 @@ app.use('/proxy', proxyRouter);
 app.use('/helper', helperRouter);
 app.use('/relay', ohttpRelayRouter);
 app.use('/verifier', verifierRouter);
+app.use('/wallet-provider', walletProviderRouter);
 
 if (process.env.NODE_ENV === 'production') {
 	const unsafeEnvironmentVariables = getUnsafeEnvironmentVariables();

@@ -10,7 +10,6 @@ import {
 	WalletProviderStatusErr,
 	STATUS_TOKEN_SECONDS,
 } from '../entities/WalletProviderStatus.entity';
-import { AuthMiddleware } from '../middlewares/auth.middleware';
 import {
 	buildWalletProviderStatusClaim,
 	loadWalletProviderSigningMaterial,
@@ -28,7 +27,7 @@ const walletProviderUrl = `${config.url.replace(/\/+$/, '')}/wallet-provider`;
 const walletProviderRouter = Router();
 const attestationProfile = loadWalletProviderAttestationProfile(config.walletProviderAttestationProfile);
 
-walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (req, res) => {
+walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 	if (!req.user) {
 		return res.status(401).send();
 	}
@@ -82,7 +81,7 @@ walletProviderRouter.post('/key-attestation/generate', AuthMiddleware, async (re
 	}
 });
 
-walletProviderRouter.post('/wallet-attestation/generate', AuthMiddleware, async (req, res) => {
+walletProviderRouter.post('/wallet-attestation/generate', async (req, res) => {
 	if (!req.user) {
 		return res.status(401).send();
 	}
@@ -138,7 +137,32 @@ walletProviderRouter.post('/wallet-attestation/generate', AuthMiddleware, async 
 	}
 });
 
-walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
+walletProviderRouter.post('/status-lists/revoke', async (req, res) => {
+	if (!req.user) {
+		return res.status(401).send();
+	}
+	try {
+		const revoked = await revokeWalletProviderStatusesForAccount(req.user.id.id);
+		if (revoked.err) {
+			return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
+		}
+		return res.status(204).send();
+	} catch {
+		return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
+	}
+});
+
+const walletProviderPublicRouter = Router();
+
+walletProviderPublicRouter.get('/certification', (_req, res) => {
+	const page = attestationProfile.getCertificationPage();
+	if (page === undefined) {
+		return res.status(404).send();
+	}
+	return res.type('html').send(page);
+});
+
+walletProviderPublicRouter.get('/status-lists/:statusListId', async (req, res) => {
 	if (!isSupportedStatusListId(req.params.statusListId)) {
 		return res.status(404).json({ error: 'NOT_FOUND' });
 	}
@@ -158,7 +182,7 @@ walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
 		}
 		const token = await signWalletProviderStatusList(
 			new SignJWT({
-				sub: `${walletProviderUrl}/status-lists/${req.params.statusListId}`,
+				sub: `${walletProviderUrl}/api/status-lists/${req.params.statusListId}`,
 				ttl: STATUS_TOKEN_SECONDS,
 				status_list: list.val,
 			})
@@ -171,27 +195,4 @@ walletProviderRouter.get('/status-lists/:statusListId', async (req, res) => {
 	}
 });
 
-walletProviderRouter.post('/status-lists/revoke', AuthMiddleware, async (req, res) => {
-	if (!req.user) {
-		return res.status(401).send();
-	}
-	try {
-		const revoked = await revokeWalletProviderStatusesForAccount(req.user.id.id);
-		if (revoked.err) {
-			return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
-		}
-		return res.status(204).send();
-	} catch {
-		return res.status(503).json({ error: 'STATUS_UNAVAILABLE' });
-	}
-});
-
-walletProviderRouter.get('/certification', (_req, res) => {
-	const page = attestationProfile.getCertificationPage();
-	if (page === undefined) {
-		return res.status(404).send();
-	}
-	return res.type('html').send(page);
-});
-
-export { walletProviderRouter };
+export { walletProviderRouter, walletProviderPublicRouter };

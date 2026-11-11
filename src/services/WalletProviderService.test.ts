@@ -36,7 +36,7 @@ describe('wallet provider signing key validation', () => {
 
 it('maps the maintenance expiry to the status claim expiry', () => {
 	expect(buildWalletProviderStatusClaim({ id: 'entry', idx: 7, listId: 'list', maintenanceExpiresAt: 2000000000 })).toEqual({
-		status: { status_list: { idx: 7, uri: 'https://provider.example/wallet-provider/status-lists/list' } },
+		status: { status_list: { idx: 7, uri: 'https://provider.example/wallet-provider/api/status-lists/list' } },
 		exp: 2000000000,
 	});
 });

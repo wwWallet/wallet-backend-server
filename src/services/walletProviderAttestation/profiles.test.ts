@@ -30,7 +30,7 @@ describe('key attestation profiles', () => {
 			key_storage_status: status,
 			key_storage: ['iso_18045_basic'],
 			user_authentication: ['iso_18045_basic'],
-			certification: 'https://provider.example/wallet-provider/certification',
+			certification: 'https://provider.example/wallet-provider/api/certification',
 		});
 		expect(() => loadWalletProviderAttestationProfile('WEBUILD').buildKeyAttestationPayload({ keys })).toThrow('key_storage_status');
 	});

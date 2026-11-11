@@ -38,7 +38,7 @@ export const weBuildProfile: WalletProviderAttestationProfile = {
 		const options = {
 			key_storage: ['iso_18045_basic'],
 			user_authentication: ['iso_18045_basic'],
-			...(issuer === undefined ? {} : { certification: `${issuer.replace(/\/+$/, '')}/certification` }),
+			...(issuer === undefined ? {} : { certification: `${issuer.replace(/\/+$/, '')}/api/certification` }),
 			...claims,
 			key_storage_status: status,
 		};

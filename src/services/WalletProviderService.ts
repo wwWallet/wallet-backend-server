@@ -43,7 +43,7 @@ export function buildWalletProviderStatusClaim(entry: WalletProviderStatusRefere
 		status: {
 			status_list: {
 				idx: entry.idx,
-				uri: `${config.url.replace(/\/+$/, '')}/wallet-provider/status-lists/${entry.listId}`,
+				uri: `${config.url.replace(/\/+$/, '')}/wallet-provider/api/status-lists/${entry.listId}`,
 			},
 		},
 		exp: entry.maintenanceExpiresAt,

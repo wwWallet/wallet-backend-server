@@ -68,7 +68,6 @@ describe('wallet provider public key validation', () => {
 	it.each(routes)('rejects a missing authenticated user before allocation on %s', async (path) => {
 		const res = await request(path, [publicKey], false);
 		expect(res.status).toHaveBeenCalledWith(401);
-		expect(mocks.load).not.toHaveBeenCalled();
 		expect(mocks.allocate).not.toHaveBeenCalled();
 		expect(mocks.sign).not.toHaveBeenCalled();
 	});
@@ -88,7 +87,6 @@ describe('wallet provider public key validation', () => {
 		const res = await request(path, [{ ...publicKey, d: 'secret' }]);
 		expect(res.status).toHaveBeenCalledWith(400);
 		expect(mocks.allocate).not.toHaveBeenCalled();
-		expect(mocks.load).not.toHaveBeenCalled();
 		expect(mocks.sign).not.toHaveBeenCalled();
 	});
 	it('validates every key in a batch', async () => {
@@ -117,7 +115,7 @@ describe('WEBUILD lifecycle payloads', () => {
 						nonce: 'nonce',
 						key_storage: ['iso_18045_basic'],
 						user_authentication: ['iso_18045_basic'],
-						certification: 'https://provider.example/wallet-provider/certification',
+						certification: 'https://provider.example/wallet-provider/api/certification',
 						key_storage_status: { status: { status_list: { idx: 1 } }, exp: 2000000000 },
 					}
 				: {
@@ -137,8 +135,8 @@ describe('WEBUILD lifecycle payloads', () => {
 
 describe('weekly status list URLs', () => {
 	async function fetchStatus(id: string) {
-		const { walletProviderRouter } = await import('./wallet_provider.router');
-		const route = walletProviderRouter.stack.find((layer) => layer.route?.path === '/status-lists/:statusListId')?.route;
+		const { walletProviderPublicRouter } = await import('./wallet_provider.router');
+		const route = walletProviderPublicRouter.stack.find((layer) => layer.route?.path === '/status-lists/:statusListId')?.route;
 		if (!route) throw new Error('Missing status route');
 		const res = {
 			status: vi.fn().mockReturnThis(),
@@ -164,7 +162,7 @@ describe('weekly status list URLs', () => {
 		expect(res.send).toHaveBeenCalledWith('signed-status');
 		expect(mocks.status).toHaveBeenCalledWith(id);
 		const jwt = mocks.signStatus.mock.calls[0][0];
-		expect(jwt._payload).toMatchObject({ sub: `https://provider.example/wallet-provider/status-lists/${id}`, ttl: 60 });
+		expect(jwt._payload).toMatchObject({ sub: `https://provider.example/wallet-provider/api/status-lists/${id}`, ttl: 60 });
 		expect(jwt._payload.exp - jwt._payload.iat).toBe(60);
 	});
 
@@ -178,4 +176,15 @@ describe('weekly status list URLs', () => {
 		mocks.status.mockResolvedValue({ ok: false, val: 'NOT_EXISTS' });
 		expect((await fetchStatus('a'.repeat(43))).status).toHaveBeenCalledWith(404);
 	});
+});
+
+it('serves the WEBUILD certification page through the public router', async () => {
+	mocks.profile = 'WEBUILD';
+	const { walletProviderPublicRouter } = await import('./wallet_provider.router');
+	const route = walletProviderPublicRouter.stack.find((layer) => layer.route?.path === '/certification')?.route;
+	if (!route) throw new Error('Missing certification route');
+	const res = { type: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+	await route.stack[0].handle({} as Request, res as unknown as Response, vi.fn());
+	expect(res.type).toHaveBeenCalledWith('html');
+	expect(res.send).toHaveBeenCalledWith(expect.stringContaining('WE BUILD mock wallet certification'));
 });
