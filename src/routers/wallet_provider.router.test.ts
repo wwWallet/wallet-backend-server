@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 	sign: vi.fn(),
 	status: vi.fn(),
 	signStatus: vi.fn(),
-	profile: 'OID4VCI',
+	profile: 'OPENID4VCI',
 }));
 vi.mock('../../config', () => ({
 	config: {
@@ -58,7 +58,7 @@ async function request(path: string, jwks: unknown, authenticated = true) {
 beforeEach(() => {
 	vi.clearAllMocks();
 	vi.resetModules();
-	mocks.profile = 'OID4VCI';
+	mocks.profile = 'OPENID4VCI';
 	mocks.allocate.mockResolvedValue({ ok: true, val: { id: 'allocated-id' } });
 	mocks.load.mockResolvedValue({});
 	mocks.sign.mockResolvedValue('signed-attestation');

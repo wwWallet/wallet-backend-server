@@ -57,7 +57,7 @@ const schema = z.object({
 		.transform((value) => positiveInteger(value, 604800000)),
 	REGISTRATION_DISABLED: flag,
 	LOG_HTTP: flag,
-	WALLET_PROVIDER_ATTESTATION_PROFILE: z.enum(['OID4VCI', 'WEBUILD']).default('OID4VCI'),
+	WALLET_PROVIDER_ATTESTATION_PROFILE: z.enum(['OPENID4VCI', 'WEBUILD']).default('OPENID4VCI'),
 	DEBUG_ACCEPT_UNAUTHORIZED_HTTPS: flag,
 });
 

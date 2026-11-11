@@ -4,14 +4,14 @@ import { loadWalletProviderAttestationProfile } from './index';
 const keys = [{ kty: 'EC', crv: 'P-256', x: 'x', y: 'y' }];
 const status = { status: { status_list: { idx: 1, uri: 'https://example.org/status' } }, exp: 2000000000 };
 describe('key attestation profiles', () => {
-	it.each(['OID4VCI', 'WEBUILD'])('selects %s', (id) => {
+	it.each(['OPENID4VCI', 'WEBUILD'])('selects %s', (id) => {
 		expect(loadWalletProviderAttestationProfile(id).id).toBe(id);
 	});
-	it.each(['', 'DEFAULT', 'typo', 'toString', '__proto__'])('rejects unknown profile %s', (id) => {
+	it.each(['', 'DEFAULT', 'OID4VCI', 'typo', 'toString', '__proto__'])('rejects unknown profile %s', (id) => {
 		expect(() => loadWalletProviderAttestationProfile(id)).toThrow('Unknown');
 	});
-	it('places the allocated key status at the OID4VCI top level', () => {
-		expect(loadWalletProviderAttestationProfile('OID4VCI').buildKeyAttestationPayload({ keys, keyStorageStatus: status })).toEqual({
+	it('places the allocated key status at the OPENID4VCI top level', () => {
+		expect(loadWalletProviderAttestationProfile('OPENID4VCI').buildKeyAttestationPayload({ keys, keyStorageStatus: status })).toEqual({
 			attested_keys: keys,
 			status: status.status,
 		});
@@ -34,7 +34,7 @@ describe('key attestation profiles', () => {
 		});
 		expect(() => loadWalletProviderAttestationProfile('WEBUILD').buildKeyAttestationPayload({ keys })).toThrow('key_storage_status');
 	});
-	it.each(['OID4VCI'])('%s has no certification page', (id) => {
+	it.each(['OPENID4VCI'])('%s has no certification page', (id) => {
 		expect(loadWalletProviderAttestationProfile(id).getCertificationPage()).toBeUndefined();
 	});
 
@@ -55,9 +55,9 @@ describe('wallet attestation profiles', () => {
 		wallet_solution_certification_information: 'Verified certification reference',
 	};
 
-	it('places the allocated wallet status at the OID4VCI top level', () => {
+	it('places the allocated wallet status at the OPENID4VCI top level', () => {
 		expect(
-			loadWalletProviderAttestationProfile('OID4VCI').buildWalletAttestationPayload({
+			loadWalletProviderAttestationProfile('OPENID4VCI').buildWalletAttestationPayload({
 				key,
 				clientId: 'client',
 				issuer: 'https://provider.example/wallet-provider',
@@ -96,7 +96,7 @@ describe('wallet attestation profiles', () => {
 		}
 	});
 
-	it.each(['OID4VCI', 'WEBUILD'])('preserves subject and key binding under %s', (id) => {
+	it.each(['OPENID4VCI', 'WEBUILD'])('preserves subject and key binding under %s', (id) => {
 		const payload = loadWalletProviderAttestationProfile(id).buildWalletAttestationPayload({
 			key,
 			clientId: 'client',
@@ -109,8 +109,8 @@ describe('wallet attestation profiles', () => {
 	});
 });
 
-describe('OID4VCI optional status', () => {
-	const profile = loadWalletProviderAttestationProfile('OID4VCI');
+describe('OPENID4VCI optional status', () => {
+	const profile = loadWalletProviderAttestationProfile('OPENID4VCI');
 	it('omits status when no reference is supplied', () => {
 		expect(profile.buildKeyAttestationPayload({ keys })).toEqual({ attested_keys: keys });
 		expect(
@@ -143,9 +143,9 @@ describe('OID4VCI optional status', () => {
 	});
 });
 
-describe('OID4VCI wallet issuer', () => {
+describe('OPENID4VCI wallet issuer', () => {
 	it('uses the provider issuer even when claims contain a different issuer', () => {
-		const payload = loadWalletProviderAttestationProfile('OID4VCI').buildWalletAttestationPayload({
+		const payload = loadWalletProviderAttestationProfile('OPENID4VCI').buildWalletAttestationPayload({
 			key: keys[0],
 			clientId: 'client',
 			issuer: 'https://provider.example/wallet-provider',
@@ -155,7 +155,7 @@ describe('OID4VCI wallet issuer', () => {
 	});
 	it('rejects an empty issuer', () => {
 		expect(() =>
-			loadWalletProviderAttestationProfile('OID4VCI').buildWalletAttestationPayload({
+			loadWalletProviderAttestationProfile('OPENID4VCI').buildWalletAttestationPayload({
 				key: keys[0],
 				clientId: 'client',
 				issuer: '',

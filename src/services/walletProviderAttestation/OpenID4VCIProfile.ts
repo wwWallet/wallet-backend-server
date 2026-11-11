@@ -2,8 +2,8 @@ import { buildWalletAttestationPayload } from '../WalletAttestationService';
 import { buildKeyAttestationPayload } from '../KeyAttestationService';
 import type { WalletProviderAttestationProfile } from './types';
 
-export const oid4vciProfile: WalletProviderAttestationProfile = {
-	id: 'OID4VCI',
+export const OpenID4VCIProfile: WalletProviderAttestationProfile = {
+	id: 'OPENID4VCI',
 	buildKeyAttestationPayload: ({ keys, nonce, claims, keyStorageStatus }) =>
 		buildKeyAttestationPayload(keys, nonce, {
 			...claims,
@@ -11,7 +11,7 @@ export const oid4vciProfile: WalletProviderAttestationProfile = {
 		}),
 	buildWalletAttestationPayload: ({ key, clientId, issuer, claims, clientStatus }) => {
 		if (typeof issuer !== 'string' || issuer.trim().length === 0) {
-			throw new Error('OID4VCI wallet attestations require a provider issuer');
+			throw new Error('OPENID4VCI wallet attestations require a provider issuer');
 		}
 		return buildWalletAttestationPayload(key, clientId, {
 			...claims,

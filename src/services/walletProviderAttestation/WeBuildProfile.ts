@@ -28,7 +28,7 @@ export const weBuildWalletInstanceAttestationOptionsSchema = walletAttestationOp
 });
 export type WeBuildWalletInstanceAttestationOptions = z.infer<typeof weBuildWalletInstanceAttestationOptionsSchema>;
 
-export const weBuildProfile: WalletProviderAttestationProfile = {
+export const WeBuildProfile: WalletProviderAttestationProfile = {
 	id: 'WEBUILD',
 	buildKeyAttestationPayload: ({ keys, nonce, issuer, claims, keyStorageStatus }) => {
 		const status = keyStorageStatus ?? claims?.key_storage_status;

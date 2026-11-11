@@ -1,10 +1,10 @@
-import { oid4vciProfile } from './Oid4vciProfile';
-import { weBuildProfile } from './WeBuildProfile';
+import { OpenID4VCIProfile } from './OpenID4VCIProfile';
+import { WeBuildProfile } from './WeBuildProfile';
 import type { WalletProviderAttestationProfile, WalletProviderAttestationProfileId } from './types';
 
 const profiles: Record<WalletProviderAttestationProfileId, WalletProviderAttestationProfile> = {
-	OID4VCI: oid4vciProfile,
-	WEBUILD: weBuildProfile,
+	OPENID4VCI: OpenID4VCIProfile,
+	WEBUILD: WeBuildProfile,
 };
 
 export function loadWalletProviderAttestationProfile(id: string): WalletProviderAttestationProfile {

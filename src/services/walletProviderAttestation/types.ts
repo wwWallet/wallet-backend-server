@@ -2,7 +2,7 @@ import type { JWK, JWTPayload } from 'jose';
 import { z } from 'zod';
 import type { KeyStorageStatus } from './WeBuildProfile';
 
-/** OID4VCI Appendix D.2 attack potential resistance values. */
+/** OPENID4VCI Appendix D.2 attack potential resistance values. */
 export const attackPotentialResistanceSchema = z.enum([
 	'iso_18045_high',
 	'iso_18045_moderate',
@@ -11,7 +11,7 @@ export const attackPotentialResistanceSchema = z.enum([
 ]);
 export type AttackPotentialResistance = z.infer<typeof attackPotentialResistanceSchema>;
 
-/** OID4VCI Appendix D.1 payload claims; signer/builder-owned claims are optional here. */
+/** OPENID4VCI Appendix D.1 payload claims; signer/builder-owned claims are optional here. */
 export const oid4vciKeyAttestationClaimsSchema = z.object({
 	iat: z.number().int().optional(),
 	exp: z.number().int().optional(),
@@ -30,7 +30,7 @@ export type Oid4vciKeyAttestationClaims = z.infer<typeof oid4vciKeyAttestationCl
 /** Provider options exclude claims owned by the shared builder and signer. */
 export type KeyAttestationOptions = Omit<Oid4vciKeyAttestationClaims, 'iat' | 'exp' | 'attested_keys' | 'nonce'>;
 
-export type WalletProviderAttestationProfileId = 'OID4VCI' | 'WEBUILD';
+export type WalletProviderAttestationProfileId = 'OPENID4VCI' | 'WEBUILD';
 
 export interface KeyAttestationInput {
 	issuer?: string;
@@ -48,7 +48,7 @@ export interface WalletProviderAttestationProfile {
 	getCertificationPage(): string | undefined;
 }
 
-/** Provider-controlled OID4VCI wallet metadata; subject, cnf and times are shared-owned. */
+/** Provider-controlled OPENID4VCI wallet metadata; subject, cnf and times are shared-owned. */
 export const walletAttestationOptionsSchema = z.object({
 	iss: z.string().optional(),
 	aud: z.string().optional(),
