@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	allocate: vi.fn(),
-	load: vi.fn(),
 	sign: vi.fn(),
 	status: vi.fn(),
 	signStatus: vi.fn(),
@@ -28,7 +27,6 @@ vi.mock('../entities/WalletProviderStatus.entity', () => ({
 	STATUS_TOKEN_SECONDS: 60,
 }));
 vi.mock('../services/WalletProviderService', () => ({
-	loadWalletProviderSigningMaterial: mocks.load,
 	signWalletProviderAttestation: mocks.sign,
 	buildWalletProviderStatusClaim: () => ({ status: { status_list: { idx: 1, uri: 'https://provider.example/status' } }, exp: 2000000000 }),
 	signWalletProviderStatusList: mocks.signStatus,
@@ -60,7 +58,6 @@ beforeEach(() => {
 	vi.resetModules();
 	mocks.profile = 'OPENID4VCI';
 	mocks.allocate.mockResolvedValue({ ok: true, val: { id: 'allocated-id' } });
-	mocks.load.mockResolvedValue({});
 	mocks.sign.mockResolvedValue('signed-attestation');
 });
 

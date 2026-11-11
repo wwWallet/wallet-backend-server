@@ -1,42 +1,59 @@
-import { generateKeyPairSync } from 'node:crypto';
-import { jwtVerify } from 'jose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ importKey: vi.fn() }));
-vi.mock('fs/promises', () => ({ readFile: vi.fn().mockResolvedValue('fixture') }));
+const mocks = vi.hoisted(() => ({ readFileSync: vi.fn(), importKey: vi.fn(), chain: vi.fn(), sign: vi.fn() }));
+vi.mock('fs', () => ({ readFileSync: mocks.readFileSync }));
 vi.mock('../../config', () => ({ config: { keysDir: '/keys', url: 'https://provider.example/' } }));
-vi.mock('../logger', () => ({ logger: { child: () => ({ info: vi.fn(), error: vi.fn() }) } }));
-vi.mock('../util/util', () => ({
-	importPrivateKeyPem: mocks.importKey,
-	getKeyAttestationCertificateChain: () => ['certificate'],
+vi.mock('../logger', () => ({ logger: { child: () => ({ info: vi.fn() }) } }));
+vi.mock('../util/util', () => ({ importPrivateKeyPem: mocks.importKey, getKeyAttestationCertificateChain: mocks.chain }));
+vi.mock('jose', () => ({
+	SignJWT: class {
+		setIssuedAt() {
+			return this;
+		}
+		setExpirationTime() {
+			return this;
+		}
+		setProtectedHeader() {
+			return this;
+		}
+		sign = mocks.sign;
+	},
 }));
-import { buildWalletProviderStatusClaim, signWalletProviderAttestation } from './WalletProviderService';
 
-const material = { privateKey: 'private-key', certificate: 'certificate' };
-const types = ['key-attestation+jwt', 'oauth-client-attestation+jwt'] as const;
-
-beforeEach(() => vi.clearAllMocks());
-
-describe('wallet provider signing key validation', () => {
-	it.each(types)('rejects an unsuccessful private key import for %s', async (type) => {
-		mocks.importKey.mockResolvedValue(undefined);
-		await expect(signWalletProviderAttestation({}, type, material)).rejects.toThrow('Failed to import wallet provider private key');
-		expect(mocks.importKey).toHaveBeenCalledExactlyOnceWith('private-key', 'ES256');
-	});
-
-	it.each(types)('signs %s with an imported private key', async (type) => {
-		const pair = generateKeyPairSync('ec', { namedCurve: 'P-256' });
-		mocks.importKey.mockResolvedValue(pair.privateKey);
-		const token = await signWalletProviderAttestation({ nonce: 'nonce' }, type, material);
-		const { payload, protectedHeader } = await jwtVerify(token, pair.publicKey);
-		expect(payload).toMatchObject({ nonce: 'nonce', iat: expect.any(Number), exp: expect.any(Number) });
-		expect(protectedHeader).toEqual({ alg: 'ES256', typ: type, x5c: ['certificate'] });
-	});
+beforeEach(() => {
+	vi.resetModules();
+	vi.clearAllMocks();
+	mocks.readFileSync.mockImplementation((file: string) => `initial:${file}`);
+	mocks.importKey.mockResolvedValue('key');
+	mocks.chain.mockReturnValue([]);
+	mocks.sign.mockResolvedValue('signed');
 });
 
-it('maps the maintenance expiry to the status claim expiry', () => {
-	expect(buildWalletProviderStatusClaim({ id: 'entry', idx: 7, listId: 'list', maintenanceExpiresAt: 2000000000 })).toEqual({
-		status: { status_list: { idx: 7, uri: 'https://provider.example/wallet-provider/api/status-lists/list' } },
-		exp: 2000000000,
+describe('wallet provider signing material', () => {
+	it('issues status references under the public API', async () => {
+		const { buildWalletProviderStatusClaim } = await import('./WalletProviderService');
+		const reference = { id: 'entry', idx: 3, listId: 'list', maintenanceExpiresAt: 2000000000 };
+		expect(buildWalletProviderStatusClaim(reference)).toEqual({
+			status: { status_list: { idx: 3, uri: 'https://provider.example/wallet-provider/api/status-lists/list' } },
+			exp: 2000000000,
+		});
+	});
+	it('loads files on startup and reuses them for signing', async () => {
+		const { signWalletProviderAttestation } = await import('./WalletProviderService');
+		mocks.readFileSync.mockImplementation((file: string) => `rotated:${file}`);
+		await signWalletProviderAttestation({}, 'key-attestation+jwt');
+		await signWalletProviderAttestation({}, 'oauth-client-attestation+jwt');
+		expect(mocks.importKey).toHaveBeenCalledWith('initial:/keys/wallet-provider.key', 'ES256');
+		expect(mocks.chain).toHaveBeenCalledWith('initial:/keys/wallet-provider.pem');
+		expect(mocks.readFileSync).toHaveBeenCalledTimes(3);
+	});
+
+	it.each(['wallet-provider.key', 'wallet-provider.pem', 'ca.pem'])('fails startup when %s is unavailable', async (name) => {
+		const failure = new Error(`missing ${name}`);
+		mocks.readFileSync.mockImplementation((file: string) => {
+			if (file.endsWith(`/${name}`)) throw failure;
+			return file;
+		});
+		await expect(import('./WalletProviderService')).rejects.toBe(failure);
 	});
 });

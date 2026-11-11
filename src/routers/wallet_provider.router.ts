@@ -2,7 +2,6 @@ import { isSupportedStatusListId } from '../status/allocator';
 import { Router } from 'express';
 import { SignJWT } from 'jose';
 import { config } from '../../config';
-import type { WalletProviderSigningMaterial } from '../services/WalletProviderService';
 import {
 	allocateWalletProviderStatus,
 	revokeWalletProviderStatusesForAccount,
@@ -12,7 +11,6 @@ import {
 } from '../entities/WalletProviderStatus.entity';
 import {
 	buildWalletProviderStatusClaim,
-	loadWalletProviderSigningMaterial,
 	signWalletProviderAttestation,
 	signWalletProviderStatusList,
 } from '../services/WalletProviderService';
@@ -40,19 +38,6 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 		return res.status(400).send(err.response);
 	}
 
-	let signingMaterial: WalletProviderSigningMaterial;
-
-	try {
-		signingMaterial = await loadWalletProviderSigningMaterial(true);
-	} catch (err) {
-		const errorResponse = {
-			error: 'UNSUPPORTED',
-			message: 'key attestation generation is not supported',
-		};
-		log.error({ err, errorResponse }, 'Key attestation generation is not supported');
-		return res.status(400).send(errorResponse);
-	}
-
 	try {
 		const allocation = await allocateWalletProviderStatus(req.user.id.id, 'ka');
 		if (allocation.ok === false) {
@@ -68,7 +53,6 @@ walletProviderRouter.post('/key-attestation/generate', async (req, res) => {
 				keyStorageStatus: buildWalletProviderStatusClaim(allocation.val),
 			}),
 			'key-attestation+jwt',
-			signingMaterial,
 		);
 
 		return res.send({ key_attestation: keyAttestation });
@@ -94,18 +78,6 @@ walletProviderRouter.post('/wallet-attestation/generate', async (req, res) => {
 		return res.status(400).send(err.response);
 	}
 
-	let signingMaterial: WalletProviderSigningMaterial;
-
-	try {
-		signingMaterial = await loadWalletProviderSigningMaterial();
-	} catch (err) {
-		log.error({ err }, 'Wallet instance attestation generation is not supported');
-		return res.status(400).send({
-			error: 'UNSUPPORTED',
-			message: 'Wallet Instance Attestation generation is not supported',
-		});
-	}
-
 	try {
 		const allocation = await allocateWalletProviderStatus(req.user.id.id, 'wa');
 		if (allocation.ok === false) {
@@ -124,7 +96,6 @@ walletProviderRouter.post('/wallet-attestation/generate', async (req, res) => {
 				clientStatus: buildWalletProviderStatusClaim(allocation.val),
 			}),
 			'oauth-client-attestation+jwt',
-			signingMaterial,
 		);
 
 		return res.send({ wallet_instance_attestation: walletInstanceAttestation });
