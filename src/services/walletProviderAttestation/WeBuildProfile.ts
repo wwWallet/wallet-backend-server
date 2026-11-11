@@ -1,60 +1,87 @@
 import { buildWalletAttestationPayload } from '../WalletAttestationService';
-import { walletAttestationOptionsSchema } from './types';
-import { z } from 'zod';
-import { oid4vciKeyAttestationClaimsSchema } from './types';
 import { buildKeyAttestationPayload } from '../KeyAttestationService';
-import type { WalletProviderAttestationProfile } from './types';
+import type { Oid4vciKeyAttestationClaims, WalletAttestationOptions, WalletProviderAttestationProfile } from './types';
 
-export const keyStorageStatusSchema = z.object({
-	status: z.object({
-		status_list: z.object({ idx: z.number().int().nonnegative(), uri: z.string().url() }),
-	}),
-	exp: z.number().int().positive(),
-});
+export interface KeyStorageStatus {
+	status: { status_list: { idx: number; uri: string } };
+	exp: number;
+}
 
-export type KeyStorageStatus = z.infer<typeof keyStorageStatusSchema>;
-
-export const weBuildKeyAttestationClaimsSchema = oid4vciKeyAttestationClaimsSchema.extend({
-	key_storage_status: keyStorageStatusSchema,
-});
-export type WeBuildKeyAttestationClaims = z.infer<typeof weBuildKeyAttestationClaimsSchema>;
+export interface WeBuildKeyAttestationClaims extends Oid4vciKeyAttestationClaims {
+	key_storage_status: KeyStorageStatus;
+}
 export type WeBuildKeyAttestationOptions = Omit<WeBuildKeyAttestationClaims, 'iat' | 'exp' | 'attested_keys' | 'nonce'>;
 
-export const weBuildWalletInstanceAttestationOptionsSchema = walletAttestationOptionsSchema.extend({
-	wallet_name: z.string().trim().min(1),
-	wallet_version: z.string().trim().min(1),
-	wallet_solution_certification_information: z.string().trim().min(1),
-	client_status: keyStorageStatusSchema,
-});
-export type WeBuildWalletInstanceAttestationOptions = z.infer<typeof weBuildWalletInstanceAttestationOptionsSchema>;
+export interface WeBuildWalletInstanceAttestationOptions extends WalletAttestationOptions {
+	wallet_name: string;
+	wallet_version: string;
+	wallet_solution_certification_information: string;
+	client_status: KeyStorageStatus;
+}
+
+function requireStatus(status: KeyStorageStatus | undefined, name: string): KeyStorageStatus {
+	if (
+		!status ||
+		!Number.isInteger(status.exp) ||
+		status.exp <= 0 ||
+		!Number.isInteger(status.status?.status_list?.idx) ||
+		status.status.status_list.idx < 0
+	) {
+		throw new Error(`WEBUILD requires a valid ${name}`);
+	}
+	try {
+		new URL(status.status.status_list.uri);
+	} catch {
+		throw new Error(`WEBUILD requires a valid ${name} URI`);
+	}
+	return status;
+}
+
+function requireUrl(value: string | undefined): void {
+	if (value !== undefined) new URL(value);
+}
 
 export const WeBuildProfile: WalletProviderAttestationProfile = {
 	id: 'WEBUILD',
 	buildKeyAttestationPayload: ({ keys, nonce, issuer, claims, keyStorageStatus }) => {
-		const status = keyStorageStatus ?? claims?.key_storage_status;
-		if (!status) {
-			throw new Error('WEBUILD requires provider key_storage_status');
-		}
-		const options = {
+		const status = requireStatus(keyStorageStatus ?? claims?.key_storage_status, 'key_storage_status');
+		const options: WeBuildKeyAttestationOptions = {
 			key_storage: ['iso_18045_basic'],
 			user_authentication: ['iso_18045_basic'],
 			...(issuer === undefined ? {} : { certification: `${issuer.replace(/\/+$/, '')}/api/certification` }),
-			...claims,
+			...(claims?.key_storage === undefined ? {} : { key_storage: claims.key_storage }),
+			...(claims?.user_authentication === undefined ? {} : { user_authentication: claims.user_authentication }),
+			...(claims?.certification === undefined ? {} : { certification: claims.certification }),
+			...(claims?.status === undefined ? {} : { status: claims.status }),
 			key_storage_status: status,
 		};
-		return buildKeyAttestationPayload(keys, nonce, weBuildKeyAttestationClaimsSchema.parse(options));
+		requireUrl(options.certification);
+		return buildKeyAttestationPayload(keys, nonce, options);
 	},
 	buildWalletAttestationPayload: ({ key, clientId, authorizationServer, attestationId, claims, clientStatus }) => {
-		const options = weBuildWalletInstanceAttestationOptionsSchema.parse({
+		const options: WeBuildWalletInstanceAttestationOptions = {
 			wallet_name: 'WE BUILD wwWallet',
 			wallet_link: 'https://webuild.wwwallet.org',
 			wallet_version: '1.0.0',
 			wallet_solution_certification_information: 'WE BUILD Development instance — no wallet solution certification asserted',
-			...claims,
+			...(claims?.iss === undefined ? {} : { iss: claims.iss }),
+			...(claims?.aud === undefined ? {} : { aud: claims.aud }),
+			...(claims?.jti === undefined ? {} : { jti: claims.jti }),
+			...(claims?.wallet_name === undefined ? {} : { wallet_name: claims.wallet_name }),
+			...(claims?.wallet_link === undefined ? {} : { wallet_link: claims.wallet_link }),
+			...(claims?.wallet_version === undefined ? {} : { wallet_version: claims.wallet_version as string }),
+			...(claims?.wallet_solution_certification_information === undefined
+				? {}
+				: { wallet_solution_certification_information: claims.wallet_solution_certification_information as string }),
+			...(claims?.status === undefined ? {} : { status: claims.status }),
 			...(authorizationServer === undefined ? {} : { aud: authorizationServer }),
 			...(attestationId === undefined ? {} : { jti: attestationId }),
-			client_status: clientStatus ?? claims?.client_status,
-		});
+			client_status: requireStatus(clientStatus ?? (claims?.client_status as KeyStorageStatus | undefined), 'client_status'),
+		};
+		for (const value of [options.wallet_name, options.wallet_version, options.wallet_solution_certification_information]) {
+			if (typeof value !== 'string' || !value.trim()) throw new Error('WEBUILD requires non-empty wallet metadata');
+		}
+		requireUrl(options.wallet_link);
 		return buildWalletAttestationPayload(key, clientId, options);
 	},
 	getCertificationPage: () =>

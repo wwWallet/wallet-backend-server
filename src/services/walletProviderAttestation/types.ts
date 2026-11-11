@@ -1,31 +1,20 @@
 import type { JWK, JWTPayload } from 'jose';
-import { z } from 'zod';
 import type { KeyStorageStatus } from './WeBuildProfile';
 
 /** OPENID4VCI Appendix D.2 attack potential resistance values. */
-export const attackPotentialResistanceSchema = z.enum([
-	'iso_18045_high',
-	'iso_18045_moderate',
-	'iso_18045_enhanced-basic',
-	'iso_18045_basic',
-]);
-export type AttackPotentialResistance = z.infer<typeof attackPotentialResistanceSchema>;
+export type AttackPotentialResistance = 'iso_18045_high' | 'iso_18045_moderate' | 'iso_18045_enhanced-basic' | 'iso_18045_basic';
 
 /** OPENID4VCI Appendix D.1 payload claims; signer/builder-owned claims are optional here. */
-export const oid4vciKeyAttestationClaimsSchema = z.object({
-	iat: z.number().int().optional(),
-	exp: z.number().int().optional(),
-	attested_keys: z
-		.array(z.custom<JWK>((value) => typeof value === 'object' && value !== null && typeof value.kty === 'string'))
-		.nonempty()
-		.optional(),
-	key_storage: z.array(attackPotentialResistanceSchema).nonempty().optional(),
-	user_authentication: z.array(attackPotentialResistanceSchema).nonempty().optional(),
-	certification: z.string().url().optional(),
-	nonce: z.string().optional(),
-	status: z.record(z.unknown()).optional(),
-});
-export type Oid4vciKeyAttestationClaims = z.infer<typeof oid4vciKeyAttestationClaimsSchema>;
+export interface Oid4vciKeyAttestationClaims {
+	iat?: number;
+	exp?: number;
+	attested_keys?: [JWK, ...JWK[]];
+	key_storage?: [AttackPotentialResistance, ...AttackPotentialResistance[]];
+	user_authentication?: [AttackPotentialResistance, ...AttackPotentialResistance[]];
+	certification?: string;
+	nonce?: string;
+	status?: Record<string, unknown>;
+}
 
 /** Provider options exclude claims owned by the shared builder and signer. */
 export type KeyAttestationOptions = Omit<Oid4vciKeyAttestationClaims, 'iat' | 'exp' | 'attested_keys' | 'nonce'>;
@@ -49,15 +38,14 @@ export interface WalletProviderAttestationProfile {
 }
 
 /** Provider-controlled OPENID4VCI wallet metadata; subject, cnf and times are shared-owned. */
-export const walletAttestationOptionsSchema = z.object({
-	iss: z.string().optional(),
-	aud: z.string().optional(),
-	jti: z.string().optional(),
-	wallet_name: z.string().optional(),
-	wallet_link: z.string().url().optional(),
-	status: z.record(z.unknown()).optional(),
-});
-export type WalletAttestationOptions = z.infer<typeof walletAttestationOptionsSchema>;
+export interface WalletAttestationOptions {
+	iss?: string;
+	aud?: string;
+	jti?: string;
+	wallet_name?: string;
+	wallet_link?: string;
+	status?: Record<string, unknown>;
+}
 
 export interface WalletAttestationInput {
 	key: JWK;

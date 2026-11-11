@@ -96,6 +96,26 @@ describe('wallet attestation profiles', () => {
 		}
 	});
 
+	it('rejects malformed status and excludes unknown WE BUILD claims', () => {
+		const profile = loadWalletProviderAttestationProfile('WEBUILD');
+		expect(() =>
+			profile.buildWalletAttestationPayload({
+				key,
+				clientId: 'client',
+				issuer: 'https://provider.example',
+				clientStatus: { ...status, exp: 0 },
+			}),
+		).toThrow('client_status');
+		const payload = profile.buildWalletAttestationPayload({
+			key,
+			clientId: 'client',
+			issuer: 'https://provider.example',
+			clientStatus: status,
+			claims: { unexpected: 'value' },
+		});
+		expect(payload).not.toHaveProperty('unexpected');
+	});
+
 	it.each(['OPENID4VCI', 'WEBUILD'])('preserves subject and key binding under %s', (id) => {
 		const payload = loadWalletProviderAttestationProfile(id).buildWalletAttestationPayload({
 			key,
