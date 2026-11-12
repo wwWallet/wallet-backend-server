@@ -37,6 +37,20 @@ describe('config', () => {
 		return (await import('.')).config;
 	}
 
+	it('defaults to OPENID4VCI', async () => {
+		expect((await importConfig()).walletProviderAttestationProfile).toBe('OPENID4VCI');
+	});
+
+	it.each(['OPENID4VCI', 'WEBUILD'])('selects profile %s', async (profile) => {
+		process.env.WALLET_PROVIDER_ATTESTATION_PROFILE = profile;
+		expect((await importConfig()).walletProviderAttestationProfile).toBe(profile);
+	});
+
+	it('rejects unknown profiles at startup', async () => {
+		process.env.WALLET_PROVIDER_ATTESTATION_PROFILE = 'typo';
+		await expect(importConfig()).rejects.toThrow('WALLET_PROVIDER_ATTESTATION_PROFILE');
+	});
+
 	it('reads required settings and converts numeric ports', async () => {
 		const config = await importConfig();
 		expect(config.port).toBe(8002);

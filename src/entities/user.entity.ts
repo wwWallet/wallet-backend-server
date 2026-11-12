@@ -20,6 +20,7 @@ import * as scrypt from '../scrypt';
 import { checkedUpdate, EtagUpdate, isResult } from '../util/util';
 import { runTransaction } from './common.entity';
 import { logger } from '../logger';
+import { revokeWalletProviderStatusesForAccountInTransaction } from './WalletProviderStatus.entity';
 
 const log = logger.child({ module: 'UserEntity' });
 
@@ -132,6 +133,9 @@ class UserEntity {
 
 	@Column({ nullable: false, default: 0 })
 	openidRefreshTokenMaxAgeInSeconds!: number;
+
+	@Column({ nullable: false, default: false })
+	isRevoked!: boolean;
 }
 
 @Entity({ name: 'webauthn_credential' })
@@ -261,6 +265,8 @@ async function getUser(id: UserId): Promise<Result<UserEntity, GetUserErr>> {
 async function deleteUser(id: UserId, options?: { entityManager: EntityManager }): Promise<Result<{}, DeleteUserErr>> {
 	try {
 		return await (options?.entityManager || userRepository.manager).transaction(async (manager) => {
+			// Lock the user first, as allocation does, and revoke entries before deleting user data.
+			await revokeWalletProviderStatusesForAccountInTransaction(manager, id.id);
 			const user = await manager.findOne(UserEntity, { where: { uuid: Equal(id) } });
 			await manager.delete(WebauthnCredentialEntity, { user });
 			await manager.delete(UserEntity, { uuid: id });
